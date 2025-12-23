@@ -1,0 +1,137 @@
+# Guía de Extensión
+
+Esta guía explica cómo extender el boilerplate para crear funcionalidad específica de cliente sin romper la capacidad de actualizar desde el repositorio original.
+
+## Principio Fundamental
+
+**Nunca modifiques código en `core/`**. Todo el código personalizado debe ir en `custom/`.
+
+## Estructura de Directorios
+
+```
+app/
+├── core/          # ❌ NO MODIFICAR - Actualizado desde repo original
+├── custom/        # ✅ MODIFICAR AQUÍ - Código específico del cliente
+└── shared/        # ⚠️ USAR CON PRECAUCIÓN - Código compartido
+```
+
+## Extender el Backend
+
+### Agregar Nuevos Endpoints
+
+1. Crear router en `backend/app/custom/api/router.py`:
+
+```python
+from fastapi import APIRouter
+
+router = APIRouter()
+
+@router.get("/my-endpoint")
+async def my_custom_endpoint():
+    return {"message": "Custom endpoint"}
+```
+
+2. El router se incluye automáticamente en `app/core/router.py` si existe.
+
+### Agregar Modelos de Base de Datos
+
+1. Crear modelos en `backend/app/custom/models/`:
+
+```python
+from sqlalchemy import Column, Integer, String
+from app.core.database import Base
+
+class CustomModel(Base):
+    __tablename__ = "custom_table"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100))
+```
+
+2. Importar en `backend/app/custom/models/__init__.py`
+3. Crear migración con Alembic:
+
+```bash
+cd backend
+alembic revision --autogenerate -m "Add custom model"
+alembic upgrade head
+```
+
+### Agregar Tareas Celery Personalizadas
+
+1. Crear tareas en `backend/app/custom/tasks/`:
+
+```python
+from app.core.tasks.celery_app import celery_app
+
+@celery_app.task
+def my_custom_task(data):
+    # Tu lógica aquí
+    return {"result": "success"}
+```
+
+## Extender el Frontend
+
+### Agregar Componentes Personalizados
+
+1. Crear componentes en `frontend/components/custom/`:
+
+```tsx
+// frontend/components/custom/MyComponent.tsx
+export function MyComponent() {
+  return <div>Custom Component</div>
+}
+```
+
+2. Usar en tus páginas:
+
+```tsx
+import { MyComponent } from '@/components/custom/MyComponent'
+```
+
+### Agregar Páginas Personalizadas
+
+1. Crear páginas en `frontend/app/`:
+
+```tsx
+// frontend/app/custom/page.tsx
+export default function CustomPage() {
+  return <div>Custom Page</div>
+}
+```
+
+## Actualizar desde el Repo Original
+
+Cuando quieras actualizar el código core desde el repositorio original:
+
+1. Agregar el repo original como remoto:
+
+```bash
+git remote add upstream https://github.com/original-repo/core.git
+```
+
+2. Fetch y merge:
+
+```bash
+git fetch upstream
+git merge upstream/main
+```
+
+3. Resolver conflictos si los hay (solo deberían aparecer en `custom/`)
+
+4. Los cambios en `core/` se aplicarán automáticamente
+
+## Mejores Prácticas
+
+1. **Separación clara**: Mantén `core/` y `custom/` completamente separados
+2. **No importar desde core**: Evita importar internals de `core/` que puedan cambiar
+3. **Usar interfaces públicas**: Usa solo las APIs públicas expuestas por `core/`
+4. **Documentar extensiones**: Documenta tus extensiones en `custom/README.md`
+5. **Tests**: Agrega tests para tu código custom en `custom/tests/`
+
+## Ejemplos Completos
+
+Ver los READMEs en:
+- `backend/app/custom/README.md`
+- `frontend/components/custom/README.md`
+

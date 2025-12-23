@@ -1,0 +1,96 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "348b0e40-cbbc-4146-97ad-e21d7b145ea9",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1912521c-3f8d-49ed-92f6-46cc66e40dbc",
+      "name": "Webhook",
+      "webhookId": "348b0e40-cbbc-4146-97ad-e21d7b145ea9",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qNuXq5BTgycnR78f",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.mendrisoftware.com/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "58786a17-8185-412e-87c8-c52b5aa1ea9e",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "toWhatsapp": true,
+        "options": {
+          "statusCallback": ""
+        }
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "7a4fa1b2-efde-49d7-b071-a93f016fe40a",
+      "name": "Send an SMS/MMS/WhatsApp message"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "24134a61-922b-455d-9502-7d7ea4958258",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f1dd21c87a811517c3c9627bc3bbd20a301c16b6817de7c922e7b7d0b3401c7"
+  },
+  "id": "QaDT9vymreyPlW75",
+  "tags": []
+}
