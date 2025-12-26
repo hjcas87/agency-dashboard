@@ -1,24 +1,16 @@
-import { redirect } from "next/navigation"
-import { getCurrentUser } from "../actions/core/auth"
 import { AuthBrandingProvider } from "@/components/core/features/auth/AuthBrandingProvider"
 import { AuthLayout } from "@/components/core/features/auth/layouts/AuthLayout"
-import { BaseLoginForm } from "@/components/core/features/auth/BaseLoginForm"
+import { BaseResetPasswordForm } from "@/components/core/features/auth/BaseResetPasswordForm"
 import { MendriFooter } from "@/components/core/ui/mendri-footer"
 import { getBrandingConfig } from "@/lib/core/config/branding"
 
-export default async function LoginPage() {
-  // Si ya está autenticado, redirigir al CRM
-  const user = await getCurrentUser()
-  if (user) {
-    redirect("/crm")
-  }
-
+export default function ResetPasswordPage() {
   const branding = getBrandingConfig()
 
   return (
     <AuthBrandingProvider>
       <AuthLayout>
-        <BaseLoginForm />
+        <BaseResetPasswordForm />
       </AuthLayout>
       {branding.footer?.show && <MendriFooter />}
     </AuthBrandingProvider>
