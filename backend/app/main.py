@@ -22,6 +22,59 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
+    
+    # Tags metadata para organizar la documentación de Swagger
+    tags_metadata = [
+        {
+            "name": "Core: Auth",
+            "description": "Endpoints de autenticación y autorización (core).",
+        },
+        {
+            "name": "Core: Users",
+            "description": "Gestión de usuarios (core).",
+        },
+        {
+            "name": "Core: N8N",
+            "description": "Integración con N8N para workflows (core).",
+        },
+        {
+            "name": "Core: Health",
+            "description": "Health checks y estado del sistema (core).",
+        },
+        {
+            "name": "Custom: Campaigns",
+            "description": "Gestión de campañas de publicidad (custom).",
+        },
+        {
+            "name": "Custom: Contacts",
+            "description": "Gestión de contactos (custom).",
+        },
+        {
+            "name": "Custom: Journeys",
+            "description": "Gestión de customer journeys (custom).",
+        },
+        {
+            "name": "Custom: Opportunities",
+            "description": "Gestión de oportunidades de venta (custom).",
+        },
+        {
+            "name": "Custom: Activities",
+            "description": "Gestión de actividades (custom).",
+        },
+        {
+            "name": "Custom: Integrations",
+            "description": "Gestión de integraciones (custom).",
+        },
+        {
+            "name": "Custom: Pipelines",
+            "description": "Gestión de pipelines de ventas (custom).",
+        },
+        {
+            "name": "Custom: Automations",
+            "description": "Gestión de automatizaciones (custom).",
+        },
+    ]
+    
     app = FastAPI(
         title="Core API",
         description="Boilerplate API with modular architecture",
@@ -29,6 +82,7 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
+        openapi_tags=tags_metadata,
     )
 
     # CORS middleware
