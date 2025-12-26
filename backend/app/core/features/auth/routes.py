@@ -47,6 +47,9 @@ async def get_current_user_info(
         "id": current_user.id,
         "email": current_user.email,
         "name": current_user.name,
+        "last_name": current_user.last_name,
+        "phone": current_user.phone,
+        "role": current_user.role.value,
         "is_active": current_user.is_active,
     }
 
