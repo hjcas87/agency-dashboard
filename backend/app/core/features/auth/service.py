@@ -24,6 +24,8 @@ from app.core.features.auth.utils import (
     get_password_reset_token,
 )
 from app.core.features.auth.models import PasswordResetToken
+from app.core.tasks.email_tasks import send_email_task
+from app.config import settings
 
 
 class AuthService:
@@ -111,13 +113,70 @@ class AuthService:
         # Crear token de reseteo
         token = create_password_reset_token(self.db, user.id)
         
-        # TODO: Enviar email con el token
-        # Por ahora, retornamos el token en la respuesta (solo para desarrollo)
-        # En producción, esto debe enviarse por email
+        # Preparar contenido del email
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+        
+        subject = "Restablecer Contraseña"
+        body = f"""
+Hola {user.name},
+
+Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para crear una nueva contraseña:
+
+{reset_url}
+
+Este enlace expirará en 1 hora.
+
+Si no solicitaste este cambio, puedes ignorar este email.
+
+Saludos,
+{settings.EMAIL_FROM_NAME}
+"""
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .button {{ display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+        .button:hover {{ background-color: #1d4ed8; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Restablecer Contraseña</h2>
+        <p>Hola {user.name},</p>
+        <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente botón para crear una nueva contraseña:</p>
+        <a href="{reset_url}" class="button">Restablecer Contraseña</a>
+        <p>O copia y pega este enlace en tu navegador:</p>
+        <p style="word-break: break-all; color: #666;">{reset_url}</p>
+        <p>Este enlace expirará en 1 hora.</p>
+        <p>Si no solicitaste este cambio, puedes ignorar este email.</p>
+        <p>Saludos,<br>{settings.EMAIL_FROM_NAME}</p>
+    </div>
+</body>
+</html>
+"""
+        
+        # Encolar email en background usando Celery
+        # Esto no bloquea la respuesta de la API
+        try:
+            send_email_task.delay(
+                to=user.email,
+                subject=subject,
+                body=body,
+                html_body=html_body,
+            )
+        except Exception as e:
+            # Log del error pero no fallar la respuesta
+            # El email se reintentará automáticamente por Celery
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error al encolar email de password reset: {str(e)}")
         
         return {
-            "message": "If the email exists, a password reset link has been sent",
-            "token": token  # Solo para desarrollo, remover en producción
+            "message": "If the email exists, a password reset link has been sent"
         }
 
     def confirm_password_reset(self, reset_data: PasswordResetConfirm) -> dict:
