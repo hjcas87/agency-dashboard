@@ -15,7 +15,7 @@ from app.core.features.users.schemas import (
     UserListResponse,
 )
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["Core: Users"])
 
 
 def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:

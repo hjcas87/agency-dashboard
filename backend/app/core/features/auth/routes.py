@@ -17,7 +17,7 @@ from app.core.features.auth.schemas import (
 from app.core.features.auth.dependencies import get_current_active_user
 from app.core.features.users.models import User
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["Core: Auth"])
 
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:

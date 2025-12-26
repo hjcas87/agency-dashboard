@@ -7,7 +7,7 @@ from app.shared.services.n8n_service import N8NService
 from app.core.features.health.service import HealthFeatureService
 from app.core.features.health.schemas import HealthResponse
 
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(prefix="/health", tags=["Core: Health"])
 
 
 def get_health_service(

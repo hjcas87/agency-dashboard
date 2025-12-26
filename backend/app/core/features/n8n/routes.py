@@ -13,7 +13,7 @@ from app.core.features.n8n.schemas import (
     TaskStatusResponse,
 )
 
-router = APIRouter(prefix="/n8n", tags=["n8n"])
+router = APIRouter(prefix="/n8n", tags=["Core: N8N"])
 
 
 def get_n8n_service() -> N8NService:
