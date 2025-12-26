@@ -75,7 +75,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
 
         {/* Right side with background */}
         <div
-          className="flex-1 flex items-center justify-center p-4 relative"
+          className="flex-1 flex items-center justify-center p-4 relative overflow-hidden"
           style={{
             backgroundImage: layout.backgroundImage
               ? `url(${layout.backgroundImage})`
@@ -83,6 +83,8 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             backgroundColor: layout.backgroundImage
               ? undefined
               : colors.background,
+            backgroundSize: layout.backgroundImage ? "cover" : undefined,
+            backgroundPosition: layout.backgroundImage ? "center" : undefined,
           }}
         >
           {layout.backgroundImage && layout.backgroundOverlay && (
@@ -93,7 +95,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
               }}
             />
           )}
-          <div className="relative z-10 w-full max-w-md">{children}</div>
+          <div className="relative z-10 w-full max-w-lg px-4">{children}</div>
         </div>
       </div>
     )

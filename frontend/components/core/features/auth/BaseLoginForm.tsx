@@ -81,13 +81,15 @@ export function BaseLoginForm({
           </div>
         )}
         <CardTitle 
-          className="text-2xl text-center"
+          className={`text-2xl font-bold ${
+            branding.formOptions?.textAlignment === "left" ? "text-left" : "text-center"
+          }`}
           style={{ color: branding.colors.text }}
         >
           {branding.texts.loginTitle}
         </CardTitle>
         <CardDescription 
-          className="text-center"
+          className={branding.formOptions?.textAlignment === "left" ? "text-left" : "text-center"}
           style={{ color: branding.colors.textSecondary }}
         >
           {branding.texts.loginSubtitle}
@@ -141,6 +143,35 @@ export function BaseLoginForm({
               {error}
             </div>
           )}
+          {/* Remember me checkbox - optional, shown if configured */}
+          {branding.formOptions?.showRememberMe && (
+            <div className="flex items-center justify-between">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="remember"
+                  className="w-4 h-4 rounded border-gray-300 focus:ring-2"
+                  style={{ 
+                    accentColor: branding.colors.primary,
+                    borderColor: branding.colors.border,
+                  }}
+                />
+                <span 
+                  className="text-sm"
+                  style={{ color: branding.colors.text }}
+                >
+                  {branding.texts.rememberMe || "Recordarme"}
+                </span>
+              </label>
+              <a
+                href="/reset-password"
+                className="text-sm hover:underline"
+                style={{ color: branding.colors.primary }}
+              >
+                {branding.texts.forgotPasswordLink}
+              </a>
+            </div>
+          )}
           <Button
             type="submit"
             className="w-full cursor-pointer"
@@ -160,7 +191,7 @@ export function BaseLoginForm({
           </Button>
           {renderFooter ? (
             renderFooter(branding)
-          ) : (
+          ) : !branding.formOptions?.showRememberMe && (
             <div className="text-center">
               <a
                 href="/reset-password"
