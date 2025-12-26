@@ -43,6 +43,27 @@ class Settings(BaseSettings):
     N8N_API_KEY: str | None = None  # API key para autenticación Header Auth (opcional)
     N8N_API_KEY_HEADER: str = "X-API-Key"  # Nombre del header para la API key (default: X-API-Key)
 
+    # Email Service
+    EMAIL_PROVIDER: str = "smtp"  # "smtp" o "api"
+    EMAIL_FROM_NAME: str = "Equipo"  # Nombre del remitente en emails (configurable)
+    
+    # SMTP Configuration
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_FROM_EMAIL: str | None = None
+    SMTP_USE_TLS: bool = True
+    
+    # API Email Configuration (SendGrid, Mailgun, etc.)
+    EMAIL_API_URL: str | None = None
+    EMAIL_API_KEY: str | None = None
+    EMAIL_API_KEY_HEADER: str = "Authorization"
+    EMAIL_FROM_EMAIL: str | None = None
+    
+    # Frontend URL (para links en emails)
+    FRONTEND_URL: str = "http://localhost:3000"
+
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:80"]
 
