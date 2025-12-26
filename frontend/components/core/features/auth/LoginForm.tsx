@@ -67,7 +67,11 @@ export function LoginForm() {
               {error}
             </div>
           )}
-          <Button type="submit" className="w-full" disabled={isPending}>
+          <Button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+            disabled={isPending}
+          >
             {isPending ? "Iniciando sesión..." : "Iniciar Sesión"}
           </Button>
           <div className="text-center">
