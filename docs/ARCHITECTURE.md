@@ -16,14 +16,19 @@ backend/app/
 │   │   │   ├── routes.py   # Endpoints
 │   │   │   ├── schemas.py  # DTOs
 │   │   │   ├── service.py  # Lógica de negocio
+│   │   │   ├── tasks.py    # Celery tasks (opcional)
 │   │   │   └── README.md
+│   │   ├── auth/           # Feature de autenticación
+│   │   │   └── tasks.py    # Tasks de auth (envío de emails, etc.)
 │   │   └── health/         # Feature de health check
 │   ├── config.py           # Configuración
 │   ├── database.py         # DB setup
 │   ├── router.py           # Router principal
-│   └── tasks/              # Tareas Celery
+│   └── tasks/              # Configuración de Celery (celery_app.py)
 ├── custom/                  # Módulos personalizados (modificar aquí)
 │   └── features/           # Features custom
+│       └── <feature>/
+│           └── tasks.py    # Tasks específicas del feature
 └── shared/                 # Código compartido
     ├── interfaces/         # Interfaces y contratos
     ├── services/           # Servicios compartidos
@@ -41,8 +46,11 @@ feature_name/
 ├── service.py      # Lógica de negocio (capa de aplicación)
 ├── repository.py  # Acceso a datos (capa de dominio, opcional)
 ├── models.py       # Modelos de dominio (SQLAlchemy, opcional)
+├── tasks.py        # Celery tasks (opcional, si necesita tareas en background)
 └── README.md       # Documentación
 ```
+
+**Nota sobre Tasks**: Las tasks de Celery deben ser autocontenidas dentro de cada feature. Cada feature que necesite tareas en background debe tener su propio `tasks.py`. Celery las descubrirá automáticamente usando `autodiscover_tasks` configurado en `app/core/tasks/celery_app.py`.
 
 ### Flujo de Request
 

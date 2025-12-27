@@ -24,11 +24,12 @@ backend/app/
 ## Principios Fundamentales
 
 1. **Nunca modificar código en `core/`** - Todo lo personalizado va en `custom/`
-2. **Arquitectura por Features** - Cada feature es autocontenido
-3. **Separación de responsabilidades** - Routes → Service → Repository → Model
-4. **Dependency Injection** - Usar FastAPI dependencies
-5. **Interfaces y Abstracciones** - Usar interfaces de `shared/interfaces/`
-6. **Testing** - Seguir TDD, mantener > 80% coverage
+2. **Cambios en `core/` van a `main` primero** - Luego actualizar rama de trabajo desde `main`
+3. **Arquitectura por Features** - Cada feature es autocontenido
+4. **Separación de responsabilidades** - Routes → Service → Repository → Model
+5. **Dependency Injection** - Usar FastAPI dependencies
+6. **Interfaces y Abstracciones** - Usar interfaces de `shared/interfaces/`
+7. **Testing** - Seguir TDD, mantener > 80% coverage
 
 ## Convenciones de Código
 
@@ -77,8 +78,18 @@ feature_name/
 ├── service.py    # Lógica de negocio
 ├── repository.py # Acceso a datos (opcional)
 ├── models.py     # Modelos SQLAlchemy (opcional)
+├── tasks.py      # Celery tasks (opcional, si necesita tareas en background)
 └── README.md     # Documentación
 ```
+
+### Tasks de Celery
+
+**Las tasks de Celery deben ser autocontenidas dentro de cada feature:**
+
+- Cada feature que necesite tareas en background debe tener su propio `tasks.py`
+- Ubicación: `backend/app/core/features/<feature>/tasks.py` o `backend/app/custom/features/<feature>/tasks.py`
+- Celery las descubrirá automáticamente con `autodiscover_tasks`
+- **NUNCA** crear módulos centralizados de tasks - cada feature maneja sus propias tasks
 
 ## Testing
 
@@ -115,9 +126,10 @@ uv run black app             # Formatear código
 
 1. Crear estructura completa en `custom/features/`
 2. Implementar routes, schemas, service
-3. Agregar tests (unit + integration)
-4. Registrar router en `custom/features/__init__.py`
-5. Documentar en README del feature
+3. Si necesita tareas en background, crear `tasks.py` dentro del feature
+4. Agregar tests (unit + integration)
+5. Registrar router en `custom/features/__init__.py`
+6. Documentar en README del feature
 
 ### Al modificar código:
 
@@ -187,6 +199,29 @@ def process_checkout(order_data: OrderCreate) -> Order:
 6. ❌ No usar type hints
 7. ❌ No documentar código público
 
+## Flujo de Trabajo con Git: Core vs Custom
+
+**CRÍTICO**: Cuando modificas código en `core/`, debes seguir este flujo:
+
+1. **Identificar si los cambios son de core o custom**
+   - Core: `backend/app/core/`, `frontend/components/core/`, `frontend/app/actions/core/`
+   - Custom: `backend/app/custom/`, `frontend/components/custom/`, etc.
+
+2. **Si modificas código de core:**
+   - Separar los cambios de core de los cambios de custom
+   - Commitear cambios de core primero
+   - Cambiar a `main` y traer esos cambios (cherry-pick o merge selectivo)
+   - Volver a la rama de trabajo (`crm-prego` u otra)
+   - Actualizar la rama de trabajo desde `main`: `git merge main`
+   - Luego commitear cambios de custom en la rama de trabajo
+
+3. **Si solo modificas código de custom:**
+   - Commitear directamente en la rama de trabajo actual
+
+**NUNCA commitees cambios de `core/` en una rama custom sin pasarlos primero a `main` y luego actualizar la rama custom desde `main`.**
+
+Ver `AGENTS.md` para el proceso detallado con comandos.
+
 ## Cuando el Agente Trabaja
 
 - **Siempre** verificar que los cambios están en `custom/` si es código personalizado
@@ -196,7 +231,9 @@ def process_checkout(order_data: OrderCreate) -> Order:
 - **Siempre** verificar que el código sigue las convenciones
 - **Siempre** consultar `docs/business/` antes de implementar features
 - **Siempre** referenciar diagramas y diseños al implementar
+- **Siempre** seguir el flujo de git correcto cuando modifiques código de `core/`
 - **Nunca** modificar `core/` sin razón explícita
+- **Nunca** commitear cambios de `core/` en rama custom sin pasarlos primero a `main`
 - **Nunca** crear dependencias circulares
 - **Nunca** hardcodear valores de configuración
 - **Nunca** implementar sin revisar documentación de negocio relevante

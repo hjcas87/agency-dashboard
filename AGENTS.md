@@ -128,6 +128,95 @@ def process_checkout(order_data: OrderCreate) -> Order:
 - **Features**: Autocontenidos en `core/features/` o `custom/features/`
 - **Nunca modificar `core/`** - Solo `custom/`
 
+## Flujo de Trabajo con Git: Core vs Custom
+
+**IMPORTANTE**: Los cambios en código `core/` deben seguir un flujo específico de git.
+
+### Principio Fundamental
+
+- **Cambios en `core/`** → Deben commitearse en `main` (o `dev` si existe)
+- **Cambios en `custom/`** → Se commitean directamente en la rama de trabajo (ej: `crm-prego`)
+- **Después de commitear cambios en `core/` a `main`** → Actualizar la rama de trabajo desde `main`
+
+### Proceso cuando Modificas Core
+
+Si necesitas hacer cambios en código `core/` (por ejemplo: `backend/app/core/`, `frontend/components/core/`):
+
+1. **Identificar los cambios de core**:
+   ```bash
+   git status
+   # Identificar archivos en core/ que están modificados
+   ```
+
+2. **Separar cambios de core de cambios de custom**:
+   ```bash
+   # Stash cambios de custom/frontend si hay mezclados
+   git stash push -m "Cambios custom - restaurar después"
+   
+   # Agregar solo cambios de core
+   git add backend/app/core/ frontend/components/core/ frontend/app/actions/core/
+   ```
+
+3. **Commitear cambios de core en la rama actual** (temporal):
+   ```bash
+   git commit -m "refactor(core): descripción de cambios en core"
+   ```
+
+4. **Cambiar a `main` y traer los cambios**:
+   ```bash
+   git checkout main
+   git cherry-pick <commit-hash>
+   # O usar: git merge <rama-de-trabajo> (solo cambios de core)
+   ```
+
+5. **Volver a la rama de trabajo y actualizar desde `main`**:
+   ```bash
+   git checkout <rama-de-trabajo>  # ej: crm-prego
+   git merge main
+   ```
+
+6. **Restaurar cambios de custom si había stash**:
+   ```bash
+   git stash pop
+   ```
+
+### Ejemplo Completo
+
+```bash
+# Estás en rama crm-prego con cambios mezclados
+git status  # Muestra cambios en core/ y custom/
+
+# 1. Separar cambios
+git stash push -m "Cambios custom"
+git add backend/app/core/ frontend/components/core/
+git commit -m "refactor(core): reorganizar tasks de Celery"
+
+# 2. Mover a main
+git checkout main
+git cherry-pick HEAD@{1}  # o usar el hash del commit
+
+# 3. Actualizar rama de trabajo
+git checkout crm-prego
+git merge main
+
+# 4. Restaurar cambios custom
+git stash pop
+```
+
+### ⚠️ Reglas Críticas
+
+- **NUNCA** commitees cambios de `core/` directamente en una rama custom sin pasarlos primero a `main`
+- **SIEMPRE** actualiza la rama de trabajo desde `main` después de commitear cambios de core
+- **SEPARA** cuidadosamente los cambios de core de los cambios de custom antes de commitear
+- Los cambios en `custom/` pueden commitearse directamente en la rama de trabajo sin pasar por `main`
+
+### ¿Cómo Saber si un Cambio es Core?
+
+- **Core**: Funcionalidad genérica, reutilizable, parte de la infraestructura base
+- **Custom**: Lógica específica del cliente, nombres de clientes, reglas de negocio específicas
+
+Ver `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` para más detalles.
+
 ## Estructura de Features
 
 Cada feature debe tener:
@@ -137,7 +226,43 @@ Cada feature debe tener:
 - `service.py` - Lógica de negocio
 - `repository.py` - Acceso a datos (opcional)
 - `models.py` - Modelos (opcional)
+- `tasks.py` - Celery tasks (opcional, si el feature necesita tareas en background)
 - `README.md` - Documentación
+
+### Tasks de Celery
+
+**IMPORTANTE**: Las tasks de Celery deben ser autocontenidas dentro de cada feature.
+
+- Cada feature que necesite tareas en background debe tener su propio archivo `tasks.py`
+- Las tasks se ubican en `backend/app/core/features/<feature>/tasks.py` o `backend/app/custom/features/<feature>/tasks.py`
+- Celery descubrirá automáticamente las tasks usando `autodiscover_tasks`
+- **NUNCA** crear un módulo centralizado de tasks - cada feature maneja sus propias tasks
+
+**Ejemplo:**
+```python
+# backend/app/core/features/auth/tasks.py
+from app.core.tasks.celery_app import celery_app
+
+@celery_app.task(bind=True, max_retries=3)
+def send_email_task(self, to: str, subject: str, body: str):
+    # Lógica de envío de email
+    pass
+```
+
+**Estructura correcta:**
+```
+backend/app/
+├── core/
+│   └── features/
+│       ├── auth/
+│       │   └── tasks.py  # ✅ Tasks de auth aquí
+│       └── n8n/
+│           └── tasks.py  # ✅ Tasks de n8n aquí
+└── custom/
+    └── features/
+        └── campaigns/
+            └── tasks.py  # ✅ Tasks de campaigns aquí
+```
 
 ## Gestión de Dependencias
 
@@ -149,6 +274,7 @@ Cada feature debe tener:
 
 - `.cursorrules` - Reglas detalladas del proyecto (Cursor)
 - `docs/ARCHITECTURE.md` - Arquitectura completa
+- `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` - **Estrategia de branches y flujo de git para core vs custom**
 - `docs/business/` - Documentación de negocio
 - `docs/business/BEST_PRACTICES.md` - Mejores prácticas para documentación de negocio
 

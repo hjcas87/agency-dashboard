@@ -10,18 +10,25 @@ El backend está construido con FastAPI siguiendo una arquitectura modular que s
 backend/
 ├── app/
 │   ├── core/              # Módulos base (NO modificar)
-│   │   ├── api/           # Endpoints core
+│   │   ├── features/      # Features core autocontenidos
+│   │   │   ├── auth/
+│   │   │   │   └── tasks.py    # Tasks de auth
+│   │   │   └── n8n/
+│   │   │       └── tasks.py    # Tasks de n8n
 │   │   ├── config.py      # Configuración
 │   │   ├── database.py    # Configuración DB
 │   │   ├── router.py      # Router principal
-│   │   ├── schemas.py     # Schemas Pydantic
-│   │   └── tasks/         # Tareas Celery
+│   │   └── tasks/         # Configuración de Celery (celery_app.py)
 │   ├── custom/            # Módulos personalizados (modificar aquí)
-│   │   └── api/           # Endpoints custom
+│   │   └── features/      # Features custom
+│   │       └── <feature>/
+│   │           └── tasks.py    # Tasks del feature
 │   └── shared/            # Utilidades compartidas
 ├── alembic/               # Migraciones de DB
 └── requirements.txt       # Dependencias
 ```
+
+**Nota importante sobre Tasks**: Las tasks de Celery deben ser autocontenidas dentro de cada feature. No existe un módulo centralizado de tasks - cada feature maneja sus propias tasks en `tasks.py`. Celery las descubrirá automáticamente.
 
 ## Flujo de Request
 
@@ -55,6 +62,12 @@ Las tareas asíncronas se ejecutan en background workers:
 
 - `celery_worker`: Ejecuta tareas
 - `celery_beat`: Ejecuta tareas programadas
+
+**Estructura de Tasks**: Las tasks deben ser autocontenidas dentro de cada feature:
+- Cada feature que necesite tareas en background tiene su propio `tasks.py`
+- Ubicación: `backend/app/core/features/<feature>/tasks.py` o `backend/app/custom/features/<feature>/tasks.py`
+- Celery las descubre automáticamente usando `autodiscover_tasks` en `celery_app.py`
+- No existe un módulo centralizado de tasks - cada feature maneja sus propias tasks
 
 ### 5. Integración con N8N
 

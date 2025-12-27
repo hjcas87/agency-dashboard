@@ -59,15 +59,33 @@ alembic upgrade head
 
 ### Agregar Tareas Celery Personalizadas
 
-1. Crear tareas en `backend/app/custom/tasks/`:
+**IMPORTANTE**: Las tasks deben ser autocontenidas dentro de cada feature, no en un módulo centralizado.
+
+1. Crear tareas en `backend/app/custom/features/<feature>/tasks.py`:
 
 ```python
 from app.core.tasks.celery_app import celery_app
 
-@celery_app.task
-def my_custom_task(data):
+@celery_app.task(bind=True, max_retries=3)
+def my_custom_task(self, data):
     # Tu lógica aquí
     return {"result": "success"}
+```
+
+2. Celery descubrirá automáticamente las tasks usando `autodiscover_tasks` configurado en `celery_app.py`
+
+**Estructura correcta:**
+```
+backend/app/custom/features/
+└── my_feature/
+    ├── routes.py
+    ├── service.py
+    └── tasks.py  # ✅ Tasks aquí, dentro del feature
+```
+
+**❌ Incorrecto:**
+```
+backend/app/custom/tasks/  # ❌ NO crear módulo centralizado
 ```
 
 ## Extender el Frontend
