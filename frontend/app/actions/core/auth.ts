@@ -43,8 +43,14 @@ export async function loginAction(formData: FormData) {
     })
 
     // Redirigir al CRM
+    // redirect() lanza una excepción especial que debe propagarse
     redirect("/crm")
   } catch (error) {
+    // Verificar si es una redirección de Next.js (comportamiento esperado)
+    if (error && typeof error === "object" && "digest" in error && typeof error.digest === "string" && error.digest.startsWith("NEXT_REDIRECT")) {
+      // Re-lanzar la excepción de redirección para que Next.js la maneje correctamente
+      throw error
+    }
     console.error("Login error:", error)
     return { error: "Error interno del servidor" }
   }
