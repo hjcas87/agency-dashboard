@@ -24,7 +24,7 @@ from app.core.features.auth.utils import (
     get_password_reset_token,
 )
 from app.core.features.auth.models import PasswordResetToken
-from app.core.tasks.email_tasks import send_email_task
+from app.core.features.auth.tasks import send_email_task
 from app.config import settings
 
 

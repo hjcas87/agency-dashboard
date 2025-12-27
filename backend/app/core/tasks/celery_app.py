@@ -5,6 +5,7 @@ Celery usa RabbitMQ como broker para ejecutar tareas en background.
 RabbitMQ proporciona fiabilidad, persistencia y buena gestión de colas
 para garantizar que las tareas se ejecuten correctamente (retries, resultados, etc).
 """
+
 from celery import Celery
 
 from app.config import settings
@@ -30,3 +31,12 @@ celery_app.conf.update(
     worker_send_task_events=True,  # Enable task events
 )
 
+# Auto-discover tasks from all features (core and custom)
+# This discovers tasks.py modules in feature directories
+celery_app.autodiscover_tasks(
+    packages=[
+        "app.core.features",
+        "app.custom.features",
+    ],
+    force=True,
+)

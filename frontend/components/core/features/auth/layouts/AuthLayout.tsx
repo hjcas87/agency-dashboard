@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import React, { ReactNode } from "react"
-import { useBranding } from "../AuthBrandingProvider"
-import Image from "next/image"
+import Image from 'next/image'
+import { ReactNode } from 'react'
+import { useBranding } from '../AuthBrandingProvider'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -10,42 +10,76 @@ interface AuthLayoutProps {
 
 /**
  * Auth layout component that renders different layouts based on branding config.
+ * Note: Mendri watermark should be rendered outside this component to avoid reloading on navigation.
  */
 export function AuthLayout({ children }: AuthLayoutProps) {
   const branding = useBranding()
-  const { layout, colors } = branding
+  const { layout, colors, logo } = branding
 
-  if (layout.type === "split-screen") {
+  if (layout.type === 'split-screen') {
     return (
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen relative">
         {/* Left side */}
         <div
-          className="hidden lg:flex lg:w-1/2 flex-col justify-center p-12"
+          className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12"
           style={{ backgroundColor: colors.background }}
         >
           {layout.leftSideContent ? (
-            <div className="max-w-md">
-              {layout.leftSideContent.title && (
-                <h1
-                  className="text-4xl font-bold mb-4"
-                  style={{ color: colors.primary }}
-                >
+            <div className="max-w-md text-center lg:text-left">
+              {/* Welcome title - combined */}
+              {layout.leftSideContent.title && layout.leftSideContent.subtitle ? (
+                <h1 className="text-5xl font-bold mb-8" style={{ color: colors.primary }}>
+                  {layout.leftSideContent.title} {layout.leftSideContent.subtitle}
+                </h1>
+              ) : layout.leftSideContent.title ? (
+                <h1 className="text-5xl font-bold mb-8" style={{ color: colors.primary }}>
                   {layout.leftSideContent.title}
                 </h1>
-              )}
-              {layout.leftSideContent.subtitle && (
-                <h2
-                  className="text-2xl font-semibold mb-4"
-                  style={{ color: colors.primary }}
+              ) : null}
+              {/* Brand logo */}
+              <div className="mb-8 flex items-center justify-center lg:justify-start">
+                {logo.component ? (
+                  <logo.component className="h-16 w-auto" />
+                ) : logo.src ? (
+                  <Image
+                    src={logo.src}
+                    alt={logo.alt || 'Logo'}
+                    width={300}
+                    height={72}
+                    className="h-16 w-auto"
+                    priority
+                  />
+                ) : logo.text ? (
+                  <span className="text-4xl font-bold" style={{ color: colors.primary }}>
+                    {logo.text}
+                  </span>
+                ) : null}
+              </div>
+              {/* Circular arrow icon */}
+              <div className="flex justify-center lg:justify-start mt-12">
+                <div
+                  className="w-16 h-16 rounded-full border-2 flex items-center justify-center"
+                  style={{ borderColor: colors.text }}
                 >
-                  {layout.leftSideContent.subtitle}
-                </h2>
-              )}
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style={{ color: colors.text }}
+                  >
+                    <path
+                      d="M9 18L15 12L9 6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+              </div>
               {layout.leftSideContent.description && (
-                <p
-                  className="text-lg mb-8"
-                  style={{ color: colors.textSecondary }}
-                >
+                <p className="text-lg mt-8" style={{ color: colors.textSecondary }}>
                   {layout.leftSideContent.description}
                 </p>
               )}
@@ -63,10 +97,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             </div>
           ) : (
             <div className="max-w-md">
-              <h1
-                className="text-4xl font-bold mb-4"
-                style={{ color: colors.primary }}
-              >
+              <h1 className="text-4xl font-bold mb-4" style={{ color: colors.primary }}>
                 ¡Bienvenido a nuestro CRM!
               </h1>
             </div>
@@ -77,14 +108,10 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         <div
           className="flex-1 flex items-center justify-center p-4 relative overflow-hidden"
           style={{
-            backgroundImage: layout.backgroundImage
-              ? `url(${layout.backgroundImage})`
-              : undefined,
-            backgroundColor: layout.backgroundImage
-              ? undefined
-              : colors.background,
-            backgroundSize: layout.backgroundImage ? "cover" : undefined,
-            backgroundPosition: layout.backgroundImage ? "center" : undefined,
+            backgroundImage: layout.backgroundImage ? `url(${layout.backgroundImage})` : undefined,
+            backgroundColor: layout.backgroundImage ? undefined : colors.background,
+            backgroundSize: layout.backgroundImage ? 'cover' : undefined,
+            backgroundPosition: layout.backgroundImage ? 'center' : undefined,
           }}
         >
           {layout.backgroundImage && layout.backgroundOverlay && (
@@ -101,12 +128,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
     )
   }
 
-  if (layout.type === "full-width") {
+  if (layout.type === 'full-width') {
     return (
-      <div
-        className="min-h-screen p-4"
-        style={{ backgroundColor: colors.background }}
-      >
+      <div className="min-h-screen p-4 relative" style={{ backgroundColor: colors.background }}>
         <div className="max-w-4xl mx-auto">{children}</div>
       </div>
     )
@@ -115,13 +139,10 @@ export function AuthLayout({ children }: AuthLayoutProps) {
   // Default: centered layout
   return (
     <div
-      className="flex flex-col min-h-screen"
+      className="flex flex-col min-h-screen relative"
       style={{ backgroundColor: colors.background }}
     >
-      <div className="flex-1 flex items-center justify-center p-4">
-        {children}
-      </div>
+      <div className="flex-1 flex items-center justify-center p-4">{children}</div>
     </div>
   )
 }
-

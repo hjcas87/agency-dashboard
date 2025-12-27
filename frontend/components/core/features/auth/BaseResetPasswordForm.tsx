@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useBranding } from "./AuthBrandingProvider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/core/ui/card"
@@ -247,13 +248,13 @@ export function BaseResetPasswordForm({
                 {loading ? "Enviando..." : branding.texts.resetPasswordButton}
               </Button>
               <div className="text-center">
-                <a
+                <Link
                   href="/login"
                   className="text-sm hover:underline"
                   style={{ color: branding.colors.primary }}
                 >
                   {branding.texts.backToLogin}
-                </a>
+                </Link>
               </div>
             </form>
           )}

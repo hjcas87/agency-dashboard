@@ -5,7 +5,7 @@ import logging
 from typing import Dict, Any
 
 from app.shared.services.n8n_service import N8NService
-from app.core.tasks.n8n_tasks import trigger_n8n_workflow
+from app.core.features.n8n.tasks import trigger_n8n_workflow
 
 logger = logging.getLogger(__name__)
 

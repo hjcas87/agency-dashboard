@@ -1,6 +1,6 @@
 """
-Celery tasks para N8N workflow execution.
-Usa el wrapper de N8N service para mejor abstracción.
+Celery tasks para el feature de N8N.
+Tasks relacionadas con ejecución de workflows de N8N.
 """
 import logging
 import asyncio
@@ -55,50 +55,31 @@ def trigger_n8n_workflow(
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
         
-        result = loop.run_until_complete(
-            n8n_service.trigger_workflow(
-                webhook_path=webhook_path,
-                payload=payload,
+        try:
+            result = loop.run_until_complete(
+                n8n_service.trigger_workflow(
+                    webhook_path=webhook_path,
+                    payload=payload,
+                )
             )
-        )
-        
-        logger.info(
-            f"N8N workflow completed successfully: {webhook_path}, status: {result.get('status', 'unknown')}"
-        )
-        return result
-        
-    except (httpx.RequestError, httpx.TimeoutException) as e:
-        # Errores de red/timeout - reintentar
+            
+            logger.info(f"N8N workflow triggered successfully: {webhook_path}")
+            return result
+        except Exception as n8n_error:
+            logger.error(f"N8N service raised exception: {str(n8n_error)}")
+            raise
+            
+    except Exception as e:
         logger.warning(
-            f"Network error triggering N8N workflow (attempt {self.request.retries + 1}): {str(e)}"
+            f"Error triggering N8N workflow {webhook_path} (attempt {self.request.retries + 1}): {str(e)}"
         )
-        raise self.retry(exc=e, countdown=2 ** self.request.retries)
         
-    except httpx.HTTPStatusError as e:
-        # Errores HTTP (4xx, 5xx) - solo reintentar si es 5xx (error del servidor)
-        if e.response.status_code >= 500:
-            logger.warning(
-                f"Server error triggering N8N workflow (attempt {self.request.retries + 1}): "
-                f"{e.response.status_code} - {str(e)}"
-            )
-            raise self.retry(exc=e, countdown=2 ** self.request.retries)
-        else:
-            # Errores 4xx (client errors) - no reintentar
+        if self.request.retries >= self.max_retries:
             logger.error(
-                f"Client error triggering N8N workflow (will not retry): "
-                f"{e.response.status_code} - {str(e)}"
+                f"Failed to trigger N8N workflow {webhook_path} after {self.max_retries + 1} attempts: {str(e)}",
+                exc_info=True
             )
             raise
         
-    except ValueError as e:
-        # Errores de validación - no reintentar
-        logger.error(f"Validation error (will not retry): {str(e)}")
-        raise
-        
-    except Exception as e:
-        # Otros errores inesperados - reintentar
-        logger.error(
-            f"Unexpected error triggering N8N workflow (attempt {self.request.retries + 1}): {str(e)}",
-            exc_info=True
-        )
         raise self.retry(exc=e, countdown=2 ** self.request.retries)
+

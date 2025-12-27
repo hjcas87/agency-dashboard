@@ -9,6 +9,10 @@ from app.config import settings
 from app.database import engine, Base
 from app.core.router import api_router
 
+# Import all models to ensure SQLAlchemy can resolve relationships
+# This must be imported before Base.metadata.create_all()
+import app.models  # noqa: F401
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

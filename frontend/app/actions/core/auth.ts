@@ -8,6 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 export async function loginAction(formData: FormData) {
   const email = formData.get("email") as string
   const password = formData.get("password") as string
+  const remember = formData.get("remember") === "on"
 
   if (!email || !password) {
     return { error: "Email y contraseña son requeridos" }
@@ -30,11 +31,14 @@ export async function loginAction(formData: FormData) {
 
     // Guardar token en httpOnly cookie
     const cookieStore = await cookies()
+    // Si "recordarme" está marcado, la cookie dura 30 días, sino 30 minutos
+    const maxAge = remember ? 30 * 24 * 60 * 60 : 30 * 60 // 30 días o 30 minutos
+    
     cookieStore.set("access_token", data.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 30 * 60, // 30 minutos
+      maxAge,
       path: "/",
     })
 
