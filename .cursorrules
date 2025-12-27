@@ -30,6 +30,7 @@ backend/app/
 5. **Dependency Injection** - Usar FastAPI dependencies
 6. **Interfaces y Abstracciones** - Usar interfaces de `shared/interfaces/`
 7. **Testing** - Seguir TDD, mantener > 80% coverage
+8. **Sincronización de Modelos y Base de Datos** - Los modelos SQLAlchemy DEBEN estar sincronizados con las tablas de la base de datos. NO debe haber diferencias entre campos definidos en los modelos y las columnas en las tablas. Usar migraciones de Alembic para mantener la sincronización.
 
 ## Convenciones de Código
 
@@ -139,6 +140,15 @@ uv run black app             # Formatear código
 4. Agregar tests para cambios
 5. Mantener cobertura > 80%
 
+### Al modificar modelos SQLAlchemy:
+
+1. **SIEMPRE** crear una migración de Alembic para cambios en modelos
+2. **NUNCA** modificar modelos sin actualizar la base de datos mediante migraciones
+3. **SIEMPRE** verificar que los campos del modelo coinciden con las columnas de la tabla
+4. **SIEMPRE** ejecutar migraciones después de modificarlas: `alembic upgrade head`
+5. Si hay discrepancias, corregirlas inmediatamente mediante migraciones o ajustando el modelo
+6. Los modelos y la base de datos deben estar siempre sincronizados - esta es una regla crítica
+
 ### Al usar servicios externos:
 
 1. Crear wrapper implementando interface de `shared/interfaces/`
@@ -198,6 +208,9 @@ def process_checkout(order_data: OrderCreate) -> Order:
 5. ❌ Acoplar features entre sí
 6. ❌ No usar type hints
 7. ❌ No documentar código público
+8. ❌ **Modificar modelos SQLAlchemy sin crear migraciones** - CRÍTICO
+9. ❌ **Tener diferencias entre modelos y tablas de la base de datos** - CRÍTICO
+10. ❌ Modificar la base de datos manualmente sin crear migraciones
 
 ## Flujo de Trabajo con Git: Core vs Custom
 
@@ -232,9 +245,13 @@ Ver `AGENTS.md` para el proceso detallado con comandos.
 - **Siempre** consultar `docs/business/` antes de implementar features
 - **Siempre** referenciar diagramas y diseños al implementar
 - **Siempre** seguir el flujo de git correcto cuando modifiques código de `core/`
+- **Siempre** mantener modelos SQLAlchemy sincronizados con la base de datos
+- **Siempre** crear migraciones de Alembic al modificar modelos
 - **Nunca** modificar `core/` sin razón explícita
 - **Nunca** commitear cambios de `core/` en rama custom sin pasarlos primero a `main`
 - **Nunca** crear dependencias circulares
 - **Nunca** hardcodear valores de configuración
 - **Nunca** implementar sin revisar documentación de negocio relevante
+- **Nunca** modificar modelos sin crear migraciones correspondientes
+- **Nunca** dejar discrepancias entre modelos y tablas de la base de datos
 

@@ -83,6 +83,8 @@ Request → Routes → Service → Repository → Database
 - Modelos SQLAlchemy
 - Representan entidades del dominio
 
+**⚠️ REGLA CRÍTICA**: Los modelos SQLAlchemy DEBEN estar siempre sincronizados con las tablas de la base de datos. NO debe haber diferencias entre los campos definidos en los modelos y las columnas en las tablas. Usar migraciones de Alembic para mantener la sincronización.
+
 ## Servicios Compartidos
 
 ### Interfaces

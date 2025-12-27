@@ -50,6 +50,13 @@ Usa Pydantic Settings para manejar variables de entorno de forma type-safe.
 - Session management con dependency injection
 - Alembic para migraciones
 
+**⚠️ REGLA CRÍTICA**: Los modelos SQLAlchemy DEBEN estar siempre sincronizados con las tablas de la base de datos. NO debe haber diferencias entre los campos definidos en los modelos y las columnas en las tablas.
+
+- **SIEMPRE** crear migraciones de Alembic al modificar modelos
+- **NUNCA** modificar modelos sin actualizar la base de datos mediante migraciones
+- **SIEMPRE** ejecutar `alembic upgrade head` después de crear/modificar migraciones
+- Si hay discrepancias, corregirlas inmediatamente mediante migraciones o ajustando el modelo
+
 ### 3. Routers
 
 - `app/core/router.py`: Agrega todos los routers

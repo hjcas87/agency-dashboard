@@ -35,11 +35,11 @@ async def my_custom_endpoint():
 
 ### Agregar Modelos de Base de Datos
 
-1. Crear modelos en `backend/app/custom/models/`:
+1. Crear modelos en `backend/app/custom/features/<feature>/models.py`:
 
 ```python
 from sqlalchemy import Column, Integer, String
-from app.core.database import Base
+from app.database import Base
 
 class CustomModel(Base):
     __tablename__ = "custom_table"
@@ -48,14 +48,21 @@ class CustomModel(Base):
     name = Column(String(100))
 ```
 
-2. Importar en `backend/app/custom/models/__init__.py`
-3. Crear migración con Alembic:
+2. Importar en `backend/app/models.py` para asegurar que SQLAlchemy puede resolver relaciones
+
+3. **CRÍTICO**: Crear migración con Alembic:
 
 ```bash
 cd backend
-alembic revision --autogenerate -m "Add custom model"
-alembic upgrade head
+uv run alembic revision --autogenerate -m "Add custom model"
+uv run alembic upgrade head
 ```
+
+**⚠️ REGLA CRÍTICA**: Los modelos SQLAlchemy DEBEN estar siempre sincronizados con las tablas de la base de datos:
+- **SIEMPRE** crear migraciones al modificar modelos
+- **NUNCA** modificar modelos sin actualizar la base de datos mediante migraciones
+- **SIEMPRE** ejecutar `alembic upgrade head` después de crear/modificar migraciones
+- Si hay discrepancias, corregirlas inmediatamente mediante migraciones o ajustando el modelo
 
 ### Agregar Tareas Celery Personalizadas
 
