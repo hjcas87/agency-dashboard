@@ -217,6 +217,30 @@ git stash pop
 
 Ver `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` para más detalles.
 
+## Sistema de Autenticación
+
+**IMPORTANTE**: El sistema de autenticación utiliza middleware para proteger rutas. NO usar `ServerAuthGuard` en layouts protegidos.
+
+### Reglas Críticas de Autenticación
+
+1. **Middleware para protección**: Usar `middleware.ts` para verificar existencia de cookies antes de que la request llegue a la página. El middleware solo verifica la **existencia** de la cookie, no su validez.
+2. **NO usar ServerAuthGuard en layouts protegidos**: Causa loops infinitos debido a problemas de timing con cookies después de `redirect()`. El middleware ya maneja la protección básica.
+3. **Server Actions para login**: Establecer cookies solo en Server Actions, nunca en Server Components o layouts.
+4. **revalidatePath después de establecer cookie**: Siempre llamar `revalidatePath("/", "layout")` después de establecer una cookie antes de hacer `redirect()`.
+5. **Validar en página de login**: La página de login debe validar que el token sea válido (no solo que exista) usando `getCurrentUser()`.
+6. **Validación del token en componentes**: La validación del token se hace cuando los componentes necesitan datos del usuario, no en los layouts.
+
+### Flujo Correcto
+
+```
+Login → Server Action establece cookie → revalidatePath → redirect("/crm")
+                                                              ↓
+Request a /crm → Middleware verifica cookie → Si hay: permite acceso
+                                                      Si no: redirige a /login
+```
+
+Ver `docs/AUTHENTICATION_FLOW.md` para documentación completa del flujo de autenticación.
+
 ## Estructura de Features
 
 Cada feature debe tener:

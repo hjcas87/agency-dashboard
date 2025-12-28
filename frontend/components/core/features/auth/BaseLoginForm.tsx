@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useTransition } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { loginAction } from "@/app/actions/core/auth"
 import { useBranding } from "./AuthBrandingProvider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/core/ui/card"
@@ -20,6 +20,8 @@ interface BaseLoginFormProps {
  * Base login form component (core).
  * Provides functionality without hardcoded styles.
  * Styles and layout can be customized via branding config.
+ * 
+ * Uses loginAction directly as form action to allow redirect() to work correctly.
  */
 export function BaseLoginForm({
   className,
@@ -28,21 +30,8 @@ export function BaseLoginForm({
   renderFooter,
 }: BaseLoginFormProps) {
   const branding = useBranding()
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
-
-  const handleSubmit = async (formData: FormData) => {
-    setError(null)
-    startTransition(async () => {
-      const result = await loginAction(formData)
-      if (result?.error) {
-        setError(result.error)
-      } else {
-        onSuccess?.()
-        // loginAction redirige automáticamente si no hay error
-      }
-    })
-  }
+  const searchParams = useSearchParams()
+  const error = searchParams.get("error")
 
   const LogoComponent = branding.logo.component
 
@@ -95,7 +84,19 @@ export function BaseLoginForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={handleSubmit} className="space-y-5">
+        <form action={loginAction} className="space-y-5">
+          {error && (
+            <div 
+              className="p-3 rounded-lg text-sm"
+              style={{
+                backgroundColor: "rgba(239, 68, 68, 0.1)",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                color: "#dc2626",
+              }}
+            >
+              {error}
+            </div>
+          )}
           <div className="space-y-2">
             <label 
               htmlFor="email" 
@@ -110,7 +111,6 @@ export function BaseLoginForm({
               type="email"
               placeholder={branding.texts.emailPlaceholder}
               required
-              disabled={isPending}
               className="rounded-lg"
             />
           </div>
@@ -128,22 +128,9 @@ export function BaseLoginForm({
               type="password"
               placeholder={branding.texts.passwordPlaceholder}
               required
-              disabled={isPending}
               className="rounded-lg"
             />
           </div>
-          {error && (
-            <div
-              className="p-3 text-sm rounded-md border"
-              style={{
-                color: branding.colors.error,
-                backgroundColor: `${branding.colors.error}10`,
-                borderColor: `${branding.colors.error}30`,
-              }}
-            >
-              {error}
-            </div>
-          )}
           {/* Remember me checkbox - optional, shown if needed */}
           {branding.formOptions?.showRememberMe && (
             <div className="flex items-center justify-between">
@@ -184,9 +171,8 @@ export function BaseLoginForm({
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = branding.colors.primary
             }}
-            disabled={isPending}
           >
-            {isPending ? "Iniciando sesión..." : branding.texts.loginButton}
+            {branding.texts.loginButton}
           </Button>
           {renderFooter && renderFooter(branding)}
         </form>

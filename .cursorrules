@@ -211,6 +211,10 @@ def process_checkout(order_data: OrderCreate) -> Order:
 8. ❌ **Modificar modelos SQLAlchemy sin crear migraciones** - CRÍTICO
 9. ❌ **Tener diferencias entre modelos y tablas de la base de datos** - CRÍTICO
 10. ❌ Modificar la base de datos manualmente sin crear migraciones
+11. ❌ **Usar ServerAuthGuard en layouts protegidos** - CRÍTICO (causa loops infinitos, el middleware ya maneja la protección)
+12. ❌ **Modificar cookies en Server Components** - Solo permitido en Server Actions o Route Handlers
+13. ❌ **Validar token en middleware** - El middleware solo debe verificar existencia de cookie, no validez del token
+14. ❌ **Redirigir desde middleware cuando hay cookie en /login** - Causa loops si el token es inválido, dejar que la página de login maneje esto
 
 ## Flujo de Trabajo con Git: Core vs Custom
 
@@ -254,4 +258,6 @@ Ver `AGENTS.md` para el proceso detallado con comandos.
 - **Nunca** implementar sin revisar documentación de negocio relevante
 - **Nunca** modificar modelos sin crear migraciones correspondientes
 - **Nunca** dejar discrepancias entre modelos y tablas de la base de datos
+- **Nunca** usar ServerAuthGuard en layouts protegidos (el middleware ya maneja la protección)
+- **Nunca** validar token en middleware (solo verificar existencia de cookie)
 
