@@ -1,114 +1,114 @@
-# Project Brief — [Client/Project Name]
+# Project Brief — [Nombre del Cliente/Proyecto]
 
-## Purpose
-This document captures the initial agreement between the analyst and the client about the project's needs and planned development. This brief serves as the foundation for generating the solution design documentation.
+## Propósito
+Este documento captura el acuerdo inicial entre el analista y el cliente sobre las necesidades y el desarrollo planificado del proyecto. Este brief sirve como base para generar la documentación de diseño de solución.
 
-**Created by**: [Analyst Name]  
-**Date**: [Date]  
-**Client**: [Client Name]  
-**Project**: [Project Name]
-
----
-
-## Client Context
-
-### Business Overview
-Brief description of the client's business and context.
-
-### Current Situation
-- What problems or needs does the client have?
-- What are they currently doing (manual processes, existing systems, etc.)?
+**Creado por**: [Nombre del Analista]  
+**Fecha**: [Fecha]  
+**Cliente**: [Nombre del Cliente]  
+**Proyecto**: [Nombre del Proyecto]
 
 ---
 
-## Project Objectives
+## Contexto del Cliente
 
-### Primary Goals
-- [Goal 1]
-- [Goal 2]
-- [Goal 3]
+### Resumen del Negocio
+Breve descripción del negocio y contexto del cliente.
 
-### Success Criteria
-- [Criterion 1]
-- [Criterion 2]
+### Situación Actual
+- ¿Qué problemas o necesidades tiene el cliente?
+- ¿Qué están haciendo actualmente (procesos manuales, sistemas existentes, etc.)?
 
 ---
 
-## Initial Scope (High Level)
+## Objetivos del Proyecto
 
-### In Scope
-- [Feature/Capability 1]
-- [Feature/Capability 2]
-- [Feature/Capability 3]
+### Objetivos Principales
+- [Objetivo 1]
+- [Objetivo 2]
+- [Objetivo 3]
 
-### Out of Scope (for now)
-- [Excluded item 1]
-- [Excluded item 2]
-
----
-
-## Key Requirements
-
-### Functional Requirements
-- [Requirement 1]
-- [Requirement 2]
-- [Requirement 3]
-
-### Non-Functional Requirements
-- Performance: [expectations]
-- Security: [requirements]
-- Scalability: [needs]
+### Criterios de Éxito
+- [Criterio 1]
+- [Criterio 2]
 
 ---
 
-## Integrations & Automations
+## Alcance Inicial (Alto Nivel)
 
-### External Services/APIs
-- [Service 1]: [Purpose]
-- [Service 2]: [Purpose]
+### En Alcance
+- [Funcionalidad/Capacidad 1]
+- [Funcionalidad/Capacidad 2]
+- [Funcionalidad/Capacidad 3]
 
-### N8N Automations Needed
-- [Automation 1]: [Description]
-- [Automation 2]: [Description]
-
-### Background Tasks
-- [Task 1]: [Description]
-- [Task 2]: [Description]
+### Fuera de Alcance (por ahora)
+- [Elemento excluido 1]
+- [Elemento excluido 2]
 
 ---
 
-## Known Constraints
+## Requisitos Clave
 
-### Technical Constraints
-- [Constraint 1]
-- [Constraint 2]
+### Requisitos Funcionales
+- [Requisito 1]
+- [Requisito 2]
+- [Requisito 3]
 
-### Business Constraints
-- [Constraint 1]
-- [Constraint 2]
-
-### Timeline Constraints
-- [Timeline information]
-
----
-
-## Assumptions
-
-- [Assumption 1]
-- [Assumption 2]
-- [Assumption 3]
+### Requisitos No Funcionales
+- Rendimiento: [expectativas]
+- Seguridad: [requisitos]
+- Escalabilidad: [necesidades]
 
 ---
 
-## Next Steps
+## Integraciones y Automatizaciones
 
-1. Analyst creates this brief after client meeting
-2. Cursor generates `docs/solution_design/` documentation based on this brief
-3. Solution design is refined with client and analyst
-4. Once approved, Cursor generates code based on solution design
+### Servicios/APIs Externos
+- [Servicio 1]: [Propósito]
+- [Servicio 2]: [Propósito]
+
+### Automatizaciones N8N Necesarias
+- [Automatización 1]: [Descripción]
+- [Automatización 2]: [Descripción]
+
+### Tareas en Background
+- [Tarea 1]: [Descripción]
+- [Tarea 2]: [Descripción]
 
 ---
 
-## Notes
+## Restricciones Conocidas
 
-[Any additional notes, questions, or clarifications needed]
+### Restricciones Técnicas
+- [Restricción 1]
+- [Restricción 2]
+
+### Restricciones de Negocio
+- [Restricción 1]
+- [Restricción 2]
+
+### Restricciones de Tiempo
+- [Información de timeline]
+
+---
+
+## Supuestos
+
+- [Supuesto 1]
+- [Supuesto 2]
+- [Supuesto 3]
+
+---
+
+## Próximos Pasos
+
+1. El analista crea este brief después de la reunión con el cliente
+2. Cursor genera la documentación `docs/solution_design/` basado en este brief
+3. El diseño de solución se refina con el cliente y el analista
+4. Una vez aprobado, Cursor genera el código basado en el diseño de solución
+
+---
+
+## Notas
+
+[Cualquier nota adicional, preguntas o aclaraciones necesarias]
