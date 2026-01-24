@@ -34,6 +34,7 @@ pre-commit install
 ### Commit Message Validation
 
 #### **Conventional Commits Validator**
+
 - **Qué hace**: Valida que los mensajes de commit sigan el formato de Conventional Commits
 - **Cuándo**: En el hook `commit-msg` (antes de completar el commit)
 - **Formato esperado**: `<type>[optional scope]: <description>`
@@ -44,26 +45,31 @@ Ver [Conventional Commits Guide](./CONVENTIONAL_COMMITS.md) para más detalles.
 ### Backend (Python)
 
 #### 1. **Black** - Formateador de Código
+
 - **Qué hace**: Formatea código Python según estándares
 - **Archivos**: `backend/**/*.py`
 - **Configuración**: Line length = 100
 
 #### 2. **isort** - Ordenador de Imports
+
 - **Qué hace**: Ordena y organiza imports de Python
 - **Archivos**: `backend/**/*.py`
 - **Configuración**: Profile = black, line length = 100
 
 #### 3. **Ruff** - Linter
+
 - **Qué hace**: Detecta errores y problemas de estilo
 - **Archivos**: `backend/**/*.py`
 - **Configuración**: Auto-fix habilitado
 
 #### 4. **MyPy** - Type Checker
+
 - **Qué hace**: Verifica tipos estáticos
 - **Archivos**: `backend/**/*.py` (excluye tests y alembic)
 - **Configuración**: Python 3.11, ignore missing imports
 
 #### 5. **Pytest Unit Tests**
+
 - **Qué hace**: Ejecuta solo tests unitarios (rápidos)
 - **Archivos**: Detecta cambios en `backend/**/*.py`
 - **Marcador**: `-m unit`
@@ -71,16 +77,19 @@ Ver [Conventional Commits Guide](./CONVENTIONAL_COMMITS.md) para más detalles.
 ### Frontend (Next.js/TypeScript)
 
 #### 1. **Prettier** - Formateador
+
 - **Qué hace**: Formatea código TypeScript/JavaScript, JSON, CSS, Markdown
 - **Archivos**: `frontend/**/*.{ts,tsx,js,jsx,json,css,md}`
 - **Excluye**: `node_modules`, `.next`, `out`, `build`
 
 #### 2. **ESLint** - Linter
+
 - **Qué hace**: Detecta errores y problemas de código
 - **Archivos**: `frontend/**/*.{ts,tsx,js,jsx}`
 - **Configuración**: Next.js config, auto-fix habilitado
 
 #### 3. **TypeScript Type Check**
+
 - **Qué hace**: Verifica tipos de TypeScript
 - **Archivos**: `frontend/**/*.{ts,tsx}`
 - **Comando**: `npm run type-check`
@@ -102,9 +111,11 @@ Ver [Conventional Commits Guide](./CONVENTIONAL_COMMITS.md) para más detalles.
 Los hooks se ejecutan automáticamente:
 
 **Antes del commit (pre-commit):**
+
 - Formateo, linting, type checking, tests
 
 **Durante el commit (commit-msg):**
+
 - Validación del mensaje de commit (Conventional Commits)
 
 ```bash
@@ -275,4 +286,3 @@ Esto asegura que el código en el repositorio siempre cumple con los estándares
 - [Ruff Documentation](https://docs.astral.sh/ruff/)
 - [Prettier Documentation](https://prettier.io/)
 - [ESLint Documentation](https://eslint.org/)
-

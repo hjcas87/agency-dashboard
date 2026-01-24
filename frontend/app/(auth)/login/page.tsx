@@ -7,10 +7,10 @@ import { MendriFooter } from "@/components/core/ui/mendri-footer"
 import { getBrandingConfig } from "@/lib/core/config/branding"
 
 export default async function LoginPage() {
-  // Si ya está autenticado, redirigir al CRM
+  // Si ya está autenticado, redirigir a la página principal del CRM
   const user = await getCurrentUser()
   if (user) {
-    redirect("/crm")
+    redirect("/inbox")
   }
 
   const branding = getBrandingConfig()

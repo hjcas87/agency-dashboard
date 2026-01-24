@@ -198,3 +198,4 @@ Ver `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` para más detalles.
 - `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` - Estrategia de branches y flujo de git para core vs custom
 - `docs/BACKEND_ARCHITECTURE.md` - Arquitectura del backend
 
+

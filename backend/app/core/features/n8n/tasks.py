@@ -43,7 +43,8 @@ def trigger_n8n_workflow(
     
     try:
         logger.info(
-            f"Triggering N8N workflow: {webhook_path} (attempt {self.request.retries + 1}/{self.max_retries + 1})"
+            f"[cyan]Triggering N8N workflow:[/cyan] [bold]{webhook_path}[/bold] "
+            f"[dim](attempt {self.request.retries + 1}/{self.max_retries + 1})[/dim]"
         )
         
         # Usar el servicio N8N (async call en sync context)
@@ -63,23 +64,26 @@ def trigger_n8n_workflow(
                 )
             )
             
-            logger.info(f"N8N workflow triggered successfully: {webhook_path}")
+            logger.info(f"[green]✓[/green] N8N workflow triggered successfully: [bold]{webhook_path}[/bold]")
             return result
         except Exception as n8n_error:
-            logger.error(f"N8N service raised exception: {str(n8n_error)}")
+            logger.error(f"[red]✗[/red] N8N service raised exception: [yellow]{str(n8n_error)}[/yellow]")
             raise
             
     except Exception as e:
         logger.warning(
-            f"Error triggering N8N workflow {webhook_path} (attempt {self.request.retries + 1}): {str(e)}"
+            f"[yellow]⚠[/yellow] Error triggering N8N workflow [bold]{webhook_path}[/bold] "
+            f"[dim](attempt {self.request.retries + 1}):[/dim] [yellow]{str(e)}[/yellow]"
         )
         
         if self.request.retries >= self.max_retries:
             logger.error(
-                f"Failed to trigger N8N workflow {webhook_path} after {self.max_retries + 1} attempts: {str(e)}",
+                f"[red]✗[/red] Failed to trigger N8N workflow [bold]{webhook_path}[/bold] "
+                f"after [yellow]{self.max_retries + 1}[/yellow] attempts: [yellow]{str(e)}[/yellow]",
                 exc_info=True
             )
             raise
         
         raise self.retry(exc=e, countdown=2 ** self.request.retries)
+
 

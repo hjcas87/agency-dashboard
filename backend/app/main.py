@@ -8,24 +8,34 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
 from app.core.router import api_router
+from app.core.logging_config import setup_logging, get_logger
 
 # Import all models to ensure SQLAlchemy can resolve relationships
 # This must be imported before Base.metadata.create_all()
 import app.models  # noqa: F401
+
+# Setup logging with Rich
+setup_logging()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown."""
     # Startup
+    logger.info("[bold cyan]Starting up application...[/bold cyan]")
     if settings.ENVIRONMENT == "DEVELOPMENT":
+        logger.debug("Creating database tables (development mode)")
         Base.metadata.create_all(bind=engine)
+    logger.info("[bold green]✓[/bold green] Application started successfully")
     yield
-    # Shutdown (if needed in the future)
+    # Shutdown
+    logger.info("[bold yellow]Shutting down application...[/bold yellow]")
 
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
+    logger.info(f"[bold blue]Creating FastAPI app:[/bold blue] {settings.PROJECT_NAME}")
     
     # Tags metadata para organizar la documentación de Swagger
     tags_metadata = [

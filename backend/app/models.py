@@ -21,19 +21,29 @@ except ImportError:
     pass
 
 try:
-    from app.custom.features.pipelines.models import Pipeline, PipelineStage  # noqa: F401
+    from app.custom.features.pipelines.models import Pipeline  # noqa: F401
+except ImportError:
+    pass
+
+# PipelineStage and Opportunity models (Opportunity depends on Contact)
+try:
+    from app.custom.features.opportunities.models import (  # noqa: F401
+        Opportunity,
+        PipelineStage,
+        StageHistory,
+    )
+except ImportError:
+    pass
+
+# WhatsApp models (depend on Contact)
+try:
+    from app.custom.features.whatsapp.models import Conversation, Message  # noqa: F401
 except ImportError:
     pass
 
 # Lead model needs to be imported before Opportunity (which references it)
 try:
     from app.custom.features.leads.models import Lead, Touchpoint  # noqa: F401
-except ImportError:
-    pass
-
-# Then import models that depend on the above models
-try:
-    from app.custom.features.opportunities.models import Opportunity  # noqa: F401
 except ImportError:
     pass
 

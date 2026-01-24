@@ -175,6 +175,7 @@ pre-commit install
 ### Hooks Configurados
 
 **Backend (Python):**
+
 - ✅ Black (formateo)
 - ✅ isort (ordenamiento de imports)
 - ✅ Ruff (linting)
@@ -182,11 +183,13 @@ pre-commit install
 - ✅ Pytest unit tests
 
 **Frontend (Next.js/TypeScript):**
+
 - ✅ Prettier (formateo)
 - ✅ ESLint (linting)
 - ✅ TypeScript type checking
 
 **Commit Messages:**
+
 - ✅ Conventional Commits validation
 
 ### Uso
@@ -260,18 +263,18 @@ cd frontend && npm run generate-api-types:dev
 ### Uso del Cliente API
 
 ```typescript
-import { apiClient } from '@/lib/api/client'
+import { apiClient } from "@/lib/api/client";
 
 // GET request tipado
-const { data, error } = await apiClient.GET('/api/v1/users')
+const { data, error } = await apiClient.GET("/api/v1/users");
 
 // POST request tipado
-const { data, error } = await apiClient.POST('/api/v1/users', {
+const { data, error } = await apiClient.POST("/api/v1/users", {
   body: {
-    email: 'user@example.com',
-    name: 'John Doe',
+    email: "user@example.com",
+    name: "John Doe",
   },
-})
+});
 ```
 
 Ver [lib/api/README.md](./frontend/lib/api/README.md) para más detalles.
@@ -323,4 +326,3 @@ Ver [Estrategia de Testing](./docs/TESTING_STRATEGY.md) para más detalles.
 ## 🤝 Contribución
 
 Este es un boilerplate interno. Para contribuir al core, contactar al equipo de arquitectura.
-

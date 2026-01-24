@@ -1,13 +1,20 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { useSearchParams } from "next/navigation"
-import { loginAction } from "@/app/actions/core/auth"
-import { useBranding } from "./AuthBrandingProvider"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/core/ui/card"
-import { Button } from "@/components/core/ui/button"
-import { Input } from "@/components/core/ui/input"
-import { cn } from "@/lib/utils"
+import { loginAction } from '@/app/actions/core/auth'
+import { Button } from '@/components/core/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/core/ui/card'
+import { Input } from '@/components/core/ui/input'
+import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useTransition } from 'react'
+import { useBranding } from './AuthBrandingProvider'
 
 interface BaseLoginFormProps {
   className?: string
@@ -20,7 +27,7 @@ interface BaseLoginFormProps {
  * Base login form component (core).
  * Provides functionality without hardcoded styles.
  * Styles and layout can be customized via branding config.
- * 
+ *
  * Uses loginAction directly as form action to allow redirect() to work correctly.
  */
 export function BaseLoginForm({
@@ -30,38 +37,43 @@ export function BaseLoginForm({
   renderFooter,
 }: BaseLoginFormProps) {
   const branding = useBranding()
+  const router = useRouter()
   const searchParams = useSearchParams()
-  const error = searchParams.get("error")
+  const error = searchParams.get('error')
+  const [isPending, startTransition] = useTransition()
+  const [formError, setFormError] = useState<string | null>(null)
 
   const LogoComponent = branding.logo.component
 
   // Card styling from branding config
-  const cardRounded = branding.formOptions?.cardStyle?.rounded === 'xl' 
-    ? 'rounded-xl' 
-    : branding.formOptions?.cardStyle?.rounded === '2xl'
-    ? 'rounded-2xl'
-    : branding.formOptions?.cardStyle?.rounded === 'lg'
-    ? 'rounded-lg'
-    : branding.formOptions?.cardStyle?.rounded === 'md'
-    ? 'rounded-md'
-    : branding.formOptions?.cardStyle?.rounded === 'sm'
-    ? 'rounded-sm'
-    : 'rounded-lg'
-    
-  const cardShadow = branding.formOptions?.cardStyle?.shadow === 'xl'
-    ? 'shadow-xl'
-    : branding.formOptions?.cardStyle?.shadow === 'lg'
-    ? 'shadow-lg'
-    : branding.formOptions?.cardStyle?.shadow === 'md'
-    ? 'shadow-md'
-    : branding.formOptions?.cardStyle?.shadow === 'sm'
-    ? 'shadow-sm'
-    : branding.formOptions?.cardStyle?.shadow === 'none'
-    ? 'shadow-none'
-    : 'shadow-sm'
+  const cardRounded =
+    branding.formOptions?.cardStyle?.rounded === 'xl'
+      ? 'rounded-xl'
+      : branding.formOptions?.cardStyle?.rounded === '2xl'
+        ? 'rounded-2xl'
+        : branding.formOptions?.cardStyle?.rounded === 'lg'
+          ? 'rounded-lg'
+          : branding.formOptions?.cardStyle?.rounded === 'md'
+            ? 'rounded-md'
+            : branding.formOptions?.cardStyle?.rounded === 'sm'
+              ? 'rounded-sm'
+              : 'rounded-lg'
+
+  const cardShadow =
+    branding.formOptions?.cardStyle?.shadow === 'xl'
+      ? 'shadow-xl'
+      : branding.formOptions?.cardStyle?.shadow === 'lg'
+        ? 'shadow-lg'
+        : branding.formOptions?.cardStyle?.shadow === 'md'
+          ? 'shadow-md'
+          : branding.formOptions?.cardStyle?.shadow === 'sm'
+            ? 'shadow-sm'
+            : branding.formOptions?.cardStyle?.shadow === 'none'
+              ? 'shadow-none'
+              : 'shadow-sm'
 
   return (
-    <Card 
+    <Card
       className={cn(className, cardRounded, cardShadow)}
       style={{
         backgroundColor: branding.colors.cardBackground,
@@ -70,13 +82,13 @@ export function BaseLoginForm({
     >
       <CardHeader className="space-y-1">
         {renderLogo && renderLogo(branding)}
-        <CardTitle 
+        <CardTitle
           className={`text-2xl ${branding.formOptions?.textAlignment === 'left' ? 'text-left' : 'text-center'}`}
           style={{ color: branding.colors.text }}
         >
           {branding.texts.loginTitle}
         </CardTitle>
-        <CardDescription 
+        <CardDescription
           className={branding.formOptions?.textAlignment === 'left' ? 'text-left' : 'text-center'}
           style={{ color: branding.colors.textSecondary }}
         >
@@ -85,21 +97,21 @@ export function BaseLoginForm({
       </CardHeader>
       <CardContent>
         <form action={loginAction} className="space-y-5">
-          {error && (
-            <div 
+          {(error || formError) && (
+            <div
               className="p-3 rounded-lg text-sm"
               style={{
-                backgroundColor: "rgba(239, 68, 68, 0.1)",
-                border: "1px solid rgba(239, 68, 68, 0.3)",
-                color: "#dc2626",
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#dc2626',
               }}
             >
-              {error}
+              {error || formError}
             </div>
           )}
           <div className="space-y-2">
-            <label 
-              htmlFor="email" 
+            <label
+              htmlFor="email"
               className="text-sm font-medium"
               style={{ color: branding.colors.text }}
             >
@@ -115,8 +127,8 @@ export function BaseLoginForm({
             />
           </div>
           <div className="space-y-2">
-            <label 
-              htmlFor="password" 
+            <label
+              htmlFor="password"
               className="text-sm font-medium"
               style={{ color: branding.colors.text }}
             >
@@ -142,10 +154,7 @@ export function BaseLoginForm({
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   style={{ accentColor: branding.colors.primary }}
                 />
-                <span 
-                  className="text-sm"
-                  style={{ color: branding.colors.text }}
-                >
+                <span className="text-sm" style={{ color: branding.colors.text }}>
                   {branding.texts.rememberMe || 'Recordarme'}
                 </span>
               </label>
@@ -160,19 +169,24 @@ export function BaseLoginForm({
           )}
           <Button
             type="submit"
-            className="w-full cursor-pointer rounded-lg"
+            disabled={isPending}
+            className="w-full cursor-pointer rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: branding.colors.primary,
-              color: "#ffffff",
+              color: '#ffffff',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = branding.colors.primaryHover
+            onMouseEnter={e => {
+              if (!isPending) {
+                e.currentTarget.style.backgroundColor = branding.colors.primaryHover
+              }
             }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = branding.colors.primary
+            onMouseLeave={e => {
+              if (!isPending) {
+                e.currentTarget.style.backgroundColor = branding.colors.primary
+              }
             }}
           >
-            {branding.texts.loginButton}
+            {isPending ? 'Iniciando sesión...' : branding.texts.loginButton}
           </Button>
           {renderFooter && renderFooter(branding)}
         </form>
@@ -180,4 +194,3 @@ export function BaseLoginForm({
     </Card>
   )
 }
-

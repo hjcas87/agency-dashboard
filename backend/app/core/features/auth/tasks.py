@@ -39,8 +39,8 @@ def send_email_task(
     """
     try:
         logger.info(
-            f"Sending email to {to} with subject '{subject}' "
-            f"(attempt {self.request.retries + 1}/{self.max_retries + 1})"
+            f"[cyan]Sending email[/cyan] to [bold]{to}[/bold] with subject [yellow]'{subject}'[/yellow] "
+            f"[dim](attempt {self.request.retries + 1}/{self.max_retries + 1})[/dim]"
         )
         
         # Obtener servicio de email
@@ -64,22 +64,23 @@ def send_email_task(
             )
             
             if result:
-                logger.info(f"Email sent successfully to {to}")
+                logger.info(f"[green]✓[/green] Email sent successfully to [cyan]{to}[/cyan]")
                 return {"success": True, "to": to, "subject": subject}
             else:
-                logger.warning(f"Email sending returned False for {to}")
+                logger.warning(f"[yellow]⚠[/yellow] Email sending returned False for [cyan]{to}[/cyan]")
                 # Reintentar si falló
                 raise Exception("Email sending returned False")
         except Exception as email_error:
             # Si el servicio de email lanzó una excepción, la propagamos
             # para que Celery pueda hacer retry
-            logger.error(f"Email service raised exception: {str(email_error)}")
+            logger.error(f"[red]✗[/red] Email service raised exception: [yellow]{str(email_error)}[/yellow]")
             raise
             
     except Exception as e:
         # Reintentar en caso de error
         logger.warning(
-            f"Error sending email to {to} (attempt {self.request.retries + 1}): {str(e)}"
+            f"[yellow]⚠[/yellow] Error sending email to [cyan]{to}[/cyan] "
+            f"[dim](attempt {self.request.retries + 1}):[/dim] [yellow]{str(e)}[/yellow]"
         )
         
         # Si ya alcanzamos el máximo de reintentos, registrar el error pero no fallar
@@ -92,4 +93,5 @@ def send_email_task(
         
         # Reintentar con exponential backoff
         raise self.retry(exc=e, countdown=2 ** self.request.retries)
+
 

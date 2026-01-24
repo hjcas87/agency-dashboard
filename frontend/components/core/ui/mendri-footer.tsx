@@ -4,10 +4,10 @@ import Image from 'next/image'
 import { useState } from 'react'
 
 /**
- * Mendri watermark logo component.
- * Should be rendered outside of page-specific layouts to avoid reloading on navigation.
+ * Mendri footer component.
+ * Displays the Mendri logo and "Desarrollado por" text at the bottom of auth pages.
  */
-export function MendriWatermark() {
+export function MendriFooter() {
   const [imageError, setImageError] = useState(false)
 
   return (

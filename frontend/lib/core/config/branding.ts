@@ -142,7 +142,15 @@ export const defaultBrandingConfig: AuthBrandingConfig = {
 export function getBrandingConfig(): AuthBrandingConfig {
   try {
     // Try to import custom branding config
-    const customBranding = require("@/lib/custom/features/auth/branding")
+    // Using dynamic require with error handling to avoid build-time errors
+    let customBranding: any
+    try {
+      customBranding = require("@/lib/custom/features/auth/branding")
+    } catch (requireError) {
+      // File doesn't exist or can't be loaded, use defaults
+      return defaultBrandingConfig
+    }
+    
     if (customBranding?.brandingConfig) {
       // Merge with defaults (custom overrides defaults)
       return {
@@ -162,8 +170,9 @@ export function getBrandingConfig(): AuthBrandingConfig {
         },
       }
     }
-  } catch {
-    // Custom branding not found, use defaults
+  } catch (error) {
+    // Any other error, use defaults
+    console.warn("Error loading custom branding config, using defaults:", error)
   }
   
   return defaultBrandingConfig

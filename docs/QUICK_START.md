@@ -245,4 +245,3 @@ docker-compose restart postgres
 - [Arquitectura](./ARCHITECTURE.md)
 - [Testing Strategy](./TESTING_STRATEGY.md)
 - [Backend Architecture](./BACKEND_ARCHITECTURE.md)
-

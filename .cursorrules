@@ -41,13 +41,13 @@ backend/app/
 - **Linting**: Ruff (reemplaza flake8)
 - **Type hints**: Usar type hints siempre que sea posible
   - **IMPORTANTE**: Python 3.11+ - Usar tipos built-in, NO importar de typing:
-    - `list[T]` en lugar de `List[T]` 
+    - `list[T]` en lugar de `List[T]`
     - `dict[K, V]` en lugar de `Dict[K, V]`
     - `tuple[T, ...]` en lugar de `Tuple[T, ...]`
     - `T | None` en lugar de `Optional[T]`
     - Solo importar de `typing` cuando sea necesario (ej: `Any`, `Callable`, `TypeVar`, `Generic`)
 - **Docstrings**: Google style para funciones públicas
-- **Naming**: 
+- **Naming**:
   - Clases: PascalCase
   - Funciones/variables: snake_case
   - Constantes: UPPER_SNAKE_CASE
@@ -72,6 +72,7 @@ backend/app/
 ## Estructura de un Feature
 
 Cada feature debe tener:
+
 ```
 feature_name/
 ├── routes.py      # Endpoints FastAPI
@@ -260,4 +261,3 @@ Ver `AGENTS.md` para el proceso detallado con comandos.
 - **Nunca** dejar discrepancias entre modelos y tablas de la base de datos
 - **Nunca** usar ServerAuthGuard en layouts protegidos (el middleware ya maneja la protección)
 - **Nunca** validar token en middleware (solo verificar existencia de cookie)
-
