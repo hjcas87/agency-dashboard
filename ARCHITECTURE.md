@@ -1,215 +1,263 @@
-# Arquitectura del Sistema
+# Architecture — Web Application Boilerplate
 
-## Visión General
+## Purpose
 
-El sistema está diseñado con una **arquitectura modular por features**, siguiendo principios de Clean Architecture y Domain-Driven Design.
+This repository is a reusable, dev-first template for building enterprise-grade web applications with frontend, backend, and automation capabilities.
 
-> **¿Por qué Features y no Modules?** Ver [Decisiones Arquitectónicas](./ARCHITECTURE_DECISIONS.md) para una comparación detallada.
+It is designed to be forked per client/project while keeping a stable core and allowing safe customization.
 
-## Estructura del Backend
+Key properties:
+- Full-stack web application (Next.js frontend + FastAPI backend)
+- Modular architecture with clear core/custom separation
+- Automation-ready (N8N integration, Celery background tasks)
+- Fork-friendly: custom code lives in dedicated areas; core stays stable
+- Production-ready infrastructure (Docker, PostgreSQL, Kafka)
 
-```
-backend/app/
-├── core/                    # Módulos base (NO modificar en forks)
-│   ├── features/            # Features core autocontenidos
-│   │   ├── n8n/            # Feature de N8N
-│   │   │   ├── routes.py   # Endpoints
-│   │   │   ├── schemas.py  # DTOs
-│   │   │   ├── service.py  # Lógica de negocio
-│   │   │   ├── tasks.py    # Celery tasks (opcional)
-│   │   │   └── README.md
-│   │   ├── auth/           # Feature de autenticación
-│   │   │   └── tasks.py    # Tasks de auth (envío de emails, etc.)
-│   │   └── health/         # Feature de health check
-│   ├── config.py           # Configuración
-│   ├── database.py         # DB setup
-│   ├── router.py           # Router principal
-│   └── tasks/              # Configuración de Celery (celery_app.py)
-├── custom/                  # Módulos personalizados (modificar aquí)
-│   └── features/           # Features custom
-│       └── <feature>/
-│           └── tasks.py    # Tasks específicas del feature
-└── shared/                 # Código compartido
-    ├── interfaces/         # Interfaces y contratos
-    ├── services/           # Servicios compartidos
-    └── repositories/       # Repositorios base
-```
+## Governance (roles, skills, and solution docs)
 
-## Arquitectura por Features
+- Agent behavior and enforcement rules: `AGENTS.md`
+- Skills and procedures: `docs/agents/skills/`
+- Roles and responsibilities: `docs/agents/roles/`
+- Project brief template: `docs/PROJECT_BRIEF.template.md`
+- Client-agreed functional definition (before development): `docs/solution_design/`
 
-Cada feature es autocontenido y sigue esta estructura:
+## Core principles
+
+1. **Core/Custom Separation**: Generic, reusable code in `core/`. Client-specific code in `custom/`.
+2. **Feature-Based Architecture**: Each feature is self-contained (routes, schemas, service, repository, models, tasks).
+3. **Fork Safety**: Client-specific changes should not modify core unless unavoidable.
+4. **Type Safety**: Full TypeScript (frontend) and Python type hints (backend).
+5. **Database Synchronization**: SQLAlchemy models MUST be synchronized with database tables via Alembic migrations.
+6. **Testing**: Maintain > 80% test coverage, follow TDD principles.
+
+## Repository layout
 
 ```
-feature_name/
-├── routes.py       # Endpoints FastAPI (capa de presentación)
-├── schemas.py      # DTOs y validación (Pydantic)
-├── service.py      # Lógica de negocio (capa de aplicación)
-├── repository.py  # Acceso a datos (capa de dominio, opcional)
-├── models.py       # Modelos de dominio (SQLAlchemy, opcional)
-├── tasks.py        # Celery tasks (opcional, si necesita tareas en background)
-└── README.md       # Documentación
+.
+├── frontend/                    # Next.js application
+│   ├── app/                    # Next.js App Router
+│   │   ├── (auth)/            # Route group: Public auth routes
+│   │   │   ├── login/
+│   │   │   └── reset-password/
+│   │   ├── (private)/         # Route group: Protected routes
+│   │   │   ├── layout.tsx     # Core - Auth check (NOT modifiable)
+│   │   │   ├── page.tsx       # Custom - Home (each fork can override)
+│   │   │   └── (custom)/      # Core - Directory for custom routes
+│   │   │       └── [pages]    # Custom - Client-specific pages
+│   │   ├── api/               # API routes
+│   │   │   ├── (core)/        # Core API endpoints (NOT modifiable)
+│   │   │   │   ├── auth/      # Authentication endpoints
+│   │   │   │   └── proxy/     # Generic proxy
+│   │   │   └── (custom)/      # Custom API endpoints (modifiable)
+│   │   ├── actions/           # Server Actions
+│   │   │   ├── core/          # Core actions (NOT modifiable)
+│   │   │   └── custom/        # Custom actions (modifiable)
+│   │   └── layout.tsx        # Root layout
+│   ├── components/            # React components
+│   │   ├── core/              # Core components (NOT modifiable)
+│   │   │   ├── ui/            # shadcn/ui components
+│   │   │   └── features/      # Core feature components
+│   │   └── custom/             # Custom components (modifiable)
+│   │       └── features/       # Custom feature components
+│   └── lib/                   # Utilities
+│       ├── core/              # Core utilities (NOT modifiable)
+│       └── custom/             # Custom utilities (modifiable)
+│
+├── backend/                    # FastAPI application
+│   ├── app/
+│   │   ├── core/               # Core modules (NOT modifiable)
+│   │   │   ├── features/       # Core features (auth, users, health, n8n)
+│   │   │   │   ├── auth/
+│   │   │   │   │   ├── routes.py
+│   │   │   │   │   ├── schemas.py
+│   │   │   │   │   ├── service.py
+│   │   │   │   │   ├── models.py
+│   │   │   │   │   └── tasks.py  # Celery tasks (if needed)
+│   │   │   │   └── n8n/
+│   │   │   ├── tasks/          # Celery configuration
+│   │   │   │   └── celery_app.py
+│   │   │   └── router.py       # Main router
+│   │   ├── custom/             # Custom modules (modifiable)
+│   │   │   └── features/       # Custom features
+│   │   │       └── <feature>/
+│   │   │           ├── routes.py
+│   │   │           ├── schemas.py
+│   │   │           ├── service.py
+│   │   │           ├── repository.py
+│   │   │           ├── models.py
+│   │   │           └── tasks.py
+│   │   └── shared/             # Shared code
+│   │       ├── interfaces/      # Interfaces (IMessageBroker, IEmailService)
+│   │       ├── services/       # Shared services (N8NService, EmailService)
+│   │       └── repositories/   # BaseRepository
+│   └── alembic/                # Database migrations
+│
+├── automation/                 # N8N workflows
+│   └── workflows/             # Exported N8N workflows
+│
+├── docs/                       # Documentation
+│   ├── agents/                 # Agent roles and skills
+│   ├── solution_design/        # Solution design templates
+│   └── PROJECT_BRIEF.template.md  # Template for project brief
+│
+└── docker-compose.yml          # Development environment
 ```
 
-**Nota sobre Tasks**: Las tasks de Celery deben ser autocontenidas dentro de cada feature. Cada feature que necesite tareas en background debe tener su propio `tasks.py`. Celery las descubrirá automáticamente usando `autodiscover_tasks` configurado en `app/core/tasks/celery_app.py`.
+## Development workflow
 
-### Flujo de Request
+### Creating a new client fork
 
+1. **Analyst meets with client** → Agrees on high-level needs
+2. **Create PROJECT_BRIEF** → Copy `docs/PROJECT_BRIEF.template.md` to `docs/PROJECT_BRIEF.md` and fill it
+3. **Cursor generates solution_design/** → Based on PROJECT_BRIEF
+4. **Refine with client** → Iterate on solution design until approved
+5. **Cursor generates code** → Based on approved solution design
+
+### Adding a new feature
+
+**Backend:**
 ```
-Request → Routes → Service → Repository → Database
-                ↓
-            External Services (N8N, etc.)
-                ↓
-            Message Broker (Kafka)
-```
-
-## Capas de la Arquitectura
-
-### 1. Routes (Presentación)
-- Maneja HTTP requests/responses
-- Valida entrada con Pydantic schemas
-- Dependency injection de servicios
-
-### 2. Service (Aplicación)
-- Contiene lógica de negocio
-- Orquesta llamadas a repositorios y servicios externos
-- Maneja transacciones
-
-### 3. Repository (Dominio)
-- Abstrae acceso a datos
-- Implementa patrón Repository
-- Hereda de `BaseRepository` para operaciones comunes
-
-### 4. Models (Dominio)
-- Modelos SQLAlchemy
-- Representan entidades del dominio
-
-**⚠️ REGLA CRÍTICA**: Los modelos SQLAlchemy DEBEN estar siempre sincronizados con las tablas de la base de datos. NO debe haber diferencias entre los campos definidos en los modelos y las columnas en las tablas. Usar migraciones de Alembic para mantener la sincronización.
-
-## Servicios Compartidos
-
-### Interfaces
-
-Definen contratos para servicios:
-
-- `IMessageBroker` - Para message brokers (Kafka, RabbitMQ, etc.)
-- `IExternalService` - Para servicios externos (N8N, APIs, etc.)
-
-### Implementaciones
-
-- `KafkaBroker` - Implementación de Kafka
-- `N8NService` - Wrapper para N8N
-
-### Repositorios
-
-- `BaseRepository` - Repositorio genérico con CRUD básico
-
-## Message Broker: Kafka
-
-Kafka se usa para:
-- Mensajería asíncrona robusta
-- Background tasks con Celery
-- Event-driven architecture
-
-### Ventajas sobre Redis
-
-- **Persistencia**: Mensajes persisten en disco
-- **Escalabilidad**: Mejor para sistemas distribuidos
-- **Throughput**: Mayor capacidad de procesamiento
-- **Replicación**: Replicación nativa de mensajes
-
-## Patrones de Diseño
-
-### Dependency Injection
-FastAPI dependencies para inyectar servicios:
-
-```python
-def get_service() -> MyService:
-    return MyService()
-
-@router.get("/endpoint")
-async def endpoint(service: MyService = Depends(get_service)):
-    return service.do_something()
+backend/app/custom/features/<feature_name>/
+├── __init__.py
+├── routes.py          # FastAPI endpoints
+├── schemas.py         # Pydantic schemas
+├── service.py         # Business logic
+├── repository.py      # Data access (optional)
+├── models.py          # SQLAlchemy models (optional)
+├── tasks.py           # Celery tasks (optional)
+└── README.md          # Feature documentation
 ```
 
-### Repository Pattern
-Abstrae acceso a datos:
+**Frontend:**
+- Pages: `frontend/app/(private)/(custom)/<feature>/page.tsx`
+- Components: `frontend/components/custom/features/<feature>/`
+- Services: `frontend/lib/custom/features/<feature>/`
 
-```python
-class UserRepository(BaseRepository[User]):
-    def get_by_email(self, email: str) -> Optional[User]:
-        return self.db.query(self.model).filter(
-            self.model.email == email
-        ).first()
-```
+## Fork strategy (how to avoid breaking downstream forks)
 
-### Service Layer
-Separa lógica de negocio:
+### Stable zone (do not modify in forks)
 
-```python
-class UserService:
-    def __init__(self, user_repo: UserRepository):
-        self.user_repo = user_repo
-    
-    def create_user(self, user_data: dict) -> User:
-        # Validaciones, transformaciones, etc.
-        return self.user_repo.create(user_data)
-```
+- `frontend/components/core/` - Base UI components
+- `frontend/app/actions/core/` - Core server actions
+- `frontend/app/api/(core)/` - Core API endpoints
+- `frontend/app/(private)/layout.tsx` - Private layout
+- `backend/app/core/` - Core features and infrastructure
+- `backend/app/shared/` - Shared interfaces and services
 
-### Wrapper Pattern
-Envuelve servicios externos:
+**Rule**: If a change cannot benefit multiple clients, it does not belong in `core/`.
 
-```python
-class N8NService(IExternalService):
-    async def call(self, endpoint: str, ...):
-        # Implementación específica de N8N
-```
+### Custom zone (safe to change)
 
-## Extensión
+- `frontend/components/custom/` - Custom components
+- `frontend/app/(private)/(custom)/` - Custom pages
+- `frontend/app/actions/custom/` - Custom server actions
+- `frontend/app/api/(custom)/` - Custom API endpoints
+- `backend/app/custom/features/` - Custom features
 
-### Agregar un Feature Custom
+### Extending core without modifying it
 
-1. Crear estructura en `app/custom/features/my_feature/`
-2. Implementar routes, schemas, service
-3. Registrar router en `app/custom/features/__init__.py`
+- Create new features in `custom/features/`
+- Use interfaces from `shared/interfaces/`
+- Implement services in `shared/services/`
+- Use dependency injection for flexibility
 
-### Agregar un Servicio Compartido
+If a core change is unavoidable:
+- Keep it backward compatible
+- Document it
+- Add tests
+- Commit to `main` first, then update client branches
 
-1. Definir interface en `app/shared/interfaces/`
-2. Implementar en `app/shared/services/`
-3. Usar dependency injection en features
+## Testing strategy
 
-## Escalabilidad
+- **Unit tests**: Pure logic, services, utilities (fast, no external dependencies)
+- **Integration tests**: API endpoints, database operations, external services (mocked)
+- **E2E tests**: Full user flows (optional, for critical paths)
+- **Coverage target**: > 80%
 
-### Horizontal Scaling
-- FastAPI con múltiples workers
-- Celery workers escalables
-- Kafka con múltiples particiones
+## Database strategy
 
-### Caching
-- Implementar caching en services cuando sea necesario
-- Usar Redis para cache (opcional, separado del message broker)
+- **ORM**: SQLAlchemy 2.0
+- **Migrations**: Alembic
+- **Critical rule**: Models MUST be synchronized with database tables
+- **Workflow**: Modify model → Create Alembic migration → Run migration → Verify sync
 
-### Database
-- Connection pooling con SQLAlchemy
-- Migraciones con Alembic
-- Índices apropiados
+## Deployment strategy
 
-## Testing
+- **Development**: Docker Compose (all services)
+- **Production**: Docker Compose with Traefik labels
+- **Services**: Frontend (Next.js), Backend (FastAPI), PostgreSQL, Kafka, N8N, Celery, Nginx
 
-Estructura recomendada:
+## Technology stack
 
-```
-tests/
-├── core/
-│   └── features/
-│       ├── test_n8n_routes.py
-│       └── test_n8n_service.py
-├── custom/
-└── conftest.py
-```
+### Frontend
+- **Framework**: Next.js 15+ (App Router)
+- **UI Library**: React 19
+- **Styling**: Tailwind CSS
+- **Components**: shadcn/ui
+- **Language**: TypeScript
 
-Usar fixtures para:
-- Database sessions
-- Test client
-- Mock de servicios externos
+### Backend
+- **Framework**: FastAPI
+- **ORM**: SQLAlchemy 2.0
+- **Migrations**: Alembic
+- **Language**: Python 3.11+
+- **Package Manager**: uv
 
+### Infrastructure
+- **Database**: PostgreSQL
+- **Message Broker**: Kafka
+- **Background Tasks**: Celery
+- **Automation**: N8N (self-hosted)
+- **Reverse Proxy**: Nginx
+
+## Python standards
+
+- Python 3.11+ only
+- Use built-in generics (`list[str]`, `dict[str, int]`) and unions (`str | None`)
+- Do NOT import types from `typing` (except `Any`, `Callable`, `TypeVar`, `Generic`)
+- All functions and methods must have typed inputs and return values
+- No imports inside functions/methods; module-level imports only
+- Formatting: Black (line-length=100), isort (profile=black), Ruff (linting)
+
+## TypeScript standards
+
+- Strict mode enabled
+- No `any` types (use `unknown` if needed)
+- Generate API types from OpenAPI schema
+- Use Server Components by default
+- Use `'use client'` only when needed (interactivity, hooks, browser APIs)
+
+## Dependency management
+
+### Backend (Python)
+- Use `uv` for package management
+- `pyproject.toml` defines dependencies
+- `uv.lock` ensures reproducible builds
+- Commands: `uv add <package>`, `uv lock`, `uv sync`
+
+### Frontend (Node.js)
+- Use `npm` for package management
+- `package.json` defines dependencies
+- `package-lock.json` ensures reproducible builds
+- Commands: `npm install`, `npm run <script>`
+
+## Git workflow
+
+### Core changes
+1. Identify changes in `core/`
+2. Commit to current branch (temporary)
+3. Switch to `main` and cherry-pick/merge
+4. Return to client branch and merge from `main`
+5. `.gitattributes` automatically resolves conflicts
+
+### Custom changes
+- Commit directly to client branch
+- No need to go through `main`
+
+## Documentation updates
+
+When making core changes:
+- Update `ARCHITECTURE.md` if structure changes
+- Update `AGENTS.md` if workflows/conventions change
+- Update relevant skills/roles if procedures change
+- Only update if the change is significant and affects how agents/developers work

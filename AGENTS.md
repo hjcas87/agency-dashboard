@@ -1,390 +1,360 @@
-# Instrucciones para Agentes de IA (Codex, Cursor)
+# Agents Guide — Web Application Boilerplate
 
-Este archivo proporciona instrucciones específicas para agentes de IA (Codex y Cursor) que trabajan en este proyecto.
+This repo is a reusable template for enterprise-grade web applications with frontend, backend, and automation capabilities.
 
-> **Nota**: Cursor también lee `.cursorrules` en la raíz del proyecto. Este archivo complementa esas reglas con contexto adicional.
+Agents must follow the architecture boundaries to keep forks and customizations safe.
 
-## Estructura del Proyecto
+## Mission
 
-- **Código fuente Backend**: `backend/app/`
-- **Código fuente Frontend**: `frontend/app/`
-- **Tests**: `backend/tests/`
-- **Documentación**: `docs/`
-- **Documentación de Negocio**: `docs/business/` (requisitos, diagramas, diseños)
+Help build, extend, and maintain web applications while preserving:
+- clean separation: core vs custom (frontend and backend)
+- type safety: TypeScript (frontend) and Python type hints (backend)
+- fork-friendly customization patterns
+- production-ready code quality
 
-## Comandos de Prueba
+## Required reading (MANDATORY)
 
+Before proposing changes, the agent MUST read:
+- `ARCHITECTURE.md`
+- `docs/agents/skills/README.md`
+- `docs/solution_design/README.md` (when working on solution definition)
+- `docs/PROJECT_BRIEF.template.md` (when starting a new client project)
+
+## Repository boundaries (STRICT)
+
+### Frontend
+
+**1) `components/core/` (stable)**
+- Base UI components (shadcn/ui)
+- Core feature components
+- Do not add client-specific behavior here
+- Changes must be generic, backward-compatible, and tested
+
+**2) `components/custom/` (custom)**
+- Client-specific components
+- Custom feature components
+- This is the default place for client UI components
+
+**3) `app/actions/core/` (stable)**
+- Core server actions (auth, etc.)
+- Do not modify in forks
+
+**4) `app/actions/custom/` (custom)**
+- Custom server actions
+- Client-specific server logic
+
+**5) `app/api/(core)/` (stable)**
+- Core API endpoints (auth, proxy)
+- Do not modify in forks
+
+**6) `app/api/(custom)/` (custom)**
+- Custom API endpoints
+- Client-specific API routes
+
+**7) `app/(private)/(custom)/` (custom)**
+- Custom pages for client
+- All routes here are protected by `(private)/layout.tsx`
+
+**8) `app/(private)/page.tsx` (custom)**
+- Home dashboard (each fork can override)
+
+**9) `app/(private)/layout.tsx` (stable)**
+- Authentication check (do not modify in forks)
+
+### Backend
+
+**1) `app/core/` (stable)**
+- Core features (auth, users, health, n8n)
+- Core infrastructure (tasks, router)
+- Do not add client-specific behavior here
+- Changes must be generic, backward-compatible, and tested
+
+**2) `app/custom/features/` (custom)**
+- Client-specific features
+- This is the default place to implement new features
+
+**3) `app/shared/` (stable)**
+- Shared interfaces and services
+- Base repositories
+- Do not add client-specific logic here
+
+If unsure where code belongs:
+- business-specific → `custom/features/`
+- generic, reusable → `core/features/`
+- shared utilities → `shared/`
+
+## Agent Roles (MANDATORY)
+
+This repository defines explicit agent roles under `docs/agents/roles/`.
+
+### Default role
+
+If the user does not specify a role, the agent MUST assume:
+- **Feature-Developer**
+
+This default role is defined as an alias under:
+- `docs/agents/roles/default.md`
+
+### Auto role selection
+
+The agent MUST switch roles based on the task:
+- Frontend architecture or Next.js/React decisions → `Frontend-Architect`
+- Backend architecture or FastAPI decisions → `Backend-Architect`
+- Reviewing changes / PR review / quality gate → `Code-Reviewer`
+- Implementing new features or client changes → `Feature-Developer`
+- Creating or updating solution definition docs (requirements, scope, diagrams, user stories) → `Solution-Designer`
+
+### Role invocation rule
+
+Before planning or editing code, the agent MUST:
+1. Select the role (default or auto-selected),
+2. Follow the role's priorities and constraints,
+3. Apply the Skills Protocol and triggers.
+
+## Dependency Management (STRICT)
+
+### Backend (Python)
+
+This repository uses **uv** as the only supported dependency manager.
+
+Rules:
+- Dependencies MUST be added using `uv add <package>`.
+- The lockfile (`uv.lock`) MUST be updated using `uv lock`.
+- Do NOT use:
+  - `pip install`
+  - `requirements.txt`
+  - `poetry add`
+- Do NOT edit `pyproject.toml` dependencies manually.
+- Dependencies MUST be installed using `uv sync` (uses `uv.lock`).
+
+Whenever dependencies are added, removed, or upgraded:
+1. Run `uv add <package>` (or `uv add --dev <package>`).
+2. Run `uv lock`.
+3. Commit both `pyproject.toml` and `uv.lock`.
+
+### Frontend (Node.js)
+
+This repository uses **npm** for package management.
+
+Rules:
+- Dependencies MUST be added using `npm install <package>`.
+- The lockfile (`package-lock.json`) is automatically updated.
+- Do NOT manually edit `package.json` version numbers.
+- Use `npm install` to sync dependencies.
+
+Violations of these rules are considered **Blockers** in review.
+
+## Skills Protocol (MANDATORY)
+
+Skills are defined under `docs/agents/skills/`.
+
+For any task, the agent MUST:
+1. Identify the task category.
+2. Check if a matching skill exists.
+3. Follow the skill steps in order.
+4. Perform the skill "Validation" before declaring completion.
+5. Only deviate if explicitly instructed.
+
+If multiple skills apply, follow this priority:
+**safety/debug → boundaries → implementation**
+
+Skills are identified by **name**, not by numeric order.
+
+## Skill Triggers (STRICT)
+
+The agent MUST invoke the corresponding skill when any of the following occurs:
+
+### Solution Design
+- Creating or updating solution definition, scope, diagrams, or user stories →
+  `solution_design.md` (Role: Solution Designer)
+
+### Features
+- Adding a new backend feature →
+  `add_backend_feature.md`
+- Adding a new frontend feature →
+  `add_frontend_feature.md`
+- Adding a new full-stack feature →
+  `add_feature.md`
+
+### Integrations
+- Adding a new external service integration →
+  `add_integration.md`
+- Adding a new N8N workflow →
+  `add_n8n_workflow.md`
+- Adding Celery background tasks →
+  `add_celery_task.md`
+
+### Database
+- Modifying SQLAlchemy models →
+  `add_database_migration.md`
+
+### Client Setup
+- Creating a new client fork →
+  `setup_new_client_fork.md`
+
+### Reviews / Quality Gate
+- Reviewing changes, PRs, or acting as a quality gate →
+  `review_feature.md`
+
+### Deployment
+- Preparing deployment, migrations, or release →
+  `deploy.md`
+
+### Skills Maintenance
+- Adding or updating skills or conventions →
+  `add_or_update_skill.md`
+
+### Enforcement
+- When a skill is triggered, its steps MUST be followed in order.
+- Validation MUST be completed before declaring success.
+- If a step cannot be executed, the agent must stop and ask for clarification.
+
+## Skill Trigger Map
+
+| Situation | Skill |
+|---|---|
+| Define solution requirements, scope, diagrams, user stories | solution_design |
+| Add new backend feature | add_backend_feature |
+| Add new frontend feature | add_frontend_feature |
+| Add new full-stack feature | add_feature |
+| Add external service integration | add_integration |
+| Add N8N workflow | add_n8n_workflow |
+| Add Celery background task | add_celery_task |
+| Modify database models | add_database_migration |
+| Create new client fork | setup_new_client_fork |
+| Review changes / PR / quality gate | review_feature |
+| Prepare deployment or release | deploy |
+| Add or update skills/conventions | add_or_update_skill |
+
+Skipping an existing skill is considered an error.
+
+Skills must follow the convention documented in:
+- `docs/agents/skills/README.md`
+
+## Coding rules (STRICT)
+
+### General
+1. Follow project conventions strictly (naming, spacing, imports, formatting).
+2. No hardcoded values; use configuration files or environment variables.
+3. Use structured logging (no `print` statements).
+4. All imports must be at module level (no imports inside functions/methods).
+
+### Python (Backend)
+5. Python version is **3.11+**.
+6. Do NOT use types imported from `typing`:
+   - ❌ `List`, `Dict`, `Tuple`, `Set`, `Optional`, `Union`
+   - ❌ `from typing import ...`
+7. Use built-in generics and modern syntax:
+   - ✅ `list[str]`
+   - ✅ `dict[str, int]`
+   - ✅ `str | None`
+8. All functions and methods MUST have:
+   - typed inputs
+   - typed return value (no implicit `Any`)
+9. Formatting: Black (line-length=100), isort (profile=black), Ruff (linting)
+10. Database models MUST be synchronized with database tables via Alembic migrations
+
+### TypeScript (Frontend)
+11. TypeScript strict mode enabled.
+12. No `any` types (use `unknown` if needed).
+13. Use Server Components by default.
+14. Use `'use client'` only when needed (interactivity, hooks, browser APIs).
+15. Generate API types from OpenAPI schema: `npm run generate-api-types`
+16. Formatting: Prettier (project config)
+
+### Error handling
+17. Exceptions must not be silently swallowed.
+18. Provide meaningful error messages.
+19. Log errors appropriately (structured logging).
+
+Violations of these rules are considered blockers during review.
+
+## Fork-friendly development workflow
+
+When creating a new client project:
+
+1. **Analyst creates PROJECT_BRIEF** → Copy `docs/PROJECT_BRIEF.template.md` to `docs/PROJECT_BRIEF.md`
+2. **Cursor generates solution_design/** → Based on PROJECT_BRIEF
+3. **Refine with client** → Iterate until approved
+4. **Cursor generates code** → Based on approved solution design
+5. **Implement features** → In `custom/features/` (backend) and `custom/` (frontend)
+6. **Do not modify core** → Unless strictly necessary and backward-compatible
+
+## Definition of Done
+
+- Code compiles and passes type checks (TypeScript + Python).
+- Unit tests exist for pure logic.
+- Integration tests exist for API endpoints and database operations.
+- No architecture boundary violations (core vs custom).
+- Database models are synchronized with tables (Alembic migrations).
+- Documentation updated if needed.
+
+## Commands (recommended)
+
+### Development
+
+**Backend:**
 ```bash
-# Ejecutar tests
-cd backend && uv run pytest
+# Install dependencies
+cd backend && uv sync
 
-# Solo unit tests
-uv run pytest -m unit
+# Run development server
+uv run uvicorn app.main:app --reload
 
-# Solo integration tests
-uv run pytest -m integration
+# Run tests
+uv run pytest
 
-# Con coverage
+# Run tests with coverage
 uv run pytest --cov=app --cov-report=html
+
+# Format code
+uv run black app && uv run isort app
+
+# Create database migration
+uv run alembic revision --autogenerate -m "Description"
+uv run alembic upgrade head
 ```
 
-## Prácticas Recomendadas
-
-- Escribir documentación para cada función pública
-- Seguir convenciones de código (ver `.cursorrules`)
-- Mantener cobertura de tests > 80%
-- Usar type hints siempre
-- Documentar decisiones arquitectónicas
-
-## Documentación de Negocio
-
-**IMPORTANTE**: Antes de implementar funcionalidades, SIEMPRE consultar:
-
-1. **`docs/business/requirements/`** - Requisitos funcionales, user stories, casos de uso
-2. **`docs/business/diagrams/`** - Diagramas de flujo, arquitectura, secuencia, ER
-3. **`docs/business/designs/`** - Diseños de UI/UX (Figma, mockups, wireframes)
-4. **`docs/business/specs/`** - Especificaciones técnicas de negocio, APIs, modelos
-
-### Cómo Usar la Documentación de Negocio
-
-- **Diagramas (PNG, SVG)**:
-
-  - Referenciar diagramas al implementar flujos de negocio
-  - Leer descripciones en archivos `.md` asociados
-  - Seguir flujos especificados en los diagramas
-
-- **Diseños Figma/PDFs/Imágenes**:
-
-  - Seguir componentes, estilos y layouts especificados
-  - Consultar archivos `.md` que describen los diseños
-  - Implementar UI según mockups y wireframes
-
-- **Requisitos (Markdown)**:
-
-  - Verificar que la implementación cumple todos los requisitos
-  - Seguir user stories y casos de uso
-  - Implementar reglas de negocio especificadas
-
-- **Especificaciones**:
-  - Implementar APIs según especificaciones
-  - Seguir modelos de datos definidos
-  - Cumplir reglas de negocio documentadas
-
-### Proceso de Implementación
-
-Cuando implementes una feature, SIEMPRE seguir este proceso:
-
-1. **Revisar documentación de negocio** en `docs/business/`
-
-   - Leer requisitos funcionales
-   - Consultar diagramas relevantes
-   - Revisar diseños UI/UX
-   - Leer especificaciones técnicas
-
-2. **Entender el contexto completo**
-
-   - Flujos de negocio
-   - Reglas de negocio
-   - Validaciones requeridas
-   - Integraciones necesarias
-
-3. **Implementar según especificaciones**
-
-   - Seguir diseños proporcionados
-   - Implementar flujos según diagramas
-   - Cumplir todos los requisitos
-   - Aplicar reglas de negocio
-
-4. **Validar implementación**
-
-   - Verificar que cumple requisitos
-   - Comparar con diseños
-   - Validar flujos de negocio
-   - Ejecutar tests
-
-5. **Documentar decisiones**
-   - Si hay desviaciones, documentarlas
-   - Explicar decisiones técnicas
-   - Actualizar documentación si es necesario
-
-### Referenciar en Código
-
-Siempre incluir referencias a documentación de negocio en el código:
-
-```python
-# Implementación según:
-# - Requisitos: docs/business/requirements/checkout.md
-# - Flujo: docs/business/diagrams/flowcharts/checkout-flow.png
-# - Diseño: docs/business/designs/figma/checkout-design.md
-# - Especificación: docs/business/specs/api-specs/checkout-api.md
-def process_checkout(order_data: OrderCreate) -> Order:
-    # ...
-```
-
-## Arquitectura
-
-- **Backend**: FastAPI con arquitectura por features
-- **Frontend**: Next.js 14+ con shadcn/ui
-- **Features**: Autocontenidos en `core/features/` o `custom/features/`
-- **Nunca modificar `core/`** - Solo `custom/`
-
-## Flujo de Trabajo con Git: Core vs Custom
-
-**IMPORTANTE**: Los cambios en código `core/` deben seguir un flujo específico de git.
-
-### Principio Fundamental
-
-- **Cambios en `core/`** → Deben commitearse en `main` (o `dev` si existe)
-- **Cambios en `custom/`** → Se commitean directamente en la rama de trabajo (ej: `crm-prego`)
-- **Después de commitear cambios en `core/` a `main`** → Actualizar la rama de trabajo desde `main`
-
-### Proceso cuando Modificas Core
-
-Si necesitas hacer cambios en código `core/` (por ejemplo: `backend/app/core/`, `frontend/components/core/`):
-
-1. **Identificar los cambios de core**:
-   ```bash
-   git status
-   # Identificar archivos en core/ que están modificados
-   ```
-
-2. **Separar cambios de core de cambios de custom**:
-   ```bash
-   # Stash cambios de custom/frontend si hay mezclados
-   git stash push -m "Cambios custom - restaurar después"
-   
-   # Agregar solo cambios de core
-   git add backend/app/core/ frontend/components/core/ frontend/app/actions/core/
-   ```
-
-3. **Commitear cambios de core en la rama actual** (temporal):
-   ```bash
-   git commit -m "refactor(core): descripción de cambios en core"
-   ```
-
-4. **Cambiar a `main` y traer los cambios**:
-   ```bash
-   git checkout main
-   git cherry-pick <commit-hash>
-   # O usar: git merge <rama-de-trabajo> (solo cambios de core)
-   ```
-
-5. **Volver a la rama de trabajo y actualizar desde `main`**:
-   ```bash
-   git checkout <rama-de-trabajo>  # ej: crm-prego
-   git merge main
-   ```
-
-6. **Restaurar cambios de custom si había stash**:
-   ```bash
-   git stash pop
-   ```
-
-### Ejemplo Completo
-
+**Frontend:**
 ```bash
-# Estás en rama crm-prego con cambios mezclados
-git status  # Muestra cambios en core/ y custom/
+# Install dependencies
+cd frontend && npm install
 
-# 1. Separar cambios
-git stash push -m "Cambios custom"
-git add backend/app/core/ frontend/components/core/
-git commit -m "refactor(core): reorganizar tasks de Celery"
+# Run development server
+npm run dev
 
-# 2. Mover a main
-git checkout main
-git cherry-pick HEAD@{1}  # o usar el hash del commit
+# Build for production
+npm run build
 
-# 3. Actualizar rama de trabajo
-git checkout crm-prego
-git merge main
+# Generate API types
+npm run generate-api-types
 
-# 4. Restaurar cambios custom
-git stash pop
+# Format code
+npm run format
 ```
 
-### ⚠️ Reglas Críticas
+**Infrastructure:**
+```bash
+# Start all services
+make dev
 
-- **NUNCA** commitees cambios de `core/` directamente en una rama custom sin pasarlos primero a `main`
-- **SIEMPRE** actualiza la rama de trabajo desde `main` después de commitear cambios de core
-- **SEPARA** cuidadosamente los cambios de core de los cambios de custom antes de commitear
-- Los cambios en `custom/` pueden commitearse directamente en la rama de trabajo sin pasar por `main`
+# Stop all services
+make down
 
-### ¿Cómo Saber si un Cambio es Core?
+# View logs
+make logs
 
-- **Core**: Funcionalidad genérica, reutilizable, parte de la infraestructura base
-- **Custom**: Lógica específica del cliente, nombres de clientes, reglas de negocio específicas
-
-Ver `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` para más detalles.
-
-## Sistema de Autenticación
-
-**IMPORTANTE**: El sistema de autenticación utiliza middleware para proteger rutas. NO usar `ServerAuthGuard` en layouts protegidos.
-
-### Reglas Críticas de Autenticación
-
-1. **Middleware para protección**: Usar `middleware.ts` para verificar existencia de cookies antes de que la request llegue a la página. El middleware solo verifica la **existencia** de la cookie, no su validez.
-2. **NO usar ServerAuthGuard en layouts protegidos**: Causa loops infinitos debido a problemas de timing con cookies después de `redirect()`. El middleware ya maneja la protección básica.
-3. **Server Actions para login**: Establecer cookies solo en Server Actions, nunca en Server Components o layouts.
-4. **revalidatePath después de establecer cookie**: Siempre llamar `revalidatePath("/", "layout")` después de establecer una cookie antes de hacer `redirect()`.
-5. **Validar en página de login**: La página de login debe validar que el token sea válido (no solo que exista) usando `getCurrentUser()`.
-6. **Validación del token en componentes**: La validación del token se hace cuando los componentes necesitan datos del usuario, no en los layouts.
-
-### Flujo Correcto
-
-```
-Login → Server Action establece cookie → revalidatePath → redirect("/crm")
-                                                              ↓
-Request a /crm → Middleware verifica cookie → Si hay: permite acceso
-                                                      Si no: redirige a /login
+# Run tests
+make test
 ```
 
-Ver `docs/AUTHENTICATION_FLOW.md` para documentación completa del flujo de autenticación.
+## Project Brief Workflow
 
-## Estructura de Features
+1. **Analyst meets with client** → Discusses needs and requirements
+2. **Create PROJECT_BRIEF** → Copy `docs/PROJECT_BRIEF.template.md` to `docs/PROJECT_BRIEF.md` in the client fork
+3. **Fill PROJECT_BRIEF** → Document agreed needs, scope, integrations, constraints
+4. **Cursor reads PROJECT_BRIEF** → Generates `docs/solution_design/` documentation
+5. **Refine solution_design** → With client and analyst until approved
+6. **Cursor generates code** → Based on approved solution design and diagrams
 
-Cada feature debe tener:
-
-- `routes.py` - Endpoints
-- `schemas.py` - DTOs
-- `service.py` - Lógica de negocio
-- `repository.py` - Acceso a datos (opcional)
-- `models.py` - Modelos (opcional)
-- `tasks.py` - Celery tasks (opcional, si el feature necesita tareas en background)
-- `README.md` - Documentación
-
-### Tasks de Celery
-
-**IMPORTANTE**: Las tasks de Celery deben ser autocontenidas dentro de cada feature.
-
-- Cada feature que necesite tareas en background debe tener su propio archivo `tasks.py`
-- Las tasks se ubican en `backend/app/core/features/<feature>/tasks.py` o `backend/app/custom/features/<feature>/tasks.py`
-- Celery descubrirá automáticamente las tasks usando `autodiscover_tasks`
-- **NUNCA** crear un módulo centralizado de tasks - cada feature maneja sus propias tasks
-
-**Ejemplo:**
-```python
-# backend/app/core/features/auth/tasks.py
-from app.core.tasks.celery_app import celery_app
-
-@celery_app.task(bind=True, max_retries=3)
-def send_email_task(self, to: str, subject: str, body: str):
-    # Lógica de envío de email
-    pass
-```
-
-**Estructura correcta:**
-```
-backend/app/
-├── core/
-│   └── features/
-│       ├── auth/
-│       │   └── tasks.py  # ✅ Tasks de auth aquí
-│       └── n8n/
-│           └── tasks.py  # ✅ Tasks de n8n aquí
-└── custom/
-    └── features/
-        └── campaigns/
-            └── tasks.py  # ✅ Tasks de campaigns aquí
-```
-
-## Gestión de Dependencias
-
-- Usar `uv` para instalar dependencias
-- Configuración en `pyproject.toml`
-- Generar `uv.lock` para builds determinísticos
-
-## Referencias Importantes
-
-- `.cursorrules` - Reglas detalladas del proyecto (Cursor)
-- `docs/ARCHITECTURE.md` - Arquitectura completa
-- `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` - **Estrategia de branches y flujo de git para core vs custom**
-- `docs/business/` - Documentación de negocio
-- `docs/business/BEST_PRACTICES.md` - Mejores prácticas para documentación de negocio
-
-## Contexto Adicional del Proyecto
-
-### Propósito del Proyecto
-
-Boilerplate reutilizable para Forward Deployed Engineers que permite:
-
-- Desarrollo rápido de proyectos personalizados
-- Extensión sin romper actualizaciones del fork original
-- Arquitectura escalable y mantenible
-
-### Stack Tecnológico
-
-**Frontend**: Next.js 14+ (App Router), shadcn/ui, Tailwind CSS, TypeScript  
-**Backend**: FastAPI, SQLAlchemy 2.0, Alembic, Python 3.11+, uv  
-**Infrastructure**: Kafka, Celery, N8N, PostgreSQL, Docker Compose
-
-### Principios de Diseño
-
-1. **Modularidad**: Features autocontenidos
-2. **Extensibilidad**: Core/Custom separation
-3. **Testabilidad**: TDD, > 80% coverage
-4. **Escalabilidad**: Horizontal scaling ready
-5. **Mantenibilidad**: Código limpio y documentado (en ingles)
-
-### Flujos Comunes
-
-**Agregar un Nuevo Feature:**
-
-1. Crear estructura en `custom/features/my_feature/`
-2. Implementar: routes, schemas, service, repository (opcional), models (opcional)
-3. Registrar router en `custom/features/__init__.py`
-4. Agregar tests (unit + integration)
-5. Documentar en README del feature (en ingles)
-
-**Modificar Funcionalidad Existente:**
-
-1. Verificar si está en `core/` (NO modificar)
-2. Si está en `core/`, crear override en `custom/`
-3. Si está en `custom/`, modificar directamente
-4. Actualizar tests
-5. Verificar que no rompe otros features
-
-**Integrar Servicio Externo:**
-
-1. Crear interface en `shared/interfaces/`
-2. Implementar wrapper en `shared/services/`
-3. Usar dependency injection en features
-4. Mockear en tests
-5. Documentar uso (en ingles)
-
-### Ejemplos de Código
-
-**Estructura de Feature Típica:**
-
-```python
-# routes.py
-@router.post("", response_model=MyFeatureResponse)
-async def create_item(
-    data: MyFeatureCreate,
-    service: MyFeatureService = Depends(get_my_feature_service),
-):
-    return service.create(data)
-
-# service.py
-class MyFeatureService:
-    def __init__(self, repo: MyFeatureRepository):
-        self.repo = repo
-
-    def create(self, data: MyFeatureCreate) -> MyFeature:
-        # Business logic
-        return self.repo.create(data.model_dump())
-```
-
-### Convenciones Importantes
-
-- **Naming**: snake_case (Python), camelCase (TypeScript)
-- **Imports**: Ordenados con isort
-- **Formatting**: Black (Python), Prettier (TypeScript)
-- **Type Hints**: Siempre en Python. Usar tipos built-in de Python 3.11+:
-  - `list[T]` en lugar de `List[T]` (NO importar de typing)
-  - `dict[K, V]` en lugar de `Dict[K, V]` (NO importar de typing)
-  - `tuple[T, ...]` en lugar de `Tuple[T, ...]` (NO importar de typing)
-  - `T | None` en lugar de `Optional[T]` (NO importar Optional de typing)
-  - Solo importar de `typing` cuando sea necesario (ej: `Any`, `Callable`, `TypeVar`, `Generic`)
-- **Docstrings**: Google style para funciones públicas (en ingles, no incluir input y output si estan tipados)
-- **Comments**: Siempre en ingles y solo cuando es necesario
+The PROJECT_BRIEF is the starting point for all client-specific development.
