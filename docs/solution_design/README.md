@@ -59,6 +59,6 @@ Do not create solution documents from scratch; always start from the template.
 ## Workflow
 
 1. **Analyst creates PROJECT_BRIEF** → `docs/PROJECT_BRIEF.md` (in client fork)
-2. **Cursor generates solution_design/** → Based on PROJECT_BRIEF
+2. **Cursor generates solution_design/** → Based on PROJECT_BRIEF (in Spanish)
 3. **Refine with client** → Iterate until approved
 4. **Cursor generates code** → Based on approved solution design
