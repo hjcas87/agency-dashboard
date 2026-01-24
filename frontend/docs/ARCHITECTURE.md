@@ -68,14 +68,19 @@ Following the backend pattern:
 ```
 frontend/
 ├── app/                      # Next.js App Router
-│   ├── (features)/          # Feature groups (route groups)
-│   │   ├── n8n/
-│   │   │   ├── page.tsx     # Route page
-│   │   │   └── layout.tsx   # Feature layout (optional)
-│   ├── api/                 # API routes (if needed)
-│   ├── globals.css          # Global styles
-│   ├── layout.tsx           # Root layout
-│   └── page.tsx             # Home page
+│   ├── (auth)/              # Route group: Public authentication routes
+│   │   ├── login/
+│   │   └── reset-password/
+│   ├── (private)/            # Route group: Protected private routes
+│   │   ├── layout.tsx        # Core - Authentication check (NOT modifiable in forks)
+│   │   ├── page.tsx          # Custom - Home dashboard (each fork can override)
+│   │   └── (custom)/         # Core - Directory for client-specific custom routes
+│   │       ├── .gitkeep      # Core - Keeps directory in git
+│   │       └── [custom pages] # Custom - Client-specific pages (protected by layout.tsx)
+│   ├── api/                  # API routes (if needed)
+│   ├── globals.css           # Global styles
+│   ├── layout.tsx            # Root layout
+│   └── page.tsx              # Public home page
 │
 ├── components/              # React components
 │   ├── core/               # Base components (NOT modifiable)
@@ -113,6 +118,61 @@ frontend/
 ├── tailwind.config.ts     # Tailwind CSS configuration
 └── tsconfig.json          # TypeScript configuration
 ```
+
+## Route Groups and Private Routes
+
+### Structure
+
+The app uses Next.js route groups to organize public and private routes:
+
+- **`(auth)/`**: Public authentication routes (login, password reset)
+- **`(private)/`**: Protected private routes with authentication
+  - **`layout.tsx`**: Core - Authentication check (NOT modifiable in forks)
+  - **`page.tsx`**: Custom - Home dashboard (each fork can override)
+  - **`(custom)/`**: Core - Directory for client-specific custom routes
+    - All routes here are automatically protected by `(private)/layout.tsx`
+    - Pages map directly to root routes (e.g., `(custom)/campaigns/page.tsx` → `/campaigns`)
+
+### Authentication Flow
+
+1. User accesses `/` (private route)
+2. `proxy.ts` verifies cookie (core)
+3. `(private)/layout.tsx` verifies authentication (core)
+4. `(private)/page.tsx` or pages in `(custom)/` render (customizable)
+
+### Customizing for a Client
+
+**Option 1: Redirect to specific page**
+
+```typescript
+// app/(private)/page.tsx (in client fork)
+import { redirect } from 'next/navigation'
+
+export default async function PrivatePage() {
+  redirect('/inbox') // or '/dashboard', etc.
+}
+```
+
+**Option 2: Render custom dashboard**
+
+```typescript
+// app/(private)/page.tsx
+import { getCurrentUser } from '@/app/actions/core/auth'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/core/ui/card'
+
+export default async function PrivatePage() {
+  const user = await getCurrentUser()
+  // Render custom dashboard
+  return <DashboardContent user={user} />
+}
+```
+
+### Rules
+
+- ✅ **DO modify `(private)/page.tsx`** - It's custom, each fork can override
+- ✅ **DO add pages in `(private)/(custom)/`** - All routes here are protected
+- ❌ **DON'T modify `(private)/layout.tsx` in forks** - Unless adding wrapper components (like CRMLayout)
+- ✅ **No `/crm/` prefix** - Pages in `(custom)/` map directly to root routes
 
 ## Code Organization Patterns
 

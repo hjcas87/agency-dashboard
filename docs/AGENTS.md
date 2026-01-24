@@ -191,11 +191,67 @@ git stash pop
 
 Ver `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` para más detalles.
 
+## Estructura de Rutas Frontend
+
+### Rutas Privadas con Autenticación
+
+El proyecto usa Next.js App Router con route groups para organizar rutas privadas:
+
+```
+app/
+├── (auth)/              # Rutas públicas de autenticación
+│   ├── login/
+│   └── reset-password/
+├── (private)/           # Rutas privadas protegidas
+│   ├── layout.tsx       # Core - Verifica autenticación (NO modificar en forks)
+│   ├── page.tsx         # Custom - Dashboard home (cada fork puede sobrescribir)
+│   └── (custom)/        # Core - Directorio para rutas custom de clientes
+│       ├── .gitkeep     # Core - Mantiene el directorio en git
+│       └── [páginas custom]  # Custom - Páginas específicas del cliente
+```
+
+**Reglas importantes:**
+- ✅ **SÍ modificar `(private)/page.tsx`** - Es custom, cada fork puede sobrescribir este archivo
+- ✅ **NO modificar `(private)/layout.tsx` en forks** - A menos que necesites agregar componentes wrapper (como CRMLayout)
+- ✅ **Páginas custom van en `(private)/(custom)/`** - Todas las rutas aquí están protegidas por `(private)/layout.tsx`
+- ✅ **Sin prefijo `/crm/`** - Las páginas en `(custom)/` se mapean directamente a rutas raíz (ej: `(custom)/campaigns/page.tsx` → `/campaigns`)
+
+**Ejemplo de personalización para un cliente:**
+
+```typescript
+// app/(private)/page.tsx (en la rama custom del cliente)
+import { redirect } from 'next/navigation'
+
+export default async function PrivatePage() {
+  redirect('/inbox') // o '/dashboard', etc.
+}
+```
+
+O renderizar un dashboard personalizado:
+
+```typescript
+// app/(private)/page.tsx
+import { getCurrentUser } from '@/app/actions/core/auth'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/core/ui/card'
+
+export default async function PrivatePage() {
+  const user = await getCurrentUser()
+  // Renderizar dashboard personalizado
+  return <DashboardContent user={user} />
+}
+```
+
+**Flujo de protección:**
+1. Usuario accede a `/` (ruta privada)
+2. `proxy.ts` verifica cookie (core)
+3. `(private)/layout.tsx` verifica autenticación (core)
+4. `(private)/page.tsx` o páginas en `(custom)/` se renderizan (customizable)
+
 ## Referencias Importantes
 
 - `.cursorrules` - Reglas detalladas del proyecto (Cursor)
-- `docs/ARCHITECTURE.md` - Arquitectura completa
-- `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` - Estrategia de branches y flujo de git para core vs custom
+- `frontend/docs/ARCHITECTURE.md` - Arquitectura del frontend
 - `docs/BACKEND_ARCHITECTURE.md` - Arquitectura del backend
+- `docs/CORE_VS_CUSTOM_BRANCH_STRATEGY.md` - Estrategia de branches y flujo de git para core vs custom
 
 
