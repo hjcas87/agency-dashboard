@@ -9,8 +9,7 @@ La estructura estándar `app/(private)/` permite que cada fork/cliente personali
 ```
 app/(private)/
 ├── layout.tsx      # Core - Verifica autenticación (NO modificar en forks)
-├── page.tsx        # Core - Importa DefaultPage (NO modificar en forks)
-└── default.tsx     # Custom - Cada fork puede sobrescribir este archivo
+└── page.tsx        # Custom - Cada fork puede sobrescribir este archivo
 ```
 
 ### Flujo
@@ -18,22 +17,21 @@ app/(private)/
 1. Usuario accede a `/` (ruta privada)
 2. `proxy.ts` verifica cookie (core)
 3. `(private)/layout.tsx` verifica autenticación (core)
-4. `(private)/page.tsx` renderiza `DefaultPage` (core)
-5. `(private)/default.tsx` muestra contenido o redirige (customizable por fork)
+4. `(private)/page.tsx` muestra contenido o redirige (customizable por fork)
 
 ## Cómo Personalizar para un Nuevo Cliente
 
 ### Opción 1: Redirigir a una Página Específica
 
 ```typescript
-// app/(private)/default.tsx (en la rama custom del cliente)
+// app/(private)/page.tsx (en la rama custom del cliente)
 import { redirect } from 'next/navigation'
 
 /**
  * Página principal por defecto para [Cliente] CRM.
  * Redirige a la página principal del CRM.
  */
-export default async function DefaultPage() {
+export default async function PrivatePage() {
   redirect('/dashboard') // o '/inbox', '/crm', etc.
 }
 ```
@@ -41,14 +39,14 @@ export default async function DefaultPage() {
 ### Opción 2: Renderizar un Dashboard Personalizado
 
 ```typescript
-// app/(private)/default.tsx (en la rama custom del cliente)
+// app/(private)/page.tsx (en la rama custom del cliente)
 import { getCurrentUser } from '@/app/actions/core/auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/core/ui/card'
 
 /**
  * Dashboard principal por defecto para [Cliente] CRM.
  */
-export default async function DefaultPage() {
+export default async function PrivatePage() {
   const user = await getCurrentUser()
 
   return (
@@ -65,13 +63,13 @@ export default async function DefaultPage() {
 ### Opción 3: Usar un Componente Custom
 
 ```typescript
-// app/(private)/default.tsx (en la rama custom del cliente)
+// app/(private)/page.tsx (en la rama custom del cliente)
 import { ClientDashboard } from '@/components/custom/features/dashboard/ClientDashboard'
 
 /**
  * Página principal por defecto para [Cliente] CRM.
  */
-export default async function DefaultPage() {
+export default async function PrivatePage() {
   return <ClientDashboard />
 }
 ```
@@ -81,10 +79,10 @@ export default async function DefaultPage() {
 ### Artistealo (`crm-artistealo`)
 
 ```typescript
-// Redirige a /inbox (dashboard principal)
+// app/(private)/page.tsx - Redirige a /inbox (dashboard principal)
 import { redirect } from 'next/navigation'
 
-export default async function DefaultPage() {
+export default async function PrivatePage() {
   redirect('/inbox')
 }
 ```
@@ -92,11 +90,11 @@ export default async function DefaultPage() {
 ### Prego (`crm-prego`)
 
 ```typescript
-// Muestra dashboard con cards
+// app/(private)/page.tsx - Muestra dashboard con cards
 import { getCurrentUser } from '@/app/actions/core/auth'
 import { Card, ... } from '@/components/core/ui/card'
 
-export default async function DefaultPage() {
+export default async function PrivatePage() {
   const user = await getCurrentUser()
   // Renderiza dashboard personalizado
   return <DashboardContent user={user} />
@@ -105,10 +103,9 @@ export default async function DefaultPage() {
 
 ## Reglas Importantes
 
-1. ✅ **NO modificar `page.tsx`** - Es core, se mantiene igual en todas las ramas
-2. ✅ **SÍ modificar `default.tsx`** - Es custom, cada fork tiene su versión
-3. ✅ **NO modificar `layout.tsx` en forks** - A menos que necesites agregar componentes wrapper (como CRMLayout)
-4. ✅ **Mantener estructura** - `page.tsx` siempre importa `DefaultPage` de `default.tsx`
+1. ✅ **SÍ modificar `page.tsx`** - Es custom, cada fork puede sobrescribir este archivo
+2. ✅ **NO modificar `layout.tsx` en forks** - A menos que necesites agregar componentes wrapper (como CRMLayout)
+3. ✅ **Estructura simple** - Solo `page.tsx` necesita personalizarse, no hay archivos intermedios
 
 ## Ventajas de esta Estrategia
 
@@ -151,11 +148,11 @@ git merge main
 Si necesitas resolver conflictos manualmente:
 
 ```bash
-# Para mantener la versión custom de default.tsx:
-git checkout --ours app/(private)/default.tsx
-git add app/(private)/default.tsx
+# Para mantener la versión custom de page.tsx:
+git checkout --ours app/(private)/page.tsx
+git add app/(private)/page.tsx
 
-# Para aceptar cambios de main en layout.tsx o page.tsx:
+# Para aceptar cambios de main en layout.tsx:
 git checkout --theirs app/(private)/layout.tsx
 git add app/(private)/layout.tsx
 

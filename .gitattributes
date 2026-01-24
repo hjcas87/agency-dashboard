@@ -3,13 +3,12 @@
 # Esto evita conflictos al hacer merge desde main a ramas custom
 
 # Archivos de configuración custom por cliente
-frontend/app/(private)/default.tsx merge=ours
+frontend/app/(private)/page.tsx merge=ours
 frontend/components/custom/** merge=ours
 frontend/app/actions/custom/** merge=ours
 frontend/app/(private)/**/page.tsx merge=ours
 
 # Archivos core que siempre deben tomarse de main
 frontend/app/(private)/layout.tsx merge=theirs
-frontend/app/(private)/page.tsx merge=theirs
 frontend/components/core/** merge=theirs
 frontend/app/actions/core/** merge=theirs
