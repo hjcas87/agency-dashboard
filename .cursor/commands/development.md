@@ -1,0 +1,1 @@
+Follow scripts/agents/development.md using docs/PROJECT_BRIEF.md and docs/solution_design/ as the source of truth.

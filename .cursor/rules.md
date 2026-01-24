@@ -1,0 +1,272 @@
+# Cursor Rules - Reglas del Proyecto Core
+
+## Contexto del Proyecto
+
+Este es un boilerplate reutilizable para Forward Deployed Engineers con arquitectura modular por features.
+
+## Arquitectura
+
+- **Frontend**: Next.js 14+ con shadcn/ui y Tailwind CSS
+- **Backend**: FastAPI con arquitectura por features (core/custom)
+- **Message Broker**: Kafka para mensajería asíncrona robusta
+- **Automation**: N8N self-hosted con webhooks
+- **Background Tasks**: Celery para tareas asíncronas
+
+## Estructura de Directorios
+
+```
+backend/app/
+├── core/features/     # Features core (NO modificar en forks)
+├── custom/features/   # Features personalizados (modificar aquí)
+└── shared/           # Código compartido (interfaces, services, repos)
+```
+
+## Principios Fundamentales
+
+1. **Nunca modificar código en `core/`** - Todo lo personalizado va en `custom/`
+2. **Cambios en `core/` van a `main` primero** - Luego actualizar rama de trabajo desde `main`
+3. **Arquitectura por Features** - Cada feature es autocontenido
+4. **Separación de responsabilidades** - Routes → Service → Repository → Model
+5. **Dependency Injection** - Usar FastAPI dependencies
+6. **Interfaces y Abstracciones** - Usar interfaces de `shared/interfaces/`
+7. **Testing** - Seguir TDD, mantener > 80% coverage
+8. **Sincronización de Modelos y Base de Datos** - Los modelos SQLAlchemy DEBEN estar sincronizados con las tablas de la base de datos. NO debe haber diferencias entre campos definidos en los modelos y las columnas en las tablas. Usar migraciones de Alembic para mantener la sincronización.
+
+## Convenciones de Código
+
+### Python (Backend)
+
+- **Formato**: Black con line-length=100
+- **Imports**: isort con profile=black
+- **Linting**: Ruff (reemplaza flake8)
+- **Type hints**: Usar type hints siempre que sea posible
+  - **IMPORTANTE**: Python 3.11+ - Usar tipos built-in, NO importar de typing:
+    - `list[T]` en lugar de `List[T]`
+    - `dict[K, V]` en lugar de `Dict[K, V]`
+    - `tuple[T, ...]` en lugar de `Tuple[T, ...]`
+    - `T | None` en lugar de `Optional[T]`
+    - Solo importar de `typing` cuando sea necesario (ej: `Any`, `Callable`, `TypeVar`, `Generic`)
+- **Docstrings**: Google style para funciones públicas
+- **Naming**:
+  - Clases: PascalCase
+  - Funciones/variables: snake_case
+  - Constantes: UPPER_SNAKE_CASE
+
+### TypeScript/React (Frontend)
+
+- **Formato**: Prettier (configurado en proyecto)
+- **Imports**: Ordenar imports correctamente
+- **Naming**:
+  - Componentes: PascalCase
+  - Funciones/variables: camelCase
+  - Constantes: UPPER_SNAKE_CASE
+
+## Patrones de Diseño
+
+1. **Repository Pattern** - Para acceso a datos
+2. **Service Layer** - Para lógica de negocio
+3. **Dependency Injection** - FastAPI dependencies
+4. **Interface Segregation** - Interfaces específicas en `shared/interfaces/`
+5. **Wrapper Pattern** - Para servicios externos (N8N, Kafka)
+
+## Estructura de un Feature
+
+Cada feature debe tener:
+
+```
+feature_name/
+├── routes.py      # Endpoints FastAPI
+├── schemas.py    # Schemas Pydantic
+├── service.py    # Lógica de negocio
+├── repository.py # Acceso a datos (opcional)
+├── models.py     # Modelos SQLAlchemy (opcional)
+├── tasks.py      # Celery tasks (opcional, si necesita tareas en background)
+└── README.md     # Documentación
+```
+
+### Tasks de Celery
+
+**Las tasks de Celery deben ser autocontenidas dentro de cada feature:**
+
+- Cada feature que necesite tareas en background debe tener su propio `tasks.py`
+- Ubicación: `backend/app/core/features/<feature>/tasks.py` o `backend/app/custom/features/<feature>/tasks.py`
+- Celery las descubrirá automáticamente con `autodiscover_tasks`
+- **NUNCA** crear módulos centralizados de tasks - cada feature maneja sus propias tasks
+
+## Testing
+
+- **Unit Tests**: Tests rápidos sin dependencias externas
+- **Integration Tests**: Tests con DB y servicios mockeados
+- **E2E Tests**: Tests end-to-end con todos los servicios
+- **Coverage**: Mantener > 80%
+- **Naming**: `test_<what>_<condition>_<expected_result>`
+
+## Gestión de Dependencias
+
+- **Backend**: Usar `uv` para gestión de paquetes
+- **Configuración**: Todo en `pyproject.toml`
+- **Lock file**: Generar `uv.lock` para builds determinísticos
+
+## Comandos Importantes
+
+```bash
+# Desarrollo
+make dev              # Levantar servicios
+make test             # Ejecutar tests
+make lint             # Verificar formato
+make format           # Formatear código
+
+# Backend
+uv pip install -e ".[dev]"  # Instalar dependencias
+uv run pytest                # Ejecutar tests
+uv run black app             # Formatear código
+```
+
+## Reglas Específicas
+
+### Al crear un nuevo feature:
+
+1. Crear estructura completa en `custom/features/`
+2. Implementar routes, schemas, service
+3. Si necesita tareas en background, crear `tasks.py` dentro del feature
+4. Agregar tests (unit + integration)
+5. Registrar router en `custom/features/__init__.py`
+6. Documentar en README del feature
+
+### Al modificar código:
+
+1. **Nunca** modificar `core/` - Solo `custom/`
+2. Usar interfaces de `shared/interfaces/` cuando sea posible
+3. Seguir patrones existentes en features core
+4. Agregar tests para cambios
+5. Mantener cobertura > 80%
+
+### Al modificar modelos SQLAlchemy:
+
+1. **SIEMPRE** crear una migración de Alembic para cambios en modelos
+2. **NUNCA** modificar modelos sin actualizar la base de datos mediante migraciones
+3. **SIEMPRE** verificar que los campos del modelo coinciden con las columnas de la tabla
+4. **SIEMPRE** ejecutar migraciones después de modificarlas: `alembic upgrade head`
+5. Si hay discrepancias, corregirlas inmediatamente mediante migraciones o ajustando el modelo
+6. Los modelos y la base de datos deben estar siempre sincronizados - esta es una regla crítica
+
+### Al usar servicios externos:
+
+1. Crear wrapper implementando interface de `shared/interfaces/`
+2. Usar dependency injection
+3. Mockear en tests
+4. Documentar en README
+
+## Documentación
+
+- Mantener READMEs actualizados
+- Documentar decisiones arquitectónicas
+- Agregar ejemplos de uso
+- Documentar APIs con docstrings
+
+## Documentación de Negocio
+
+**IMPORTANTE**: Antes de implementar cualquier feature, SIEMPRE consultar:
+
+1. **`docs/business/requirements/`** - Requisitos funcionales y user stories
+2. **`docs/business/diagrams/`** - Diagramas de flujo, arquitectura, secuencia
+3. **`docs/business/designs/`** - Diseños UI/UX (Figma, mockups, wireframes)
+4. **`docs/business/specs/`** - Especificaciones técnicas de negocio
+
+### Cómo Usar la Documentación de Negocio
+
+- **Diagramas**: Referenciar diagramas al implementar flujos de negocio
+- **Diseños Figma/PDFs**: Seguir componentes, estilos y layouts especificados
+- **Imágenes**: Usar como referencia visual para implementación
+- **Requisitos**: Verificar que la implementación cumple todos los requisitos
+
+### Al Implementar un Feature
+
+1. **Revisar documentación de negocio** en `docs/business/`
+2. **Consultar diagramas** relevantes para entender flujos
+3. **Seguir diseños** de UI/UX proporcionados
+4. **Cumplir especificaciones** de negocio y API
+5. **Documentar desviaciones** si las hay
+
+### Referenciar Documentación
+
+Cuando implementes código, incluir comentarios referenciando documentación:
+
+```python
+# Implementación según docs/business/requirements/checkout.md
+# Flujo: docs/business/diagrams/flowcharts/checkout-flow.png
+# Diseño: docs/business/designs/figma/checkout.figma
+def process_checkout(order_data: OrderCreate) -> Order:
+    # ...
+```
+
+## Errores Comunes a Evitar
+
+1. ❌ Modificar código en `core/`
+2. ❌ Crear dependencias circulares
+3. ❌ Ignorar tests
+4. ❌ Hardcodear valores (usar config)
+5. ❌ Acoplar features entre sí
+6. ❌ No usar type hints
+7. ❌ No documentar código público
+8. ❌ **Modificar modelos SQLAlchemy sin crear migraciones** - CRÍTICO
+9. ❌ **Tener diferencias entre modelos y tablas de la base de datos** - CRÍTICO
+10. ❌ Modificar la base de datos manualmente sin crear migraciones
+11. ❌ **Usar ServerAuthGuard en layouts protegidos** - CRÍTICO (causa loops infinitos, el middleware ya maneja la protección)
+12. ❌ **Modificar cookies en Server Components** - Solo permitido en Server Actions o Route Handlers
+13. ❌ **Validar token en middleware** - El middleware solo debe verificar existencia de cookie, no validez del token
+14. ❌ **Redirigir desde middleware cuando hay cookie en /login** - Causa loops si el token es inválido, dejar que la página de login maneje esto
+
+## Flujo de Trabajo con Git: Core vs Custom
+
+**CRÍTICO**: Cuando modificas código en `core/`, debes seguir este flujo:
+
+1. **Identificar si los cambios son de core o custom**
+   - Core: `backend/app/core/`, `frontend/components/core/`, `frontend/app/actions/core/`
+   - Custom: `backend/app/custom/`, `frontend/components/custom/`, etc.
+
+2. **Si modificas código de core:**
+   - Separar los cambios de core de los cambios de custom
+   - Commitear cambios de core primero
+   - Cambiar a `main` y traer esos cambios (cherry-pick o merge selectivo)
+   - Volver a la rama de trabajo (`crm-prego` u otra)
+   - Actualizar la rama de trabajo desde `main`: `git merge main`
+   - Luego commitear cambios de custom en la rama de trabajo
+
+3. **Si solo modificas código de custom:**
+   - Commitear directamente en la rama de trabajo actual
+
+**NUNCA commitees cambios de `core/` en una rama custom sin pasarlos primero a `main` y luego actualizar la rama custom desde `main`.**
+
+Ver `AGENTS.md` para el proceso detallado con comandos.
+
+## Referencias a Documentación
+
+- `AGENTS.md` - Guía completa para agentes de IA
+- `ARCHITECTURE.md` - Arquitectura del proyecto
+- `docs/PROJECT_BRIEF.template.md` - Template para crear PROJECT_BRIEF de cliente
+- `docs/solution_design/` - Documentación de solución acordada con cliente
+- `docs/agents/roles/` - Roles de agentes
+- `docs/agents/skills/` - Skills/procedimientos para agentes
+
+## Cuando el Agente Trabaja
+
+- **Siempre** verificar que los cambios están en `custom/` si es código personalizado
+- **Siempre** seguir la estructura de features existente
+- **Siempre** agregar tests para nueva funcionalidad
+- **Siempre** usar type hints
+- **Siempre** verificar que el código sigue las convenciones
+- **Siempre** consultar `docs/business/` antes de implementar features
+- **Siempre** referenciar diagramas y diseños al implementar
+- **Siempre** seguir el flujo de git correcto cuando modifiques código de `core/`
+- **Siempre** mantener modelos SQLAlchemy sincronizados con la base de datos
+- **Siempre** crear migraciones de Alembic al modificar modelos
+- **Nunca** modificar `core/` sin razón explícita
+- **Nunca** commitear cambios de `core/` en rama custom sin pasarlos primero a `main`
+- **Nunca** crear dependencias circulares
+- **Nunca** hardcodear valores de configuración
+- **Nunca** implementar sin revisar documentación de negocio relevante
+- **Nunca** modificar modelos sin crear migraciones correspondientes
+- **Nunca** dejar discrepancias entre modelos y tablas de la base de datos
+- **Nunca** usar ServerAuthGuard en layouts protegidos (el middleware ya maneja la protección)
+- **Nunca** validar token en middleware (solo verificar existencia de cookie)
