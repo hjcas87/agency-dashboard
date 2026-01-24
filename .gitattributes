@@ -4,13 +4,13 @@
 
 # Archivos de configuración custom por cliente
 frontend/app/(private)/page.tsx merge=ours
-frontend/app/api/custom/** merge=ours
+frontend/app/api/(custom)/** merge=ours
 frontend/components/custom/** merge=ours
 frontend/app/actions/custom/** merge=ours
 frontend/app/(private)/**/page.tsx merge=ours
 
 # Archivos core que siempre deben tomarse de main
 frontend/app/(private)/layout.tsx merge=theirs
-frontend/app/api/core/** merge=theirs
+frontend/app/api/(core)/** merge=theirs
 frontend/components/core/** merge=theirs
 frontend/app/actions/core/** merge=theirs
