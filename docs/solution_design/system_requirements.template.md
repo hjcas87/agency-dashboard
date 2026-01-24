@@ -12,24 +12,27 @@ This document defines constraints, not implementation.
 The solution MUST run under the following conditions:
 
 - Operating system:
-  - <e.g., Windows 11>
-- User session:
-  - <logged-in / interactive>
-- Language / locale:
-  - <fixed language>
-- Resolution / DPI:
-  - <fixed resolution and scale>
+  - <e.g., Linux, Windows, macOS>
+- Runtime environment:
+  - <e.g., Docker, cloud platform>
+- Network requirements:
+  - <e.g., internet access, VPN, specific ports>
+- Browser requirements (if applicable):
+  - <e.g., Chrome 120+, Firefox 115+>
 
 ---
 
 ## Application Requirements
-List required applications and versions.
+List required services and versions.
 
-- Application name:
-  - Version / edition constraints
-- Required user permissions or roles
+- Database:
+  - <PostgreSQL 14+, MySQL 8+, etc.>
+- External services:
+  - <APIs, third-party services, versions>
+- Required user permissions or roles:
+  - <database access, API keys, etc.>
 
-No assumptions about internal APIs or automation techniques.
+No assumptions about internal implementation details.
 
 ---
 
@@ -37,25 +40,29 @@ No assumptions about internal APIs or automation techniques.
 Define expectations about input and output data.
 
 - Input format:
-  - <files, structure, constraints>
+  - <files, API payloads, structure, constraints>
 - Data quality assumptions:
-  - <e.g., consistent UI labels, stable formats>
+  - <e.g., consistent formats, valid data types>
+- Database schema requirements:
+  - <e.g., required tables, relationships>
 
 ---
 
 ## Performance Requirements
 High-level, non-technical expectations.
 
-- Expected execution frequency
-- Acceptable execution duration (approximate)
+- Expected request frequency
+- Acceptable response times (approximate)
 - Tolerance for delays or retries
+- Concurrent user capacity
 
 ---
 
 ## Availability & Stability Assumptions
-- Application availability expectations
-- UI stability assumptions
+- Service availability expectations
+- API stability assumptions
 - Maintenance windows (if known)
+- Backup and recovery requirements
 
 ---
 
@@ -63,6 +70,7 @@ High-level, non-technical expectations.
 - Data sensitivity classification (if applicable)
 - Credential handling constraints
 - Audit or logging requirements
+- Authentication/authorization requirements
 
 ---
 
@@ -70,8 +78,9 @@ High-level, non-technical expectations.
 Explicitly list what is NOT required.
 
 - Unsupported platforms
-- Unsupported environments
+- Unsupported browsers (if applicable)
 - Non-goals
+- Out-of-scope features
 
 ---
 

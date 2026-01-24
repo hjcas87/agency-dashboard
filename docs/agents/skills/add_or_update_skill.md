@@ -25,10 +25,10 @@ by agents across the repository.
 - Do NOT use numeric prefixes.
 
 Examples:
-- `add_use_case.md`
-- `debug_failures.md`
+- `add_backend_feature.md`
+- `add_frontend_feature.md`
 - `solution_design.md`
-- `release_and_runner_deploy.md`
+- `deploy.md`
 
 The filename is the skill identifier.
 

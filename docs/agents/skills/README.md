@@ -5,7 +5,7 @@ Skills are operational, repeatable procedures used by both developers and agents
 ## Naming
 - Prefix: `<verb>_<object>.md`
 - Use snake_case.
-- Example: `add_uia_locator.md`
+- Example: `add_backend_feature.md`
 
 ## Required sections (in this order)
 1. Title: `# Skill <Name>`
@@ -19,7 +19,7 @@ Skills are operational, repeatable procedures used by both developers and agents
 
 ## Tags (optional but recommended)
 Add at the top of the file:
-`Tags: [core] [adapter] [client] [debug] [review] [release]`
+`Tags: [core] [custom] [backend] [frontend] [debug] [review] [deploy]`
 
 ## Style rules
 - Steps must be deterministic and testable.

@@ -1,6 +1,6 @@
 # Solution Design — Documentation Convention
 
-This folder contains the agreed functional definition of the automation solution.
+This folder contains the agreed functional definition of the web application solution.
 
 ## General rules
 - These documents are discussed and approved with the client.

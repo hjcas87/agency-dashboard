@@ -2,7 +2,7 @@
 
 ## Rules
 - One user story per file.
-- One user story maps to exactly one automation use case.
+- One user story maps to exactly one feature (backend + frontend if needed).
 - No technical language.
 - No UI selectors or tool names.
 
