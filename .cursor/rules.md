@@ -230,22 +230,42 @@ def process_checkout(order_data: OrderCreate) -> Order:
 
 **CRITICAL**: When modifying code in `core/`, you must follow this flow:
 
-1. **Identify if changes are core or custom**
-   - Core: `backend/app/core/`, `frontend/components/core/`, `frontend/app/actions/core/`
-   - Custom: `backend/app/custom/`, `frontend/components/custom/`, etc.
+### Core Changes (MANDATORY: use `dev` branch)
 
-2. **If you modify core code:**
-   - Separate core changes from custom changes
-   - Commit core changes first
-   - Switch to `main` and bring those changes (cherry-pick or selective merge)
-   - Return to working branch (`crm-prego` or other)
-   - Update working branch from `main`: `git merge main`
-   - Then commit custom changes in working branch
+**ALL core development MUST be done in the `dev` branch first.**
 
-3. **If you only modify custom code:**
-   - Commit directly in current working branch
+1. **Work in `dev` branch**:
+   - Switch to `dev`: `git checkout dev`
+   - Create feature branch if needed: `git checkout -b feat/my-feature`
+   - Make changes to `core/` code
+   - Commit to `dev` (or feature branch, then merge to `dev`)
 
-**NEVER commit changes to `core/` in a custom branch without passing them to `main` first and then updating the custom branch from `main`.**
+2. **Review and analysis**:
+   - Developer in charge reviews changes in `dev`
+   - Code review, testing, and analysis happens in `dev`
+   - Fixes are made in `dev`
+
+3. **Merge to `main`** (only after approval):
+   - Once reviewed and approved: `git checkout main && git merge dev`
+   - `main` is the stable branch for core code
+
+4. **Update client branches**:
+   - After `dev` → `main` merge, update client branches: `git checkout <client-branch> && git merge main`
+   - `.gitattributes` automatically resolves conflicts
+
+**NEVER commit core changes directly to `main`**. They must go through `dev` first.
+
+### Custom Changes (client branches)
+
+- Commit directly to client branch (`crm-prego`, `crm-artistealo`, etc.)
+- No need to go through `dev` or `main`
+- Client branches are independent for custom development
+
+### Future: Client Forks
+
+When creating actual forks for clients (instead of branches):
+- Each fork will have its own `main` and `dev` branches
+- Same workflow applies: `dev` → `main` for core changes in the fork
 
 See `AGENTS.md` for detailed process with commands.
 

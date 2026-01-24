@@ -269,6 +269,47 @@ Skills must follow the convention documented in:
 
 Violations of these rules are considered blockers during review.
 
+## Git workflow (STRICT)
+
+### Core changes (MANDATORY: use `dev` branch)
+
+**CRITICAL RULE**: All core development MUST be done in the `dev` branch first.
+
+1. **Work in `dev` branch**:
+   - Switch to `dev` branch: `git checkout dev`
+   - Create feature branch from `dev` if needed: `git checkout -b feat/my-feature`
+   - Make changes to `core/` code
+   - Commit to `dev` (or feature branch, then merge to `dev`)
+
+2. **Review and analysis**:
+   - Developer in charge reviews changes in `dev`
+   - Code review, testing, and analysis happens in `dev`
+   - Fixes and improvements are made in `dev`
+
+3. **Merge to `main`** (only after approval):
+   - Once reviewed and approved, merge `dev` → `main`
+   - `main` is the stable branch for core code
+   - Command: `git checkout main && git merge dev`
+
+4. **Update client branches**:
+   - After `dev` → `main` merge, update client branches from `main`
+   - Command: `git checkout <client-branch> && git merge main`
+   - `.gitattributes` automatically resolves conflicts
+
+**NEVER commit core changes directly to `main`**. They must go through `dev` first.
+
+### Custom changes (client branches)
+
+- Commit directly to client branch (`crm-prego`, `crm-artistealo`, etc.)
+- No need to go through `dev` or `main`
+- Client branches are independent for custom development
+
+### Future: Client forks
+
+When creating actual forks for clients (instead of branches):
+- Each fork will have its own `main` and `dev` branches
+- Same workflow applies: `dev` → `main` for core changes in the fork
+
 ## Fork-friendly development workflow
 
 When creating a new client project:
@@ -278,7 +319,7 @@ When creating a new client project:
 3. **Refine with client** → Iterate until approved
 4. **Cursor generates code** → Based on approved solution design
 5. **Implement features** → In `custom/features/` (backend) and `custom/` (frontend)
-6. **Do not modify core** → Unless strictly necessary and backward-compatible
+6. **Do not modify core** → Unless strictly necessary and backward-compatible (then use `dev` branch)
 
 ## Definition of Done
 

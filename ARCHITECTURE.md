@@ -248,16 +248,41 @@ If a core change is unavoidable:
 
 ## Git workflow
 
-### Core changes
-1. Identify changes in `core/`
-2. Commit to current branch (temporary)
-3. Switch to `main` and cherry-pick/merge
-4. Return to client branch and merge from `main`
-5. `.gitattributes` automatically resolves conflicts
+### Core changes (MANDATORY: use `dev` branch)
 
-### Custom changes
-- Commit directly to client branch
-- No need to go through `main`
+**IMPORTANT**: All core development MUST be done in the `dev` branch first.
+
+1. **Work in `dev` branch**:
+   - Create feature branch from `dev` (optional, for larger features)
+   - Make changes to `core/` code
+   - Commit to `dev` branch
+
+2. **Review and analysis**:
+   - Developer in charge reviews changes in `dev`
+   - Code review, testing, and analysis happens in `dev`
+   - Only after approval, merge to `main`
+
+3. **Merge to `main`**:
+   - Once reviewed and approved, merge `dev` → `main`
+   - `main` is the stable branch for core code
+
+4. **Update client branches**:
+   - After `dev` → `main` merge, update client branches from `main`
+   - `.gitattributes` automatically resolves conflicts
+
+**Rule**: Core changes NEVER go directly to `main`. They must go through `dev` first.
+
+### Custom changes (client branches)
+
+- Commit directly to client branch (`crm-prego`, `crm-artistealo`, etc.)
+- No need to go through `dev` or `main`
+- Client branches are independent for custom development
+
+### Future: Client forks
+
+When creating actual forks for clients (instead of branches):
+- Each fork will have its own `main` and `dev` branches
+- Same workflow applies: `dev` → `main` for core changes in the fork
 
 ## Documentation updates
 
