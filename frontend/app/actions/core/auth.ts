@@ -72,12 +72,11 @@ export async function loginAction(formData: FormData) {
     // Revalidar todos los paths para asegurar que la cookie esté disponible
     // IMPORTANTE: revalidatePath debe ejecutarse ANTES del redirect
     revalidatePath('/', 'layout')
-    revalidatePath('/inbox', 'page')
     revalidatePath('/login', 'page')
 
     // Hacer redirect desde el servidor después de establecer la cookie
     // Esto asegura que la cookie esté disponible cuando se ejecute el layout
-    redirect('/inbox')
+    redirect('/')
   } catch (error) {
     // Si es una excepción de redirect, relanzarla
     if (
