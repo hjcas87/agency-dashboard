@@ -1,0 +1,15 @@
+# Custom API Routes Directory
+# 
+# This directory is for client-specific API routes.
+# Each client fork can add their custom API endpoints here.
+# 
+# Example structure:
+# api/custom/
+#   campaigns/
+#     route.ts
+#   contacts/
+#     route.ts
+#   journeys/
+#     route.ts
+#
+# These routes will be accessible at /api/custom/[route]
