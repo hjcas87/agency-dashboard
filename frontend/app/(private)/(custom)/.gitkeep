@@ -1,0 +1,18 @@
+# Custom Routes Directory
+# 
+# This directory is for client-specific custom routes that need authentication.
+# Each client fork can add their custom pages here (e.g., crm/, dashboard/, etc.)
+# 
+# Example structure:
+# (private)/(custom)/
+#   crm/
+#     campaigns/
+#       page.tsx
+#     contacts/
+#       page.tsx
+#     journey/
+#       page.tsx
+#   dashboard/
+#     page.tsx
+#
+# These routes will be automatically protected by (private)/layout.tsx
