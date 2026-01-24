@@ -1,4 +1,4 @@
-# Archivos y directorios que Cursor debe ignorar
+# Files and directories that Cursor should ignore
 
 # Dependencias
 node_modules/
@@ -63,8 +63,8 @@ n8n_data/
 # uv.lock
 # package-lock.json
 
-# Documentación de negocio - INCLUIR (no ignorar)
-# Los archivos en docs/business/ son importantes para el contexto
-# Solo ignorar si son extremadamente grandes (>10MB)
-# docs/business/assets/pdfs/*.pdf  # Descomentar si PDFs son muy grandes
+# Business documentation - INCLUDE (do not ignore)
+# Files in docs/business/ are important for context
+# Only ignore if extremely large (>10MB)
+# docs/business/assets/pdfs/*.pdf  # Uncomment if PDFs are very large
 
