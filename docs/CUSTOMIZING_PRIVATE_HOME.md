@@ -118,20 +118,51 @@ export default async function DefaultPage() {
 - ✅ **Flexible**: Cada cliente puede redirigir o renderizar lo que necesite
 - ✅ **Consistente**: Todas las ramas usan la misma estructura base
 
-## Flujo de Actualización
+## Flujo de Actualización Sin Conflictos
 
-Cuando `main` tiene cambios en `(private)/`:
+Para evitar conflictos automáticamente, se usa `.gitattributes` con estrategias de merge:
 
-1. Merge de `main` a la rama custom
-2. Si hay conflictos en `default.tsx`, mantener la versión custom (theirs)
-3. Si hay cambios en `page.tsx` o `layout.tsx`, aceptar los de `main` (ours)
+### Configuración Automática (`.gitattributes`)
+
+El archivo `.gitattributes` está configurado para resolver conflictos automáticamente:
+
+- **Archivos custom** (`default.tsx`, componentes custom): `merge=ours` - Mantiene la versión custom
+- **Archivos core** (`page.tsx`, `layout.tsx`): `merge=theirs` - Acepta cambios de main
+
+### Proceso de Actualización
 
 ```bash
-# Ejemplo de merge
+# 1. Cambiar a la rama custom
 git checkout crm-cliente
+
+# 2. Hacer merge desde main
 git merge main
-# Si hay conflicto en default.tsx:
-git checkout --theirs app/(private)/default.tsx
+
+# 3. Git resolverá automáticamente los conflictos según .gitattributes
+# - default.tsx: mantendrá la versión custom automáticamente
+# - page.tsx/layout.tsx: aceptará cambios de main automáticamente
+
+# 4. Si todo está bien, el merge se completa sin intervención
+# Si hay otros conflictos no configurados, resolverlos manualmente
+```
+
+### Resolución Manual (si es necesario)
+
+Si necesitas resolver conflictos manualmente:
+
+```bash
+# Para mantener la versión custom de default.tsx:
+git checkout --ours app/(private)/default.tsx
 git add app/(private)/default.tsx
+
+# Para aceptar cambios de main en layout.tsx o page.tsx:
+git checkout --theirs app/(private)/layout.tsx
+git add app/(private)/layout.tsx
+
+# Completar el merge
 git commit
 ```
+
+**Nota sobre terminología Git:**
+- `--ours`: versión de la rama actual (custom) cuando estás en `crm-cliente`
+- `--theirs`: versión de la rama que estás mergeando (main) cuando estás en `crm-cliente`
