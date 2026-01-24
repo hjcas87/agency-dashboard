@@ -43,6 +43,7 @@ If PROJECT_BRIEF doesn't exist, STOP and ask for it.
 - Clear, unambiguous language.
 - Suitable for client review and sign-off.
 - Each user story maps to one feature (backend + frontend if needed).
+- **Language: All documents MUST be written in Spanish** - These are for client review and discussion. Technical documentation remains in English.
 
 ---
 

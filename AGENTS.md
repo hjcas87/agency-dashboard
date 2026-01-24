@@ -358,3 +358,29 @@ make test
 6. **Cursor generates code** → Based on approved solution design and diagrams
 
 The PROJECT_BRIEF is the starting point for all client-specific development.
+
+## Language Guidelines
+
+### Documentation Language
+
+**Solution Design Documents (`docs/solution_design/`):**
+- **MUST be written in Spanish** - These documents are for client review and discussion
+- Files affected: `system_requirements.md`, `scope.md`, `assumptions_and_constraints.md`, `user_stories/*.md`
+- Diagrams and visual content should also use Spanish labels when possible
+
+**Technical Documentation (READMEs, ARCHITECTURE.md, AGENTS.md):**
+- **MUST be written in English** - These are for developers and technical reference
+- Files: `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, `docs/agents/roles/*.md`, `docs/agents/skills/*.md`
+
+### Code Language
+
+**All code and comments:**
+- **MUST be written in English** - Code, comments, docstrings, variable names, function names
+- This applies to both Python (backend) and TypeScript (frontend)
+- Exception: User-facing strings in the UI can be in Spanish (or client's language) if needed
+
+### Chat Responses
+
+**Agent responses to user:**
+- **MUST be in Spanish** - All chat conversations with the user must be in Spanish
+- This is specified in `.cursor/rules.md` and must be followed strictly

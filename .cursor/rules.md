@@ -2,6 +2,13 @@
 
 > **IMPORTANT**: Always respond to the user in Spanish in chat conversations, even though this documentation is in English.
 
+## Language Guidelines
+
+- **Solution Design Documents** (`docs/solution_design/`): MUST be in Spanish (for client review)
+- **Code and Comments**: MUST be in English (standard practice)
+- **Technical Documentation** (READMEs, ARCHITECTURE.md, AGENTS.md): MUST be in English
+- **Chat Responses**: MUST be in Spanish (user communication)
+
 ## Project Context
 
 This is a reusable boilerplate for Forward Deployed Engineers with modular feature-based architecture.

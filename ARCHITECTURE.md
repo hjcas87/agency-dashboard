@@ -109,9 +109,14 @@ Key properties:
 
 1. **Analyst meets with client** → Agrees on high-level needs
 2. **Create PROJECT_BRIEF** → Copy `docs/PROJECT_BRIEF.template.md` to `docs/PROJECT_BRIEF.md` and fill it
-3. **Cursor generates solution_design/** → Based on PROJECT_BRIEF
+3. **Cursor generates solution_design/** → Based on PROJECT_BRIEF (documents must be in Spanish for client review)
 4. **Refine with client** → Iterate on solution design until approved
-5. **Cursor generates code** → Based on approved solution design
+5. **Cursor generates code** → Based on approved solution design (code must be in English)
+
+**Language Guidelines:**
+- `docs/solution_design/` documents → **Spanish** (for client review and discussion)
+- Code, comments, docstrings → **English** (standard practice)
+- Technical documentation (READMEs, ARCHITECTURE.md, AGENTS.md) → **English**
 
 ### Adding a new feature
 

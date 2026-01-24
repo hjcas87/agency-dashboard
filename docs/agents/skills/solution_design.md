@@ -21,13 +21,16 @@ This skill applies to all content under:
 - No implementation details.
 - No code changes.
 - Changes require explicit agreement (scope change).
+- **Language: All documents in `docs/solution_design/` MUST be written in Spanish** - These documents are for client review and discussion. Technical documentation (READMEs, ARCHITECTURE.md, AGENTS.md) remains in English.
 
 ## Outputs
-- system_requirements.md
-- scope.md
-- assumptions_and_constraints.md
-- diagrams/*.excalidraw
-- user_stories/*.md
+- system_requirements.md (in Spanish)
+- scope.md (in Spanish)
+- assumptions_and_constraints.md (in Spanish)
+- diagrams/*.excalidraw (labels in Spanish when possible)
+- user_stories/*.md (in Spanish)
+
+**IMPORTANT**: All solution design documents must be written in Spanish as they are intended for client review and discussion.
 
 ## Steps (MANDATORY ORDER)
 
