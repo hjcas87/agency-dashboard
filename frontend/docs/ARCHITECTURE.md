@@ -77,7 +77,11 @@ frontend/
 │   │   └── (custom)/         # Core - Directory for client-specific custom routes
 │   │       ├── .gitkeep      # Core - Keeps directory in git
 │   │       └── [custom pages] # Custom - Client-specific pages (protected by layout.tsx)
-│   ├── api/                  # API routes (if needed)
+│   ├── api/                  # API routes
+│   │   ├── (core)/           # Core API endpoints (NOT modifiable)
+│   │   │   ├── auth/         # Authentication endpoints
+│   │   │   └── proxy/        # Generic proxy
+│   │   └── (custom)/         # Custom API endpoints (modifiable)
 │   ├── globals.css           # Global styles
 │   ├── layout.tsx            # Root layout
 │   └── page.tsx              # Public home page
@@ -132,6 +136,18 @@ The app uses Next.js route groups to organize public and private routes:
   - **`(custom)/`**: Core - Directory for client-specific custom routes
     - All routes here are automatically protected by `(private)/layout.tsx`
     - Pages map directly to root routes (e.g., `(custom)/campaigns/page.tsx` → `/campaigns`)
+
+### API Routes Structure
+
+API routes also use route groups to organize core and custom endpoints:
+
+- **`api/(core)/`**: Core API endpoints (NOT modifiable in forks)
+  - **`auth/`**: Authentication endpoints (`/api/auth/login`, `/api/auth/logout`, etc.)
+  - **`proxy/`**: Generic proxy (`/api/proxy/[...path]`)
+- **`api/(custom)/`**: Custom API endpoints (modifiable per client)
+  - Custom endpoints map to `/api/[endpoint]` (route group doesn't appear in URL)
+
+**Note**: Route groups `(core)` and `(custom)` don't appear in public URLs, keeping URLs clean while organizing code internally.
 
 ### Authentication Flow
 

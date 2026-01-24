@@ -210,6 +210,27 @@ app/
 │       └── [páginas custom]  # Custom - Páginas específicas del cliente
 ```
 
+### Rutas API
+
+Las rutas API también usan route groups para organizar endpoints core y custom:
+
+```
+app/api/
+├── (core)/              # Core - Endpoints genéricos (NO modificar en forks)
+│   ├── auth/            # Endpoints de autenticación
+│   │   ├── login/       → /api/auth/login
+│   │   ├── logout/      → /api/auth/logout
+│   │   ├── me/          → /api/auth/me
+│   │   └── password/change/ → /api/auth/password/change
+│   └── proxy/           # Proxy genérico
+│       └── [...path]/   → /api/proxy/[...path]
+│
+└── (custom)/            # Custom - Endpoints específicos del cliente
+    └── [endpoints]      → /api/[endpoint] (sin "custom" en URL)
+```
+
+**Nota importante**: Los route groups `(core)` y `(custom)` no aparecen en las URLs públicas. Esto mantiene URLs limpias mientras organiza el código internamente.
+
 **Reglas importantes:**
 - ✅ **SÍ modificar `(private)/page.tsx`** - Es custom, cada fork puede sobrescribir este archivo
 - ✅ **NO modificar `(private)/layout.tsx` en forks** - A menos que necesites agregar componentes wrapper (como CRMLayout)
