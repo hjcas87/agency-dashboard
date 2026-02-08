@@ -1,23 +1,24 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/core/ui/card"
 import { Button } from "@/components/core/ui/button"
 import { Input } from "@/components/core/ui/input"
 import { loginAction } from "@/app/actions/core/auth"
 
 export function LoginForm() {
-  const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const errorFromUrl = searchParams.get("error")
+  const [error, setError] = useState<string | null>(errorFromUrl)
   const [isPending, startTransition] = useTransition()
 
   const handleSubmit = async (formData: FormData) => {
     setError(null)
     startTransition(async () => {
-      const result = await loginAction(formData)
-      if (result?.error) {
-        setError(result.error)
-      }
-      // Si no hay error, loginAction redirige automáticamente
+      // loginAction always redirects, never returns
+      // Errors are passed via URL query params
+      await loginAction(formData)
     })
   }
 
@@ -87,4 +88,3 @@ export function LoginForm() {
     </Card>
   )
 }
-
