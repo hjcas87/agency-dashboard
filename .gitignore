@@ -53,10 +53,19 @@ yarn-error.log*
 *.seed
 *.pid.lock
 
+# Celery
+celerybeat-schedule
+celerybeat-schedule.db
+
 # Database
 *.db
 *.sqlite
 *.sqlite3
+
+# Coverage
+htmlcov/
+.coverage
+coverage.xml
 
 # N8N
 n8n_data/
