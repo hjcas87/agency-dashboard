@@ -225,6 +225,7 @@ The agent MUST invoke the corresponding skill when any of the following occurs:
 | Review changes / PR / quality gate | review_feature |
 | Prepare deployment or release | deploy |
 | Add or update skills/conventions | add_or_update_skill |
+| Add or modify UI components (buttons, forms, charts, tables, navigation) | shadcn-frontend |
 
 Skipping an existing skill is considered an error.
 

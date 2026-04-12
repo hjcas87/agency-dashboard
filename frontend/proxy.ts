@@ -7,6 +7,7 @@ export function proxy(request: NextRequest) {
   // Rutas públicas que NO requieren autenticación
   const publicPaths = [
     '/login',
+    '/register',
     '/reset-password',
     '/api', // API routes pueden tener su propia autenticación
   ]
@@ -50,7 +51,7 @@ export const config = {
      * - login (página de login)
      * - reset-password (página de reset password)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|login|reset-password).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|login|register|reset-password).*)',
   ],
 }
 

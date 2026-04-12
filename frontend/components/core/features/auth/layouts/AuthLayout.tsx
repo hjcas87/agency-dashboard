@@ -3,43 +3,40 @@
 import Image from 'next/image'
 import { ReactNode } from 'react'
 import { useBranding } from '../AuthBrandingProvider'
+import { ThemeToggle } from '@/components/core/features/dashboard/theme-toggle'
 
 interface AuthLayoutProps {
   children: ReactNode
 }
 
 /**
- * Auth layout component that renders different layouts based on branding config.
- * Note: Mendri watermark should be rendered outside this component to avoid reloading on navigation.
+ * Auth layout component.
+ * Renders a centered or split-screen layout using shadcn theme colors.
  */
 export function AuthLayout({ children }: AuthLayoutProps) {
   const branding = useBranding()
-  const { layout, colors, logo } = branding
+  const { layout, logo } = branding
 
   if (layout.type === 'split-screen') {
     return (
-      <div className="flex min-h-screen relative">
+      <div className="flex min-h-screen">
         {/* Left side */}
-        <div
-          className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12"
-          style={{ backgroundColor: colors.background }}
-        >
+        <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center bg-muted p-12">
           {layout.leftSideContent ? (
             <div className="max-w-md text-center lg:text-left">
-              {/* Welcome title - combined */}
               {layout.leftSideContent.title && layout.leftSideContent.subtitle ? (
-                <h1 className="text-5xl font-bold mb-8" style={{ color: colors.primary }}>
+                <h1 className="mb-8 text-5xl font-bold text-foreground">
                   {layout.leftSideContent.title} {layout.leftSideContent.subtitle}
                 </h1>
               ) : layout.leftSideContent.title ? (
-                <h1 className="text-5xl font-bold mb-8" style={{ color: colors.primary }}>
+                <h1 className="mb-8 text-5xl font-bold text-foreground">
                   {layout.leftSideContent.title}
                 </h1>
               ) : null}
-              {/* Brand logo */}
+
               <div className="mb-8 flex items-center justify-center lg:justify-start">
                 {logo.component ? (
-                  <logo.component className="h-16 w-auto" />
+                  <logo.component className="size-16 text-primary" />
                 ) : logo.src ? (
                   <Image
                     src={logo.src}
@@ -50,36 +47,12 @@ export function AuthLayout({ children }: AuthLayoutProps) {
                     priority
                   />
                 ) : logo.text ? (
-                  <span className="text-4xl font-bold" style={{ color: colors.primary }}>
-                    {logo.text}
-                  </span>
+                  <span className="text-4xl font-bold text-primary">{logo.text}</span>
                 ) : null}
               </div>
-              {/* Circular arrow icon */}
-              <div className="flex justify-center lg:justify-start mt-12">
-                <div
-                  className="w-16 h-16 rounded-full border-2 flex items-center justify-center"
-                  style={{ borderColor: colors.text }}
-                >
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    style={{ color: colors.text }}
-                  >
-                    <path
-                      d="M9 18L15 12L9 6"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-              </div>
+
               {layout.leftSideContent.description && (
-                <p className="text-lg mt-8" style={{ color: colors.textSecondary }}>
+                <p className="mt-8 text-lg text-muted-foreground">
                   {layout.leftSideContent.description}
                 </p>
               )}
@@ -96,53 +69,36 @@ export function AuthLayout({ children }: AuthLayoutProps) {
               )}
             </div>
           ) : (
-            <div className="max-w-md">
-              <h1 className="text-4xl font-bold mb-4" style={{ color: colors.primary }}>
-                ¡Bienvenido a nuestro CRM!
-              </h1>
-            </div>
+            <h1 className="mb-4 text-4xl font-bold text-foreground">
+              ¡Bienvenido a Mendri!
+            </h1>
           )}
         </div>
 
-        {/* Right side with background */}
-        <div
-          className="flex-1 flex items-center justify-center p-4 relative overflow-hidden"
-          style={{
-            backgroundImage: layout.backgroundImage ? `url(${layout.backgroundImage})` : undefined,
-            backgroundColor: layout.backgroundImage ? undefined : colors.background,
-            backgroundSize: layout.backgroundImage ? 'cover' : undefined,
-            backgroundPosition: layout.backgroundImage ? 'center' : undefined,
-          }}
-        >
+        {/* Right side */}
+        <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-background p-4">
+          <div className="absolute right-4 top-4">
+            <ThemeToggle />
+          </div>
           {layout.backgroundImage && layout.backgroundOverlay && (
             <div
               className="absolute inset-0"
-              style={{
-                backgroundColor: layout.backgroundOverlay,
-              }}
+              style={{ backgroundColor: layout.backgroundOverlay }}
             />
           )}
-          <div className="relative z-10 w-full max-w-lg px-4">{children}</div>
+          <div className="relative z-10 w-full max-w-lg">{children}</div>
         </div>
       </div>
     )
   }
 
-  if (layout.type === 'full-width') {
-    return (
-      <div className="min-h-screen p-4 relative" style={{ backgroundColor: colors.background }}>
-        <div className="max-w-4xl mx-auto">{children}</div>
-      </div>
-    )
-  }
-
-  // Default: centered layout
+  // Default: centered
   return (
-    <div
-      className="flex flex-col min-h-screen relative"
-      style={{ backgroundColor: colors.background }}
-    >
-      <div className="flex-1 flex items-center justify-center p-4">{children}</div>
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
+      <div className="w-full max-w-lg">{children}</div>
     </div>
   )
 }

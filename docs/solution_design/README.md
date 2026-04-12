@@ -1,8 +1,8 @@
-# Solution Design — Mendri Loyalty
+# Solution Design — Mendri
 
 **Versión**: v1.0
 **Fecha**: 2025-04-11
-**Proyecto**: Mendri Loyalty
+**Proyecto**: Mendri
 
 ## Documentos
 

@@ -169,7 +169,7 @@ export async function registerAction(formData: FormData) {
     })
 
     revalidatePath('/', 'layout')
-    redirect('/(private)/(custom)/connect-store')
+    redirect('/')
   } catch (error) {
     if (
       error &&

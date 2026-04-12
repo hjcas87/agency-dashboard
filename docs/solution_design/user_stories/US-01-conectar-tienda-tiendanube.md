@@ -1,7 +1,7 @@
 # US-01 Conectar Tienda con Tiendanube
 
 ## Descripción
-Como administrador de un comercio, quiero conectar mi tienda de Tiendanube con Mendri Loyalty para poder activar el programa de fidelización y recuperación de carritos.
+Como administrador de un comercio, quiero conectar mi tienda de Tiendanube con Mendri para poder activar el programa de fidelización y recuperación de carritos.
 
 ## Precondiciones
 - El comercio tiene una tienda activa en Tiendanube
@@ -10,7 +10,7 @@ Como administrador de un comercio, quiero conectar mi tienda de Tiendanube con M
 ## Camino Feliz
 1. El admin hace clic en "Conectar con Tiendanube"
 2. Es redirigido al flujo OAuth de Tiendanube
-3. Autoriza la aplicación Mendri Loyalty
+3. Autoriza la aplicación Mendri
 4. Es redirigido de vuelta al dashboard de Mendri
 5. Se muestra confirmación: "Tienda conectada exitosamente"
 6. Se inicia la sincronización inicial del catálogo en segundo plano

@@ -23,8 +23,7 @@
       "Skill(setup-client-fork)",
       "Skill(add-or-update-skill)",
       "Skill(solution-design)",
-      "Bash(mkdir *)",
-      "Bash(cp *)"
+      "Skill(shadcn-frontend)"
     ]
   },
   "$version": 3

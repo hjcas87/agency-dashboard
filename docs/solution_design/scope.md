@@ -1,7 +1,7 @@
-# Alcance — Mendri Loyalty
+# Alcance — Mendri
 
 ## Propósito
-Definir explícitamente qué está dentro y fuera del alcance del MVP de Mendri Loyalty.
+Definir explícitamente qué está dentro y fuera del alcance del MVP de Mendri.
 
 ---
 

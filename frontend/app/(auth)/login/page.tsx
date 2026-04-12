@@ -20,7 +20,6 @@ export default async function LoginPage() {
       <AuthLayout>
         <BaseLoginForm />
       </AuthLayout>
-      {branding.footer?.show && <MendriFooter />}
     </AuthBrandingProvider>
   )
 }

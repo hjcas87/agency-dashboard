@@ -21,6 +21,12 @@ description: Implement a new frontend UI feature using Next.js App Router, Serve
 
 ## Steps
 
+### 0) Check for shadcn components first
+- Run `shadcn-frontend` skill to find if an existing component solves the need
+- **Never write custom UI** when a shadcn component exists
+- Use `npx shadcn@latest search` to find available components
+- Use `npx shadcn@latest docs <component>` to get correct API docs before implementing
+
 ### 1) Create component directory
 ```
 frontend/components/custom/features/<feature_name>/

@@ -1,4 +1,4 @@
-# Supuestos y Restricciones — Mendri Loyalty
+# Supuestos y Restricciones — Mendri
 
 ## Propósito
 Documentar las expectativas sobre datos, rendimiento, condiciones de ejecución y riesgos conocidos.

@@ -1,19 +1,19 @@
-# Project Brief — Mendri Loyalty
+# Project Brief — Mendri
 
 ## Propósito
-Este documento captura el acuerdo inicial sobre las necesidades y el desarrollo planificado del proyecto Mendri Loyalty — una plataforma SaaS multi-tenant de fidelización de clientes para tiendas de Tiendanube.
+Este documento captura el acuerdo inicial sobre las necesidades y el desarrollo planificado del proyecto Mendri — una plataforma SaaS multi-tenant de fidelización de clientes para tiendas de Tiendanube.
 
 **Creado por**: Core Team
 **Fecha**: 2025-04-11
 **Cliente**: Producto interno (no cliente externo)
-**Proyecto**: Mendri Loyalty
+**Proyecto**: Mendri
 
 ---
 
 ## Contexto
 
 ### Resumen del Negocio
-Mendri Loyalty es un producto SaaS interno dirigido a comercios de Tiendanube que buscan aumentar la retención de clientes y el lifetime value (LTV) a través de un programa de fidelización integrado.
+Mendri es un producto SaaS interno dirigido a comercios de Tiendanube que buscan aumentar la retención de clientes y el lifetime value (LTV) a través de un programa de fidelización integrado.
 
 ### Situación Actual
 - Las tiendas de Tiendanube no tienen herramientas nativas de fidelización

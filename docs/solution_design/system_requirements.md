@@ -1,4 +1,4 @@
-# Requisitos del Sistema — Mendri Loyalty
+# Requisitos del Sistema — Mendri
 
 ## Propósito
 Documentar los requisitos no negociables del sistema y entorno para que la solución funcione correctamente. Este documento define restricciones, no implementación.

@@ -9,28 +9,21 @@ Endpoints:
 - POST   /tiendanube/stores/{store_id}/sync - Trigger catalog sync
 - GET    /tiendanube/stores/{store_id}/status - Get store connection status
 """
-import logging
 import secrets
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.custom.features.tiendanube_connection.schemas import (
-    AuthCallbackResponse,
-    AuthInitiateRequest,
-    AuthInitiateResponse,
     StoreListResponse,
     StoreResponse,
     SyncTriggerResponse,
-    TiendanubeStoreInfo,
 )
 from app.custom.features.tiendanube_connection.service import TiendanubeConnectionService
 from app.config import settings
 from app.database import get_db
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tiendanube", tags=["Custom: Tiendanube"])
 
@@ -45,26 +38,18 @@ def get_service(db: Session = Depends(get_db)) -> TiendanubeConnectionService:
 
 @router.get(
     "/auth/initiate",
-    response_model=AuthInitiateResponse,
     summary="Start Tiendanube OAuth flow",
 )
 def initiate_auth(
-    store_id: str = Query(..., description="Tiendanube store numeric ID"),
     service: TiendanubeConnectionService = Depends(get_service),
-) -> AuthInitiateResponse:
-    """Generate authorization URL to connect a Tiendanube store.
+):
+    """Start OAuth flow. Redirects user to Tiendanube to select their store."""
+    import secrets as _secrets
 
-    The user should be redirected to the returned auth_url.
-    After authorization, they'll be redirected back with a code.
-    """
-    state = secrets.token_urlsafe(32)
-    req = AuthInitiateRequest(
-        client_id=settings.TIENDANUBE_CLIENT_ID or "",
-        store_id=store_id,
-    )
-    auth_url = service.initiate_auth(req, state)
+    state = _secrets.token_urlsafe(32)
     # TODO: Store state in cache/session for callback verification
-    return AuthInitiateResponse(auth_url=auth_url, state=state)
+    auth_url = service.initiate_auth(state)
+    return {"auth_url": auth_url, "state": state}
 
 
 @router.get(
@@ -74,74 +59,31 @@ def initiate_auth(
 async def auth_callback(
     code: str = Query(..., description="Authorization code from Tiendanube"),
     state: str = Query(..., description="CSRF state token"),
-    redirect: bool = Query(
-        True, description="Redirect to frontend after success"
-    ),
     service: TiendanubeConnectionService = Depends(get_service),
-) -> AuthCallbackResponse:
+):
     """Handle OAuth callback and exchange code for permanent token.
 
-    After user authorizes the app, Tiendanube redirects here with
-    the authorization code. We exchange it for a permanent token
-    and register/update the store.
-
-    If redirect=True (default for browser flow), redirects to
-    frontend with success/error params.
-    If redirect=False, returns JSON response (for programmatic use).
+    Tiendanube redirects here after user authorizes. We exchange
+    the code for a token and register the store automatically.
+    The store_id comes from user_id in the token response.
     """
     try:
-        # Exchange code for token (uses client_id/secret from settings)
+        # Exchange code for token (includes user_id = store_id)
         token_data = await service.exchange_token(code)
 
-        # Fetch store info from Tiendanube API
-        store_info = await _fetch_store_info(
-            token_data.user_id,
-            token_data.access_token,
-        )
+        # Register store from token response
+        store = service.register_store_from_token(token_data)
 
-        # Register store + save token
-        store = service.register_store(token_data, store_info)
-
-        if redirect:
-            return RedirectResponse(
-                url=f"{settings.FRONTEND_URL}/(private)/(custom)/connect-store/connected?store_name={store.name}",
-                status_code=302,
-            )
-
-        return AuthCallbackResponse(
-            store_id=store.id,
-            store_name=store.name,
-            access_token=token_data.access_token,
-            message="Store connected successfully",
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/connect-store/connected?store_name={store.name}",
+            status_code=302,
         )
 
     except Exception as e:
-        if redirect:
-            return RedirectResponse(
-                url=f"{settings.FRONTEND_URL}/(private)/(custom)/connect-store?error={str(e)}",
-                status_code=302,
-            )
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-async def _fetch_store_info(
-    store_id: str,
-    access_token: str,
-) -> TiendanubeStoreInfo:
-    """Fetch store metadata from Tiendanube API."""
-    import httpx
-
-    url = f"https://api.tiendanube.com/v1/{store_id}/store"
-    headers = {
-        "Authentication": f"bearer {access_token}",
-        "User-Agent": "mendri-loyalty",
-        "Content-Type": "application/json",
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers, timeout=30.0)
-        response.raise_for_status()
-        return TiendanubeStoreInfo(**response.json())
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/connect-store?error={str(e)}",
+            status_code=302,
+        )
 
 
 # ── Store Management ────────────────────────────────────────────────

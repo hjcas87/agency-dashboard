@@ -1,6 +1,6 @@
 /**
  * Branding configuration for authentication pages.
- * 
+ *
  * This configuration allows customization of:
  * - Colors and theme
  * - Logo and branding elements
@@ -8,8 +8,9 @@
  * - Layout styles
  * - Background images
  */
+import type React from 'react'
 
-export type AuthLayout = "centered" | "split-screen" | "full-width"
+export type AuthLayoutType = 'centered' | 'split-screen' | 'full-width'
 
 export interface BrandingColors {
   primary: string
@@ -29,7 +30,7 @@ export interface BrandingLogo {
   alt?: string
   component?: React.ComponentType<{ className?: string }>
   text?: string
-  size?: "sm" | "md" | "lg"
+  size?: 'sm' | 'md' | 'lg'
 }
 
 export interface BrandingTexts {
@@ -46,20 +47,20 @@ export interface BrandingTexts {
   confirmPasswordLabel: string
   emailPlaceholder: string
   passwordPlaceholder: string
-  rememberMe?: string // Optional "Remember me" checkbox label
+  rememberMe?: string
 }
 
 export interface BrandingFormOptions {
-  showRememberMe?: boolean // Show "Remember me" checkbox
-  textAlignment?: "left" | "center" // Text alignment for titles and descriptions
+  showRememberMe?: boolean
+  textAlignment?: 'left' | 'center'
   cardStyle?: {
-    rounded?: "sm" | "md" | "lg" | "xl" | "2xl"
-    shadow?: "sm" | "md" | "lg" | "xl" | "2xl" | "none"
+    rounded?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+    shadow?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'none'
   }
 }
 
 export interface BrandingLayout {
-  type: AuthLayout
+  type: AuthLayoutType
   backgroundImage?: string
   backgroundOverlay?: string
   leftSideContent?: {
@@ -85,49 +86,46 @@ export interface AuthBrandingConfig {
 }
 
 /**
- * Default branding configuration (core).
- * This can be overridden in custom/features/auth/branding.ts
+ * Default branding configuration.
+ * Uses shadcn/ui global CSS variables to stay consistent with the dashboard theme.
  */
 export const defaultBrandingConfig: AuthBrandingConfig = {
   colors: {
-    primary: "#2563eb", // blue-600
-    primaryHover: "#1d4ed8", // blue-700
-    background: "#f9fafb", // gray-50
-    cardBackground: "#ffffff", // white
-    text: "#111827", // gray-900
-    textSecondary: "#6b7280", // gray-500
-    border: "#e5e7eb", // gray-200
-    error: "#dc2626", // red-600
-    success: "#16a34a", // green-600
+    primary: 'hsl(var(--primary))',
+    primaryHover: 'hsl(var(--primary) / 0.8)',
+    background: 'hsl(var(--background))',
+    cardBackground: 'hsl(var(--card))',
+    text: 'hsl(var(--foreground))',
+    textSecondary: 'hsl(var(--muted-foreground))',
+    border: 'hsl(var(--border))',
+    error: 'hsl(var(--destructive))',
+    success: 'hsl(var(--primary))',
   },
-  logo: {
-    text: "O",
-    size: "md",
-  },
+  logo: {},
   texts: {
-    loginTitle: "Iniciar Sesión",
-    loginSubtitle: "Ingresa tus credenciales para acceder al CRM",
-    loginButton: "Iniciar Sesión",
-    resetPasswordTitle: "Restablecer Contraseña",
-    resetPasswordSubtitle: "Ingresa tu email para recibir un enlace de restablecimiento",
-    resetPasswordButton: "Enviar Enlace",
-    forgotPasswordLink: "¿Olvidaste tu contraseña?",
-    backToLogin: "Volver al Login",
-    emailLabel: "Email",
-    passwordLabel: "Contraseña",
-    confirmPasswordLabel: "Confirmar Contraseña",
-    emailPlaceholder: "tu@email.com",
-    passwordPlaceholder: "••••••••",
+    loginTitle: 'Iniciar sesión',
+    loginSubtitle: 'Ingresá tus credenciales para acceder a Mendri',
+    loginButton: 'Iniciar sesión',
+    resetPasswordTitle: 'Restablecer contraseña',
+    resetPasswordSubtitle: 'Ingresá tu email para recibir un enlace de restablecimiento',
+    resetPasswordButton: 'Enviar enlace',
+    forgotPasswordLink: '¿Olvidaste tu contraseña?',
+    backToLogin: 'Volver al login',
+    emailLabel: 'Email',
+    passwordLabel: 'Contraseña',
+    confirmPasswordLabel: 'Confirmar contraseña',
+    emailPlaceholder: 'tu@email.com',
+    passwordPlaceholder: '••••••••',
   },
   layout: {
-    type: "centered",
+    type: 'centered',
   },
   formOptions: {
     showRememberMe: false,
-    textAlignment: "center",
+    textAlignment: 'center',
     cardStyle: {
-      rounded: "md",
-      shadow: "sm",
+      rounded: 'lg',
+      shadow: 'sm',
     },
   },
   footer: {
@@ -141,12 +139,9 @@ export const defaultBrandingConfig: AuthBrandingConfig = {
  */
 export function getBrandingConfig(): AuthBrandingConfig {
   try {
-    // Try to import custom branding config
-    // The file exists as a stub by default, so this won't cause build warnings
-    const customBranding = require("@/lib/custom/features/auth/branding")
-    
+    const customBranding = require('@/lib/custom/features/auth/branding')
+
     if (customBranding?.brandingConfig) {
-      // Merge with defaults (custom overrides defaults)
       return {
         ...defaultBrandingConfig,
         ...customBranding.brandingConfig,
@@ -164,11 +159,9 @@ export function getBrandingConfig(): AuthBrandingConfig {
         },
       }
     }
-  } catch (error) {
-    // File doesn't exist or can't be loaded, use defaults
-    // Silently fall back to defaults
+  } catch {
+    // File doesn't exist, use defaults
   }
-  
+
   return defaultBrandingConfig
 }
-
