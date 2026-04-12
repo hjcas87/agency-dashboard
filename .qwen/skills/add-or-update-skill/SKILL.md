@@ -14,6 +14,13 @@ description: Create or modify an agent skill following the standard convention. 
 - The change is generic (not client-specific)
 - The skill represents a repeatable process
 
+## Rules (STRICT)
+- **Code, comments, docstrings, variable names**: MUST be in **English**
+- **User-facing messages** (error messages shown in the UI, success/error notifications): MUST be in **Spanish** (or the client's language)
+- **Magic strings in comparisons**: Avoid — use constants or enums
+- **Magic user-facing messages**: Extract to named constants for clarity and i18n support
+- These rules apply to ALL features and skills created in this repository
+
 ## Steps
 
 ### 1) Choose a clear skill name

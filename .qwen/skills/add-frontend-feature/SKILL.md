@@ -14,6 +14,11 @@ description: Implement a new frontend UI feature using Next.js App Router, Serve
 - Feature name follows kebab-case for routes, PascalCase for components
 - API endpoints are identified (if backend integration needed)
 
+## Rules (STRICT)
+- **Code, comments, TypeScript types**: MUST be in **English**
+- **User-facing text** (labels, messages, notifications): MUST be in **Spanish** (client's language)
+- **Magic strings**: Extract user-facing text to named constants
+
 ## Steps
 
 ### 1) Create component directory

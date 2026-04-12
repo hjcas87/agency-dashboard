@@ -188,6 +188,18 @@ export function BaseLoginForm({
           >
             {isPending ? 'Iniciando sesión...' : branding.texts.loginButton}
           </Button>
+
+          <p className="text-center text-sm" style={{ color: branding.colors.textSecondary }}>
+            ¿No tenés cuenta?{' '}
+            <Link
+              href="/register"
+              className="hover:underline"
+              style={{ color: branding.colors.primary }}
+            >
+              Creá tu cuenta
+            </Link>
+          </p>
+
           {renderFooter && renderFooter(branding)}
         </form>
       </CardContent>

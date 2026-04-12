@@ -43,3 +43,11 @@ class UserCreateWithPassword(BaseModel):
     is_active: bool = Field(default=True, description="Si el usuario está activo")
     is_admin: bool = Field(default=False, description="Si el usuario es administrador")
 
+
+class UserRegister(BaseModel):
+    """Schema for public user registration (self-signup)."""
+
+    email: EmailStr = Field(..., description="User email address")
+    name: str = Field(..., min_length=1, max_length=255, description="User display name")
+    password: str = Field(..., min_length=8, max_length=72, description="Account password")
+

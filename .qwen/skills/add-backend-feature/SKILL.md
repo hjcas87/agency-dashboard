@@ -15,6 +15,11 @@ description: Implement a new backend API feature in the custom/features director
 - Database models are identified (if needed)
 - External integrations are identified (if needed)
 
+## Rules (STRICT)
+- **Code, comments, docstrings**: MUST be in **English**
+- **User-facing error/success messages**: MUST be in **Spanish** (client's language)
+- **Magic strings**: Avoid — use constants or enums for error messages and comparisons
+
 ## Steps
 
 ### 1) Create feature directory structure

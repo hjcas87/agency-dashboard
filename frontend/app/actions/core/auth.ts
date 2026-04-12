@@ -6,14 +6,25 @@ import { redirect } from 'next/navigation'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+// ── User-facing messages (Spanish) ──────────────────────────────────
+const MSG_LOGIN_EMAIL_PASSWORD_REQUIRED = 'Email y contraseña son requeridos'
+const MSG_LOGIN_ERROR = 'Error al iniciar sesión'
+const MSG_SERVER_ERROR = 'Error interno del servidor'
+const MSG_EMAIL_REQUIRED = 'El email es requerido'
+const MSG_NAME_REQUIRED = 'El nombre es requerido'
+const MSG_PASSWORD_REQUIRED = 'La contraseña es requerida'
+const MSG_PASSWORD_MIN_LENGTH = 'La contraseña debe tener al menos 8 caracteres'
+const MSG_PASSWORDS_MISMATCH = 'Las contraseñas no coinciden'
+const MSG_REGISTER_ERROR = 'Error al crear la cuenta'
+const MSG_ACCOUNT_CREATED = 'Cuenta creada. Iniciá sesión para continuar.'
+
 export async function loginAction(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const remember = formData.get('remember') === 'on'
 
   if (!email || !password) {
-    // Retornar error usando redirect con query param
-    redirect('/login?error=' + encodeURIComponent('Email y contraseña son requeridos'))
+    redirect('/login?error=' + encodeURIComponent(MSG_LOGIN_EMAIL_PASSWORD_REQUIRED))
   }
 
   try {
@@ -25,71 +36,60 @@ export async function loginAction(formData: FormData) {
       body: JSON.stringify({ email, password }),
     })
 
-    // Intentar parsear JSON, pero manejar errores si la respuesta no es JSON
-    let data: any = {}
+    // Parse response, handle non-JSON gracefully
+    let data: Record<string, unknown> = {}
     const contentType = response.headers.get('content-type')
-    if (contentType && contentType.includes('application/json')) {
+    if (contentType?.includes('application/json')) {
       try {
         data = await response.json()
-      } catch (jsonError) {
-        // Si falla el parseo JSON, usar el texto de la respuesta
+      } catch {
         const text = await response.text()
-        redirect(
-          '/login?error=' + encodeURIComponent('Error al iniciar sesión: ' + text.substring(0, 100))
-        )
+        redirect('/login?error=' + encodeURIComponent(text.substring(0, 100)))
       }
     } else {
-      // Si no es JSON, leer como texto
       const text = await response.text()
-      redirect(
-        '/login?error=' + encodeURIComponent('Error al iniciar sesión: ' + text.substring(0, 100))
-      )
+      redirect('/login?error=' + encodeURIComponent(text.substring(0, 100)))
     }
 
     if (!response.ok) {
-      // Retornar error usando redirect con query param
-      redirect(
-        '/login?error=' +
-          encodeURIComponent(data.detail || data.message || 'Error al iniciar sesión')
-      )
+      const detail = (data.detail as string) || MSG_LOGIN_ERROR
+      redirect('/login?error=' + encodeURIComponent(detail))
     }
 
-    // Guardar token en httpOnly cookie
+    // Save token in httpOnly cookie
     const cookieStore = await cookies()
-    // Si "recordarme" está marcado, la cookie dura 30 días, sino 30 minutos
-    const maxAge = remember ? 30 * 24 * 60 * 60 : 30 * 60 // 30 días o 30 minutos
+    const maxAge = remember ? 30 * 24 * 60 * 60 : 30 * 60 // 30 days or 30 minutes
 
-    cookieStore.set('access_token', data.access_token, {
-      httpOnly: true, // ✅ Prevenir acceso desde JavaScript (protección contra XSS)
-      secure: process.env.NODE_ENV === 'production', // ✅ Solo HTTPS en producción (protección contra sniffing)
-      sameSite: 'lax', // ⚖️ Balance entre seguridad y funcionalidad
-      // "strict" sería más seguro pero rompe redirects desde emails/links externos
-      // "lax" permite redirects GET cross-site pero bloquea POST/forms (recomendado por OWASP)
+    const accessToken = typeof data.access_token === 'string' ? data.access_token : null
+    if (!accessToken) {
+      redirect('/login?error=' + encodeURIComponent(MSG_SERVER_ERROR))
+    }
+
+    cookieStore.set('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge,
-      path: '/', // ✅ Cookie disponible en toda la aplicación
+      path: '/',
     })
 
-    // Revalidar todos los paths para asegurar que la cookie esté disponible
-    // IMPORTANTE: revalidatePath debe ejecutarse ANTES del redirect
+    // Revalidate paths to ensure cookie is available
     revalidatePath('/', 'layout')
     revalidatePath('/login', 'page')
 
-    // Hacer redirect desde el servidor después de establecer la cookie
-    // Esto asegura que la cookie esté disponible cuando se ejecute el layout
+    // Redirect after setting cookie
     redirect('/')
   } catch (error) {
-    // Si es una excepción de redirect, relanzarla
     if (
       error &&
       typeof error === 'object' &&
       'digest' in error &&
-      typeof error.digest === 'string' &&
-      error.digest.startsWith('NEXT_REDIRECT')
+      typeof (error as { digest?: string }).digest === 'string' &&
+      (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
     ) {
       throw error
     }
-    console.error('Login error:', error)
-    redirect('/login?error=' + encodeURIComponent('Error interno del servidor'))
+    redirect('/login?error=' + encodeURIComponent(MSG_SERVER_ERROR))
   }
 }
 
@@ -97,6 +97,91 @@ export async function logoutAction() {
   const cookieStore = await cookies()
   cookieStore.delete('access_token')
   redirect('/login')
+}
+
+export async function registerAction(formData: FormData) {
+  const email = formData.get('email') as string
+  const name = formData.get('name') as string
+  const password = formData.get('password') as string
+  const passwordConfirm = formData.get('passwordConfirm') as string
+
+  if (!email) {
+    redirect('/register?error=' + encodeURIComponent(MSG_EMAIL_REQUIRED))
+  }
+  if (!name) {
+    redirect('/register?error=' + encodeURIComponent(MSG_NAME_REQUIRED))
+  }
+  if (!password) {
+    redirect('/register?error=' + encodeURIComponent(MSG_PASSWORD_REQUIRED))
+  }
+  if (password.length < 8) {
+    redirect('/register?error=' + encodeURIComponent(MSG_PASSWORD_MIN_LENGTH))
+  }
+  if (password !== passwordConfirm) {
+    redirect('/register?error=' + encodeURIComponent(MSG_PASSWORDS_MISMATCH))
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/api/v1/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name, password }),
+    })
+
+    let data: Record<string, unknown> = {}
+    const contentType = response.headers.get('content-type')
+    if (contentType?.includes('application/json')) {
+      try {
+        data = await response.json()
+      } catch {
+        const text = await response.text()
+        redirect('/register?error=' + encodeURIComponent(text.substring(0, 100)))
+      }
+    } else {
+      const text = await response.text()
+      redirect('/register?error=' + encodeURIComponent(text.substring(0, 100)))
+    }
+
+    if (!response.ok) {
+      const detail = (data.detail as string) || MSG_REGISTER_ERROR
+      redirect('/register?error=' + encodeURIComponent(detail))
+    }
+
+    // Registration succeeded — auto-login
+    const loginResponse = await fetch(`${API_URL}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+
+    if (!loginResponse.ok) {
+      redirect('/login?info=' + encodeURIComponent(MSG_ACCOUNT_CREATED))
+    }
+
+    const loginData = await loginResponse.json()
+    const cookieStore = await cookies()
+    cookieStore.set('access_token', loginData.access_token as string, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 60,
+      path: '/',
+    })
+
+    revalidatePath('/', 'layout')
+    redirect('/(private)/(custom)/connect-store')
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'digest' in error &&
+      typeof (error as { digest?: string }).digest === 'string' &&
+      (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+    ) {
+      throw error
+    }
+    redirect('/register?error=' + encodeURIComponent(MSG_SERVER_ERROR))
+  }
 }
 
 export async function getCurrentUser() {

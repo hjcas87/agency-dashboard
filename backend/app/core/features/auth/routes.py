@@ -13,6 +13,7 @@ from app.core.features.auth.schemas import (
     PasswordResetConfirm,
     PasswordChangeRequest,
     UserCreateWithPassword,
+    UserRegister,
 )
 from app.core.features.auth.dependencies import get_current_active_user
 from app.core.features.users.models import User
@@ -25,14 +26,27 @@ def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     return AuthService(db)
 
 
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+async def register(
+    user_data: UserRegister,
+    service: AuthService = Depends(get_auth_service),
+):
+    """Register a new user account (public endpoint, no auth required)."""
+    user = service.register(user_data)
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "is_active": user.is_active,
+    }
+
+
 @router.post("/login", response_model=LoginResponse, status_code=status.HTTP_200_OK)
 async def login(
     login_data: LoginRequest,
     service: AuthService = Depends(get_auth_service),
 ):
-    """
-    Autentica un usuario y retorna un JWT token.
-    """
+    """Authenticate a user and return a JWT token."""
     return service.login(login_data)
 
 

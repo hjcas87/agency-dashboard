@@ -13,6 +13,7 @@ from app.core.features.auth.schemas import (
     PasswordResetConfirm,
     PasswordChangeRequest,
     UserCreateWithPassword,
+    UserRegister,
 )
 from app.core.features.auth.utils import (
     verify_password,
@@ -242,6 +243,37 @@ Saludos,
         set_user_password(self.db, user_id, change_data.new_password)
         
         return {"message": "Password has been changed successfully"}
+
+    def register(self, user_data: UserRegister) -> User:
+        """
+        Public user registration (self-signup).
+
+        Args:
+            user_data: Registration data (email, name, password).
+
+        Returns:
+            Created user.
+
+        Raises:
+            HTTPException: If email already exists.
+        """
+        existing_user = self.user_repository.get_by_email(user_data.email)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is already registered",
+            )
+
+        from app.core.features.users.schemas import UserCreate
+
+        user_create = UserCreate(
+            email=user_data.email,
+            name=user_data.name,
+            is_active=True,
+        )
+        user = self.user_repository.create(user_create.model_dump())
+        set_user_password(self.db, user.id, user_data.password)
+        return user
 
     def create_user_with_password(self, user_data: UserCreateWithPassword) -> User:
         """
