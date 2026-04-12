@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     N8N_API_KEY: str | None = None  # API key para autenticación Header Auth (opcional)
     N8N_API_KEY_HEADER: str = "X-API-Key"  # Nombre del header para la API key (default: X-API-Key)
 
+    # Tiendanube Integration
+    TIENDANUBE_USER_ID: str | None = None
+    TIENDANUBE_ACCESS_TOKEN: str | None = None
+    TIENDANUBE_USER_AGENT: str = "mendri-loyalty"
+
     # Email Service
     EMAIL_PROVIDER: str = "smtp"  # "smtp" o "api"
     EMAIL_FROM_NAME: str = "Equipo"  # Nombre del remitente en emails (configurable)
