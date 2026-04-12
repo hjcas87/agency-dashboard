@@ -55,4 +55,3 @@ export function WorkflowStatus({ status }: WorkflowStatusProps) {
     </Card>
   )
 }
-

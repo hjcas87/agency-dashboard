@@ -1,16 +1,16 @@
-import { redirect } from "next/navigation"
-import { getCurrentUser } from "../../actions/core/auth"
-import { AuthBrandingProvider } from "@/components/core/features/auth/AuthBrandingProvider"
-import { AuthLayout } from "@/components/core/features/auth/layouts/AuthLayout"
-import { BaseLoginForm } from "@/components/core/features/auth/BaseLoginForm"
-import { MendriFooter } from "@/components/core/ui/mendri-footer"
-import { getBrandingConfig } from "@/lib/core/config/branding"
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '../../actions/core/auth'
+import { AuthBrandingProvider } from '@/components/core/features/auth/AuthBrandingProvider'
+import { AuthLayout } from '@/components/core/features/auth/layouts/AuthLayout'
+import { BaseLoginForm } from '@/components/core/features/auth/BaseLoginForm'
+import { MendriFooter } from '@/components/core/ui/mendri-footer'
+import { getBrandingConfig } from '@/lib/core/config/branding'
 
 export default async function LoginPage() {
   // Si ya está autenticado, redirigir a la página principal
   const user = await getCurrentUser()
   if (user) {
-    redirect("/")
+    redirect('/')
   }
 
   const branding = getBrandingConfig()
@@ -23,4 +23,3 @@ export default async function LoginPage() {
     </AuthBrandingProvider>
   )
 }
-

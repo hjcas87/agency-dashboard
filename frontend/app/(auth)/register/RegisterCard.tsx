@@ -4,7 +4,10 @@ import { useState, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { registerAction } from '@/app/actions/core/auth'
-import { AuthBrandingProvider, useBranding } from '@/components/core/features/auth/AuthBrandingProvider'
+import {
+  AuthBrandingProvider,
+  useBranding,
+} from '@/components/core/features/auth/AuthBrandingProvider'
 import { getBrandingConfig } from '@/lib/core/config/branding'
 
 import { Button } from '@/components/core/ui/button'
@@ -65,30 +68,70 @@ function RegisterForm() {
     <Card className={cn(cardRounded, cardShadow)}>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Crear cuenta</CardTitle>
-        <CardDescription>
-          Completá tus datos para registrarte en Mendri
-        </CardDescription>
+        <CardDescription>Completá tus datos para registrarte en Mendri</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">Nombre</label>
-            <Input id="name" name="name" type="text" placeholder="Tu nombre" disabled={pending} required className="rounded-lg" />
+            <label htmlFor="name" className="text-sm font-medium">
+              Nombre
+            </label>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              placeholder="Tu nombre"
+              disabled={pending}
+              required
+              className="rounded-lg"
+            />
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">Email</label>
-            <Input id="email" name="email" type="email" placeholder="tu@email.com" disabled={pending} required className="rounded-lg" />
+            <label htmlFor="email" className="text-sm font-medium">
+              Email
+            </label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="tu@email.com"
+              disabled={pending}
+              required
+              className="rounded-lg"
+            />
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">Contraseña</label>
-            <Input id="password" name="password" type="password" placeholder="Mínimo 8 caracteres" disabled={pending} required minLength={8} className="rounded-lg" />
+            <label htmlFor="password" className="text-sm font-medium">
+              Contraseña
+            </label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Mínimo 8 caracteres"
+              disabled={pending}
+              required
+              minLength={8}
+              className="rounded-lg"
+            />
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="passwordConfirm" className="text-sm font-medium">Confirmar contraseña</label>
-            <Input id="passwordConfirm" name="passwordConfirm" type="password" placeholder="Repetí tu contraseña" disabled={pending} required minLength={8} className="rounded-lg" />
+            <label htmlFor="passwordConfirm" className="text-sm font-medium">
+              Confirmar contraseña
+            </label>
+            <Input
+              id="passwordConfirm"
+              name="passwordConfirm"
+              type="password"
+              placeholder="Repetí tu contraseña"
+              disabled={pending}
+              required
+              minLength={8}
+              className="rounded-lg"
+            />
           </div>
 
           {error && (

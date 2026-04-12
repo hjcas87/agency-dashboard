@@ -8,13 +8,24 @@ import { Button } from '@/components/core/ui/button'
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <Button
       variant="ghost"
       size="icon"
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+      title={
+        mounted
+          ? theme === 'dark'
+            ? 'Cambiar a tema claro'
+            : 'Cambiar a tema oscuro'
+          : 'Cambiar tema'
+      }
     >
       <Sun className="size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
       <Moon className="absolute size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

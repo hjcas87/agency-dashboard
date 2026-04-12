@@ -64,12 +64,8 @@ export function BaseLoginForm({ className, onSuccess }: BaseLoginFormProps) {
   return (
     <Card className={cn(cardRounded, cardShadow, className)}>
       <CardHeader className="space-y-1">
-        <CardTitle className="text-center text-2xl">
-          {branding.texts.loginTitle}
-        </CardTitle>
-        <CardDescription className="text-center">
-          {branding.texts.loginSubtitle}
-        </CardDescription>
+        <CardTitle className="text-center text-2xl">{branding.texts.loginTitle}</CardTitle>
+        <CardDescription className="text-center">{branding.texts.loginSubtitle}</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={loginAction} className="space-y-5">
@@ -113,9 +109,7 @@ export function BaseLoginForm({ className, onSuccess }: BaseLoginFormProps) {
                   defaultChecked
                   className="h-4 w-4 rounded border-border text-primary accent-primary"
                 />
-                <span className="text-sm">
-                  {branding.texts.rememberMe || 'Recordarme'}
-                </span>
+                <span className="text-sm">{branding.texts.rememberMe || 'Recordarme'}</span>
               </label>
               <Link href="/reset-password" className="text-sm text-primary hover:underline">
                 {branding.texts.forgotPasswordLink}

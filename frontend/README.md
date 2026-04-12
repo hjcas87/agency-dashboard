@@ -129,7 +129,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 - **TypeScript**: Strict mode, no `any` unless absolutely necessary
 - **Formatting**: Prettier (configured)
 - **Linting**: ESLint with Next.js config
-- **Naming**: 
+- **Naming**:
   - Components: PascalCase
   - Functions/Variables: camelCase
   - Constants: UPPER_SNAKE_CASE
@@ -163,4 +163,3 @@ See [docs/BEST_PRACTICES.md](./docs/BEST_PRACTICES.md#testing-patterns) for test
 - Review [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for architecture details
 - Review [docs/BEST_PRACTICES.md](./docs/BEST_PRACTICES.md) for coding guidelines
 - Check existing code in `lib/custom/features/` for examples
-

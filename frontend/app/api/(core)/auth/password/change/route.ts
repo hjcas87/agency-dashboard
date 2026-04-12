@@ -1,18 +1,15 @@
-import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
+import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies()
-    const token = cookieStore.get("access_token")?.value
+    const token = cookieStore.get('access_token')?.value
 
     if (!token) {
-      return NextResponse.json(
-        { detail: "No autenticado" },
-        { status: 401 }
-      )
+      return NextResponse.json({ detail: 'No autenticado' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -20,17 +17,17 @@ export async function POST(request: NextRequest) {
 
     if (!current_password || !new_password) {
       return NextResponse.json(
-        { detail: "Contraseña actual y nueva contraseña son requeridas" },
+        { detail: 'Contraseña actual y nueva contraseña son requeridas' },
         { status: 400 }
       )
     }
 
     // Llamar a FastAPI
     const response = await fetch(`${API_URL}/api/v1/auth/password/change`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         current_password,
@@ -42,19 +39,14 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { detail: data.detail || "Error al cambiar la contraseña" },
+        { detail: data.detail || 'Error al cambiar la contraseña' },
         { status: response.status }
       )
     }
 
-    return NextResponse.json({ message: "Contraseña cambiada exitosamente" })
+    return NextResponse.json({ message: 'Contraseña cambiada exitosamente' })
   } catch (error) {
-    console.error("Change password error:", error)
-    return NextResponse.json(
-      { detail: "Error interno del servidor" },
-      { status: 500 }
-    )
+    console.error('Change password error:', error)
+    return NextResponse.json({ detail: 'Error interno del servidor' }, { status: 500 })
   }
 }
-
-

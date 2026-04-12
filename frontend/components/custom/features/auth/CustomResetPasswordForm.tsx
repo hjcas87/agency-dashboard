@@ -6,5 +6,5 @@ export function CustomResetPasswordForm() {
     <div>
       <p>Reset password form — implement according to client requirements.</p>
     </div>
-  );
+  )
 }

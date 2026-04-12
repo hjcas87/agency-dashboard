@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/core/ui/button'
-import { MessageReader } from '@/components/core/features/dashboard/message-reader'
 import { AUTH_MESSAGES } from '@/lib/messages'
 import { SETTINGS } from '@/components/core/features/dashboard/settings-config'
 
@@ -71,12 +70,9 @@ export default function SettingsPage() {
 
   return (
     <section className="space-y-4">
-      <MessageReader />
       <div>
         <h2 className="text-lg font-semibold">{SETTINGS.connectStore.title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {SETTINGS.connectStore.description}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{SETTINGS.connectStore.description}</p>
       </div>
 
       <div className="flex gap-3">

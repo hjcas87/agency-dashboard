@@ -263,7 +263,7 @@ export class N8NService {
 
   async getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
     const response = await fetch(`/api/v1/n8n/task/${taskId}`)
-    
+
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.detail || error.message || 'Failed to get task status')
@@ -296,18 +296,21 @@ export function useN8NWorkflow() {
     taskId !== null && taskStatus?.state !== 'SUCCESS' && taskStatus?.state !== 'FAILURE'
   )
 
-  const triggerWorkflow = useCallback(async (request: N8NTriggerRequest) => {
-    try {
-      setError(null)
-      const response = await service.triggerWorkflow(request)
-      setTaskId(response.task_id)
-      return response
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to trigger workflow')
-      setError(error)
-      throw error
-    }
-  }, [service])
+  const triggerWorkflow = useCallback(
+    async (request: N8NTriggerRequest) => {
+      try {
+        setError(null)
+        const response = await service.triggerWorkflow(request)
+        setTaskId(response.task_id)
+        return response
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Failed to trigger workflow')
+        setError(error)
+        throw error
+      }
+    },
+    [service]
+  )
 
   return {
     triggerWorkflow,
@@ -495,9 +498,9 @@ import { usePolling } from '@/lib/custom/hooks/usePolling'
 describe('usePolling', () => {
   it('should poll at interval', async () => {
     const fetchFn = vi.fn().mockResolvedValue({ data: 'test' })
-    
+
     renderHook(() => usePolling(fetchFn, 100))
-    
+
     await waitFor(() => {
       expect(fetchFn).toHaveBeenCalledTimes(2) // Immediate + first interval
     })
@@ -536,7 +539,7 @@ describe('usePolling', () => {
 - **Functions/Variables**: camelCase (`triggerWorkflow`)
 - **Constants**: UPPER_SNAKE_CASE (`MAX_RETRIES`)
 - **Types/Interfaces**: PascalCase (`TaskStatusResponse`)
-- **Files**: 
+- **Files**:
   - Components: PascalCase (`WorkflowStatus.tsx`)
   - Utilities: camelCase (`usePolling.ts`)
   - Types: camelCase (`types.ts`)
@@ -569,6 +572,7 @@ When refactoring existing code:
 ## Examples
 
 See the `examples/` directory for:
+
 - Feature implementation examples
 - Hook usage patterns
 - Service layer examples
@@ -580,4 +584,3 @@ See the `examples/` directory for:
 - [React Documentation](https://react.dev)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [shadcn/ui](https://ui.shadcn.com/)
-

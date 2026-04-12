@@ -10,7 +10,13 @@ export type UserInfo = {
 
 const UserContext = React.createContext<UserInfo | null>(null)
 
-export function UserProvider({ user, children }: { user: UserInfo | null; children: React.ReactNode }) {
+export function UserProvider({
+  user,
+  children,
+}: {
+  user: UserInfo | null
+  children: React.ReactNode
+}) {
   return <UserContext.Provider value={user}>{children}</UserContext.Provider>
 }
 

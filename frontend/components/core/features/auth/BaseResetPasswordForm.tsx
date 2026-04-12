@@ -1,12 +1,18 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useBranding } from "./AuthBrandingProvider"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/core/ui/card"
-import { Button } from "@/components/core/ui/button"
-import { Input } from "@/components/core/ui/input"
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useBranding } from './AuthBrandingProvider'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/core/ui/card'
+import { Button } from '@/components/core/ui/button'
+import { Input } from '@/components/core/ui/input'
 
 interface BaseResetPasswordFormProps {
   className?: string
@@ -26,15 +32,15 @@ export function BaseResetPasswordForm({
   const branding = useBranding()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const token = searchParams.get("token")
-  
-  const [email, setEmail] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  const token = searchParams.get('token')
+
+  const [email, setEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [step, setStep] = useState<"request" | "confirm">(token ? "confirm" : "request")
+  const [step, setStep] = useState<'request' | 'confirm'>(token ? 'confirm' : 'request')
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,11 +49,11 @@ export function BaseResetPasswordForm({
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/auth/password-reset/request`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/password-reset/request`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ email }),
         }
@@ -55,12 +61,12 @@ export function BaseResetPasswordForm({
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || "Error al solicitar reseteo")
+        throw new Error(data.detail || 'Error al solicitar reseteo')
       }
 
       setSuccess(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al solicitar reseteo")
+      setError(err instanceof Error ? err.message : 'Error al solicitar reseteo')
     } finally {
       setLoading(false)
     }
@@ -71,17 +77,17 @@ export function BaseResetPasswordForm({
     setError(null)
 
     if (newPassword !== confirmPassword) {
-      setError("Las contraseñas no coinciden")
+      setError('Las contraseñas no coinciden')
       return
     }
 
     if (newPassword.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres")
+      setError('La contraseña debe tener al menos 8 caracteres')
       return
     }
 
     if (!token) {
-      setError("Token no válido")
+      setError('Token no válido')
       return
     }
 
@@ -89,11 +95,11 @@ export function BaseResetPasswordForm({
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/auth/password-reset/confirm`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/password-reset/confirm`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ token, new_password: newPassword }),
         }
@@ -101,16 +107,16 @@ export function BaseResetPasswordForm({
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || "Error al restablecer contraseña")
+        throw new Error(data.detail || 'Error al restablecer contraseña')
       }
 
       setSuccess(true)
       onSuccess?.()
       setTimeout(() => {
-        router.push("/login")
+        router.push('/login')
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al restablecer contraseña")
+      setError(err instanceof Error ? err.message : 'Error al restablecer contraseña')
     } finally {
       setLoading(false)
     }
@@ -118,9 +124,9 @@ export function BaseResetPasswordForm({
 
   const LogoComponent = branding.logo.component
 
-  if (step === "request") {
+  if (step === 'request') {
     return (
-      <Card 
+      <Card
         className={className}
         style={{
           backgroundColor: branding.colors.cardBackground,
@@ -137,34 +143,25 @@ export function BaseResetPasswordForm({
               ) : branding.logo.src ? (
                 <img
                   src={branding.logo.src}
-                  alt={branding.logo.alt || "Logo"}
-                  className={`${branding.logo.size === "sm" ? "w-8 h-8" : branding.logo.size === "lg" ? "w-16 h-16" : "w-12 h-12"}`}
+                  alt={branding.logo.alt || 'Logo'}
+                  className={`${branding.logo.size === 'sm' ? 'w-8 h-8' : branding.logo.size === 'lg' ? 'w-16 h-16' : 'w-12 h-12'}`}
                 />
               ) : branding.logo.text ? (
                 <div
-                  className={`${branding.logo.size === "sm" ? "w-8 h-8" : branding.logo.size === "lg" ? "w-16 h-16" : "w-12 h-12"} rounded-lg flex items-center justify-center`}
+                  className={`${branding.logo.size === 'sm' ? 'w-8 h-8' : branding.logo.size === 'lg' ? 'w-16 h-16' : 'w-12 h-12'} rounded-lg flex items-center justify-center`}
                   style={{ backgroundColor: branding.colors.primary }}
                 >
-                  <span
-                    className="font-bold text-2xl"
-                    style={{ color: "#ffffff" }}
-                  >
+                  <span className="font-bold text-2xl" style={{ color: '#ffffff' }}>
                     {branding.logo.text}
                   </span>
                 </div>
               ) : null}
             </div>
           )}
-          <CardTitle 
-            className="text-2xl text-center"
-            style={{ color: branding.colors.text }}
-          >
+          <CardTitle className="text-2xl text-center" style={{ color: branding.colors.text }}>
             {branding.texts.resetPasswordTitle}
           </CardTitle>
-          <CardDescription 
-            className="text-center"
-            style={{ color: branding.colors.textSecondary }}
-          >
+          <CardDescription className="text-center" style={{ color: branding.colors.textSecondary }}>
             {branding.texts.resetPasswordSubtitle}
           </CardDescription>
         </CardHeader>
@@ -182,16 +179,16 @@ export function BaseResetPasswordForm({
                 Si el email existe, se ha enviado un enlace de restablecimiento.
               </div>
               <Button
-                onClick={() => router.push("/login")}
+                onClick={() => router.push('/login')}
                 className="w-full cursor-pointer"
                 style={{
                   backgroundColor: branding.colors.primary,
-                  color: "#ffffff",
+                  color: '#ffffff',
                 }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = branding.colors.primaryHover
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   e.currentTarget.style.backgroundColor = branding.colors.primary
                 }}
               >
@@ -201,8 +198,8 @@ export function BaseResetPasswordForm({
           ) : (
             <form onSubmit={handleRequestReset} className="space-y-4">
               <div className="space-y-2">
-                <label 
-                  htmlFor="email" 
+                <label
+                  htmlFor="email"
                   className="text-sm font-medium"
                   style={{ color: branding.colors.text }}
                 >
@@ -213,7 +210,7 @@ export function BaseResetPasswordForm({
                   type="email"
                   placeholder={branding.texts.emailPlaceholder}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
                   required
                   disabled={loading}
                 />
@@ -235,17 +232,17 @@ export function BaseResetPasswordForm({
                 className="w-full cursor-pointer"
                 style={{
                   backgroundColor: branding.colors.primary,
-                  color: "#ffffff",
+                  color: '#ffffff',
                 }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = branding.colors.primaryHover
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   e.currentTarget.style.backgroundColor = branding.colors.primary
                 }}
                 disabled={loading}
               >
-                {loading ? "Enviando..." : branding.texts.resetPasswordButton}
+                {loading ? 'Enviando...' : branding.texts.resetPasswordButton}
               </Button>
               <div className="text-center">
                 <Link
@@ -264,7 +261,7 @@ export function BaseResetPasswordForm({
   }
 
   return (
-    <Card 
+    <Card
       className={className}
       style={{
         backgroundColor: branding.colors.cardBackground,
@@ -278,33 +275,24 @@ export function BaseResetPasswordForm({
           ) : branding.logo.src ? (
             <img
               src={branding.logo.src}
-              alt={branding.logo.alt || "Logo"}
-              className={`${branding.logo.size === "sm" ? "w-8 h-8" : branding.logo.size === "lg" ? "w-16 h-16" : "w-12 h-12"}`}
+              alt={branding.logo.alt || 'Logo'}
+              className={`${branding.logo.size === 'sm' ? 'w-8 h-8' : branding.logo.size === 'lg' ? 'w-16 h-16' : 'w-12 h-12'}`}
             />
           ) : branding.logo.text ? (
             <div
-              className={`${branding.logo.size === "sm" ? "w-8 h-8" : branding.logo.size === "lg" ? "w-16 h-16" : "w-12 h-12"} rounded-lg flex items-center justify-center`}
+              className={`${branding.logo.size === 'sm' ? 'w-8 h-8' : branding.logo.size === 'lg' ? 'w-16 h-16' : 'w-12 h-12'} rounded-lg flex items-center justify-center`}
               style={{ backgroundColor: branding.colors.primary }}
             >
-              <span
-                className="font-bold text-2xl"
-                style={{ color: "#ffffff" }}
-              >
+              <span className="font-bold text-2xl" style={{ color: '#ffffff' }}>
                 {branding.logo.text}
               </span>
             </div>
           ) : null}
         </div>
-        <CardTitle 
-          className="text-2xl text-center"
-          style={{ color: branding.colors.text }}
-        >
+        <CardTitle className="text-2xl text-center" style={{ color: branding.colors.text }}>
           Nueva Contraseña
         </CardTitle>
-        <CardDescription 
-          className="text-center"
-          style={{ color: branding.colors.textSecondary }}
-        >
+        <CardDescription className="text-center" style={{ color: branding.colors.textSecondary }}>
           Ingresa tu nueva contraseña
         </CardDescription>
       </CardHeader>
@@ -325,8 +313,8 @@ export function BaseResetPasswordForm({
         ) : (
           <form onSubmit={handleConfirmReset} className="space-y-4">
             <div className="space-y-2">
-              <label 
-                htmlFor="newPassword" 
+              <label
+                htmlFor="newPassword"
                 className="text-sm font-medium"
                 style={{ color: branding.colors.text }}
               >
@@ -337,15 +325,15 @@ export function BaseResetPasswordForm({
                 type="password"
                 placeholder={branding.texts.passwordPlaceholder}
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={e => setNewPassword(e.target.value)}
                 required
                 disabled={loading}
                 minLength={8}
               />
             </div>
             <div className="space-y-2">
-              <label 
-                htmlFor="confirmPassword" 
+              <label
+                htmlFor="confirmPassword"
                 className="text-sm font-medium"
                 style={{ color: branding.colors.text }}
               >
@@ -356,7 +344,7 @@ export function BaseResetPasswordForm({
                 type="password"
                 placeholder={branding.texts.passwordPlaceholder}
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={e => setConfirmPassword(e.target.value)}
                 required
                 disabled={loading}
                 minLength={8}
@@ -379,17 +367,17 @@ export function BaseResetPasswordForm({
               className="w-full cursor-pointer"
               style={{
                 backgroundColor: branding.colors.primary,
-                color: "#ffffff",
+                color: '#ffffff',
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 e.currentTarget.style.backgroundColor = branding.colors.primaryHover
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = branding.colors.primary
               }}
               disabled={loading}
             >
-              {loading ? "Restableciendo..." : "Restablecer Contraseña"}
+              {loading ? 'Restableciendo...' : 'Restablecer Contraseña'}
             </Button>
           </form>
         )}
@@ -397,4 +385,3 @@ export function BaseResetPasswordForm({
     </Card>
   )
 }
-

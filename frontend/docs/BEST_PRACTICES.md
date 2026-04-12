@@ -86,7 +86,7 @@ export function WorkflowManager() {
 // ✅ Good: Logic separated from UI
 export function WorkflowPage() {
   const { triggerWorkflow, taskStatus, error } = useN8NWorkflow()
-  
+
   return (
     <div>
       <Button onClick={() => triggerWorkflow({ webhook_path: '...' })}>
@@ -101,15 +101,15 @@ export function WorkflowPage() {
 export function WorkflowPage() {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState(null)
-  
+
   useEffect(() => {
     // Complex polling logic here...
   }, [])
-  
+
   const handleClick = async () => {
     // API call logic here...
   }
-  
+
   return <div>...</div>
 }
 ```
@@ -219,11 +219,11 @@ export class N8NService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     })
-    
+
     if (!response.ok) {
       throw new Error('Failed to trigger workflow')
     }
-    
+
     return response.json()
   }
 }
@@ -267,7 +267,7 @@ const result = await service.triggerWorkflow(request) // Might throw
 import { apiClient } from '@/lib/core/api/client'
 
 const { data, error } = await apiClient.GET('/api/v1/users/{id}', {
-  params: { path: { id: '123' } }
+  params: { path: { id: '123' } },
 })
 
 // ❌ Bad: Unchecked API calls
@@ -425,10 +425,9 @@ const apiKey = process.env.API_KEY // ❌ Will be undefined in client
 
 ```typescript
 // ✅ Good: Always use HTTPS in production
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? 'https://api.example.com' 
-    : 'http://localhost:8000')
+const apiUrl =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'production' ? 'https://api.example.com' : 'http://localhost:8000')
 ```
 
 ## Testing Patterns
@@ -456,9 +455,11 @@ test('calls setError when API fails', () => {
 ```typescript
 // ✅ Good: Test hook separately
 test('usePolling stops when condition is met', async () => {
-  const { result } = renderHook(() => usePolling(fetchFn, {
-    stopCondition: (data) => data?.complete === true
-  }))
+  const { result } = renderHook(() =>
+    usePolling(fetchFn, {
+      stopCondition: data => data?.complete === true,
+    })
+  )
   // ...
 })
 ```
@@ -472,10 +473,10 @@ jest.mock('@/lib/custom/features/n8n/n8nService')
 test('triggers workflow', async () => {
   const mockTrigger = jest.fn().mockResolvedValue({ task_id: '123' })
   N8NService.prototype.triggerWorkflow = mockTrigger
-  
+
   render(<Component />)
   await userEvent.click(screen.getByText('Trigger'))
-  
+
   expect(mockTrigger).toHaveBeenCalled()
 })
 ```
@@ -572,4 +573,3 @@ Before submitting code for review, ensure:
 - [Next.js Best Practices](https://nextjs.org/docs)
 - [TypeScript Best Practices](https://www.typescriptlang.org/docs/)
 - [Web Security Guidelines](https://owasp.org/www-project-web-security-testing-guide/)
-

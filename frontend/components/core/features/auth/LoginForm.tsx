@@ -1,15 +1,21 @@
-"use client"
+'use client'
 
-import { useState, useTransition } from "react"
-import { useSearchParams } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/core/ui/card"
-import { Button } from "@/components/core/ui/button"
-import { Input } from "@/components/core/ui/input"
-import { loginAction } from "@/app/actions/core/auth"
+import { useState, useTransition } from 'react'
+import { useSearchParams } from 'next/navigation'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/core/ui/card'
+import { Button } from '@/components/core/ui/button'
+import { Input } from '@/components/core/ui/input'
+import { loginAction } from '@/app/actions/core/auth'
 
 export function LoginForm() {
   const searchParams = useSearchParams()
-  const errorFromUrl = searchParams.get("error")
+  const errorFromUrl = searchParams.get('error')
   const [error, setError] = useState<string | null>(errorFromUrl)
   const [isPending, startTransition] = useTransition()
 
@@ -73,13 +79,10 @@ export function LoginForm() {
             className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
             disabled={isPending}
           >
-            {isPending ? "Iniciando sesión..." : "Iniciar Sesión"}
+            {isPending ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </Button>
           <div className="text-center">
-            <a
-              href="/reset-password"
-              className="text-sm text-blue-600 hover:underline"
-            >
+            <a href="/reset-password" className="text-sm text-blue-600 hover:underline">
               ¿Olvidaste tu contraseña?
             </a>
           </div>

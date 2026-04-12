@@ -69,9 +69,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
               )}
             </div>
           ) : (
-            <h1 className="mb-4 text-4xl font-bold text-foreground">
-              ¡Bienvenido a Mendri!
-            </h1>
+            <h1 className="mb-4 text-4xl font-bold text-foreground">¡Bienvenido a Mendri!</h1>
           )}
         </div>
 

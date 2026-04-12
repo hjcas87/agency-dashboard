@@ -1,23 +1,29 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/core/ui/card"
-import { Button } from "@/components/core/ui/button"
-import { Input } from "@/components/core/ui/input"
+import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/core/ui/card'
+import { Button } from '@/components/core/ui/button'
+import { Input } from '@/components/core/ui/input'
 
 export function ResetPasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const token = searchParams.get("token")
-  
-  const [email, setEmail] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  const token = searchParams.get('token')
+
+  const [email, setEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [step, setStep] = useState<"request" | "confirm">(token ? "confirm" : "request")
+  const [step, setStep] = useState<'request' | 'confirm'>(token ? 'confirm' : 'request')
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,11 +32,11 @@ export function ResetPasswordForm() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/auth/password-reset/request`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/password-reset/request`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ email }),
         }
@@ -38,12 +44,12 @@ export function ResetPasswordForm() {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || "Error al solicitar reseteo")
+        throw new Error(data.detail || 'Error al solicitar reseteo')
       }
 
       setSuccess(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al solicitar reseteo")
+      setError(err instanceof Error ? err.message : 'Error al solicitar reseteo')
     } finally {
       setLoading(false)
     }
@@ -54,17 +60,17 @@ export function ResetPasswordForm() {
     setError(null)
 
     if (newPassword !== confirmPassword) {
-      setError("Las contraseñas no coinciden")
+      setError('Las contraseñas no coinciden')
       return
     }
 
     if (newPassword.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres")
+      setError('La contraseña debe tener al menos 8 caracteres')
       return
     }
 
     if (!token) {
-      setError("Token no válido")
+      setError('Token no válido')
       return
     }
 
@@ -72,11 +78,11 @@ export function ResetPasswordForm() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/auth/password-reset/confirm`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/password-reset/confirm`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ token, new_password: newPassword }),
         }
@@ -84,21 +90,21 @@ export function ResetPasswordForm() {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || "Error al restablecer contraseña")
+        throw new Error(data.detail || 'Error al restablecer contraseña')
       }
 
       setSuccess(true)
       setTimeout(() => {
-        router.push("/login")
+        router.push('/login')
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al restablecer contraseña")
+      setError(err instanceof Error ? err.message : 'Error al restablecer contraseña')
     } finally {
       setLoading(false)
     }
   }
 
-  if (step === "request") {
+  if (step === 'request') {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
@@ -119,7 +125,7 @@ export function ResetPasswordForm() {
                 Si el email existe, se ha enviado un enlace de restablecimiento.
               </div>
               <Button
-                onClick={() => router.push("/login")}
+                onClick={() => router.push('/login')}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
               >
                 Volver al Login
@@ -136,7 +142,7 @@ export function ResetPasswordForm() {
                   type="email"
                   placeholder="tu@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
                   required
                   disabled={loading}
                 />
@@ -151,13 +157,10 @@ export function ResetPasswordForm() {
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                 disabled={loading}
               >
-                {loading ? "Enviando..." : "Enviar Enlace"}
+                {loading ? 'Enviando...' : 'Enviar Enlace'}
               </Button>
               <div className="text-center">
-                <a
-                  href="/login"
-                  className="text-sm text-blue-600 hover:underline"
-                >
+                <a href="/login" className="text-sm text-blue-600 hover:underline">
                   Volver al Login
                 </a>
               </div>
@@ -177,9 +180,7 @@ export function ResetPasswordForm() {
           </div>
         </div>
         <CardTitle className="text-2xl text-center">Nueva Contraseña</CardTitle>
-        <CardDescription className="text-center">
-          Ingresa tu nueva contraseña
-        </CardDescription>
+        <CardDescription className="text-center">Ingresa tu nueva contraseña</CardDescription>
       </CardHeader>
       <CardContent>
         {success ? (
@@ -199,7 +200,7 @@ export function ResetPasswordForm() {
                 type="password"
                 placeholder="••••••••"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={e => setNewPassword(e.target.value)}
                 required
                 disabled={loading}
                 minLength={8}
@@ -214,7 +215,7 @@ export function ResetPasswordForm() {
                 type="password"
                 placeholder="••••••••"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={e => setConfirmPassword(e.target.value)}
                 required
                 disabled={loading}
                 minLength={8}
@@ -230,7 +231,7 @@ export function ResetPasswordForm() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
               disabled={loading}
             >
-              {loading ? "Restableciendo..." : "Restablecer Contraseña"}
+              {loading ? 'Restableciendo...' : 'Restablecer Contraseña'}
             </Button>
           </form>
         )}
@@ -238,5 +239,3 @@ export function ResetPasswordForm() {
     </Card>
   )
 }
-
-

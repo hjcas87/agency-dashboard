@@ -21,10 +21,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[slot=sidebar-menu-button]:p-1.5!"
-            >
+            <SidebarMenuButton size="lg" className="data-[slot=sidebar-menu-button]:p-1.5!">
               <a href="/" className="flex items-center gap-2">
                 <span className="text-base font-semibold">Mendri</span>
               </a>
@@ -38,7 +35,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {MAIN_NAV.map((item) => (
+              {MAIN_NAV.map(item => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <a href={item.url}>

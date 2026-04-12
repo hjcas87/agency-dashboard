@@ -10,28 +10,20 @@ import { toast } from 'sonner'
 function MessageReaderInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const lastMessageRef = useRef<string | null>(null)
+  const displayedMessagesRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
-    // Try useSearchParams first (works for client navigation)
-    let msg = searchParams.get('msg')
-    let error = searchParams.get('error')
+    const msg = searchParams.get('msg')
+    const error = searchParams.get('error')
 
-    // Fallback to window.location for full page loads / redirects
-    if (!msg && !error) {
-      const urlParams = new URLSearchParams(window.location.search)
-      msg = urlParams.get('msg')
-      error = urlParams.get('error')
-    }
-
-    if (!msg && !error) {
-      lastMessageRef.current = null
-      return
-    }
+    if (!msg && !error) return
 
     const messageKey = msg || error
-    // Prevent showing same message twice
-    if (lastMessageRef.current === messageKey) return
+    if (!messageKey) return
+
+    // Only display each unique message once
+    if (displayedMessagesRef.current.has(messageKey)) return
+    displayedMessagesRef.current.add(messageKey)
 
     // Display toast
     if (msg) {
@@ -40,17 +32,16 @@ function MessageReaderInner() {
       toast.error(decodeURIComponent(error))
     }
 
-    lastMessageRef.current = messageKey
-
-    // Clean URL to prevent re-display
+    // Clean URL immediately to prevent re-trigger
     const params = new URLSearchParams(window.location.search)
     params.delete('msg')
     params.delete('error')
     const clean = params.toString()
     const newUrl = clean ? `${window.location.pathname}?${clean}` : window.location.pathname
 
-    router.replace(newUrl, { scroll: false })
-  }, [searchParams, router])
+    // Use window.history.replaceState for instant URL cleanup without triggering re-render
+    window.history.replaceState(null, '', newUrl)
+  }, [searchParams])
 
   return null
 }
@@ -59,7 +50,7 @@ function MessageReaderInner() {
  * Displays toast notifications from URL query parameters.
  * Handles: ?msg= (success), ?error= (error)
  *
- * Reacts to URL changes (both client navigation and full page loads).
+ * Single global instance — only one should exist in the app.
  * Wrapped in Suspense to work with Next.js static generation.
  */
 export function MessageReader() {

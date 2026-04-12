@@ -35,4 +35,3 @@ custom/
 - Todos los cambios personalizados deben ir en `custom/`
 - Al actualizar desde el repo original, los cambios en `custom/` se preservan
 - Usar shadcn/ui como base para componentes personalizados
-

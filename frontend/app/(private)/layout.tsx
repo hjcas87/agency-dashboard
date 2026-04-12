@@ -9,11 +9,7 @@ import { UserProvider } from '@/components/core/features/dashboard/user-context'
  * verificando la autenticación en el servidor, y envuelve el contenido
  * con el dashboard layout (sidebar + header).
  */
-export default async function PrivateLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser()
 
   if (!user) {
