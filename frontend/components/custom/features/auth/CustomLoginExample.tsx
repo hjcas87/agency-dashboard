@@ -57,15 +57,7 @@ function CustomLoginContent() {
         
         {/* Form */}
         <div className="relative z-10 w-full max-w-md">
-          <BaseLoginForm
-            renderLogo={(branding) => (
-              <div className="flex items-center justify-center mb-4">
-                <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-blue-600 font-bold text-3xl">O</span>
-                </div>
-              </div>
-            )}
-          />
+          <BaseLoginForm />
         </div>
       </div>
     </div>

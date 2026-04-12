@@ -87,7 +87,7 @@ class TiendanubeTokenResponse(BaseModel):
     access_token: str
     token_type: str
     scope: str
-    user_id: str
+    user_id: int  # Tiendanube returns this as int, not str
 
 
 class TiendanubeStoreInfo(BaseModel):

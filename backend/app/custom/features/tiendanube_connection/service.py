@@ -74,9 +74,14 @@ class TiendanubeConnectionService:
 
         Returns:
             Full authorization URL.
+
+        Raises:
+            ValueError: If TIENDANUBE_CLIENT_ID is not configured.
         """
         scopes = ",".join(REQUIRED_SCOPES)
         client_id = settings.TIENDANUBE_CLIENT_ID
+        if not client_id:
+            raise ValueError("TIENDANUBE_CLIENT_ID is not configured")
         return (
             f"{TIENDANUBE_AUTH_URL.format(client_id=client_id)}"
             f"?response_type=code"
@@ -142,7 +147,7 @@ class TiendanubeConnectionService:
         Returns:
             The created or updated Store model.
         """
-        store_id_str = token_data.user_id
+        store_id_str = str(token_data.user_id)
 
         # Find or create store
         store = (

@@ -11,11 +11,13 @@ Endpoints:
 """
 import secrets
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.custom.features.tiendanube_connection.models import TiendanubeToken
 from app.custom.features.tiendanube_connection.schemas import (
     StoreListResponse,
     StoreResponse,
@@ -75,18 +77,37 @@ async def auth_callback(
         store = service.register_store_from_token(token_data)
 
         return RedirectResponse(
-            url=f"{settings.FRONTEND_URL}/connect-store/connected?store_name={store.name}",
+            url=f"{settings.FRONTEND_URL}/settings?msg={quote('Tienda conectada correctamente')}",
             status_code=302,
         )
 
     except Exception as e:
+        error_msg = quote(str(e))
         return RedirectResponse(
-            url=f"{settings.FRONTEND_URL}/connect-store?error={str(e)}",
+            url=f"{settings.FRONTEND_URL}/settings?error={error_msg}",
             status_code=302,
         )
 
 
 # ── Store Management ────────────────────────────────────────────────
+
+
+@router.post(
+    "/stores/disconnect",
+    status_code=204,
+    summary="Disconnect all stores",
+)
+def disconnect_stores(
+    service: TiendanubeConnectionService = Depends(get_service),
+):
+    """Remove all connected stores and tokens (for testing/debugging)."""
+    stores = service.list_stores()
+    for store in stores:
+        service.db.query(TiendanubeToken).filter(
+            TiendanubeToken.store_id == store.id,
+        ).delete()
+        service.db.delete(store)
+    service.db.commit()
 
 
 @router.get(

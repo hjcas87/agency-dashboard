@@ -104,13 +104,31 @@ const ChartTooltip = RechartsPrimitive.Tooltip
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
+  Omit<React.ComponentProps<typeof RechartsPrimitive.Tooltip>, "payload" | "formatter" | "labelFormatter" | "label"> &
     React.ComponentProps<"div"> & {
       hideLabel?: boolean
       hideIndicator?: boolean
       indicator?: "line" | "dot" | "dashed"
       nameKey?: string
       labelKey?: string
+      label?: string
+      payload?: Array<{
+        name?: string
+        value?: number
+        dataKey?: string
+        color?: string
+        type?: string
+        payload?: Record<string, unknown>
+        fill?: string
+      }>
+      formatter?: (
+        value: unknown,
+        name: unknown,
+        item: Record<string, unknown>,
+        index: number,
+        payload: unknown,
+      ) => React.ReactNode
+      labelFormatter?: (label: unknown, payload: unknown) => React.ReactNode
     }
 >(
   (
@@ -190,7 +208,7 @@ const ChartTooltipContent = React.forwardRef<
             .map((item, index) => {
               const key = `${nameKey || item.name || item.dataKey || "value"}`
               const itemConfig = getPayloadConfigFromPayload(config, item, key)
-              const indicatorColor = color || item.payload.fill || item.color
+              const indicatorColor = color || item.payload?.fill || item.color
 
               return (
                 <div
@@ -262,11 +280,17 @@ const ChartLegend = RechartsPrimitive.Legend
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
-      hideIcon?: boolean
-      nameKey?: string
-    }
+  React.ComponentProps<"div"> & {
+    hideIcon?: boolean
+    nameKey?: string
+    verticalAlign?: "top" | "bottom"
+    payload?: Array<{
+      value?: string
+      color?: string
+      dataKey?: string
+      type?: string
+    }>
+  }
 >(
   (
     { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },

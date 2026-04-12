@@ -4,19 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { AUTH_MESSAGES } from '@/lib/messages'
 
-// ── User-facing messages (Spanish) ──────────────────────────────────
-const MSG_LOGIN_EMAIL_PASSWORD_REQUIRED = 'Email y contraseña son requeridos'
-const MSG_LOGIN_ERROR = 'Error al iniciar sesión'
-const MSG_SERVER_ERROR = 'Error interno del servidor'
-const MSG_EMAIL_REQUIRED = 'El email es requerido'
-const MSG_NAME_REQUIRED = 'El nombre es requerido'
-const MSG_PASSWORD_REQUIRED = 'La contraseña es requerida'
-const MSG_PASSWORD_MIN_LENGTH = 'La contraseña debe tener al menos 8 caracteres'
-const MSG_PASSWORDS_MISMATCH = 'Las contraseñas no coinciden'
-const MSG_REGISTER_ERROR = 'Error al crear la cuenta'
-const MSG_ACCOUNT_CREATED = 'Cuenta creada. Iniciá sesión para continuar.'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export async function loginAction(formData: FormData) {
   const email = formData.get('email') as string
@@ -24,7 +14,7 @@ export async function loginAction(formData: FormData) {
   const remember = formData.get('remember') === 'on'
 
   if (!email || !password) {
-    redirect('/login?error=' + encodeURIComponent(MSG_LOGIN_EMAIL_PASSWORD_REQUIRED))
+    redirect('/login?msg=' + encodeURIComponent(AUTH_MESSAGES.invalidCredentials.title))
   }
 
   try {
@@ -44,16 +34,16 @@ export async function loginAction(formData: FormData) {
         data = await response.json()
       } catch {
         const text = await response.text()
-        redirect('/login?error=' + encodeURIComponent(text.substring(0, 100)))
+        redirect('/login?msg=' + encodeURIComponent(text.substring(0, 100)))
       }
     } else {
       const text = await response.text()
-      redirect('/login?error=' + encodeURIComponent(text.substring(0, 100)))
+      redirect('/login?msg=' + encodeURIComponent(text.substring(0, 100)))
     }
 
     if (!response.ok) {
-      const detail = (data.detail as string) || MSG_LOGIN_ERROR
-      redirect('/login?error=' + encodeURIComponent(detail))
+      const detail = (data.detail as string) || AUTH_MESSAGES.invalidCredentials.title
+      redirect('/login?msg=' + encodeURIComponent(detail))
     }
 
     // Save token in httpOnly cookie
@@ -62,7 +52,7 @@ export async function loginAction(formData: FormData) {
 
     const accessToken = typeof data.access_token === 'string' ? data.access_token : null
     if (!accessToken) {
-      redirect('/login?error=' + encodeURIComponent(MSG_SERVER_ERROR))
+      redirect('/login?msg=' + encodeURIComponent(AUTH_MESSAGES.sessionExpired.title))
     }
 
     cookieStore.set('access_token', accessToken, {
@@ -77,8 +67,8 @@ export async function loginAction(formData: FormData) {
     revalidatePath('/', 'layout')
     revalidatePath('/login', 'page')
 
-    // Redirect after setting cookie
-    redirect('/')
+    // Redirect after setting cookie with welcome message
+    redirect('/?msg=' + encodeURIComponent(AUTH_MESSAGES.loginSuccess.title))
   } catch (error) {
     if (
       error &&
@@ -89,7 +79,7 @@ export async function loginAction(formData: FormData) {
     ) {
       throw error
     }
-    redirect('/login?error=' + encodeURIComponent(MSG_SERVER_ERROR))
+    redirect('/login?msg=' + encodeURIComponent(AUTH_MESSAGES.sessionExpired.title))
   }
 }
 
@@ -106,19 +96,19 @@ export async function registerAction(formData: FormData) {
   const passwordConfirm = formData.get('passwordConfirm') as string
 
   if (!email) {
-    redirect('/register?error=' + encodeURIComponent(MSG_EMAIL_REQUIRED))
+    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.invalidCredentials.title))
   }
   if (!name) {
-    redirect('/register?error=' + encodeURIComponent(MSG_NAME_REQUIRED))
+    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.invalidCredentials.title))
   }
   if (!password) {
-    redirect('/register?error=' + encodeURIComponent(MSG_PASSWORD_REQUIRED))
+    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.registerError.title))
   }
   if (password.length < 8) {
-    redirect('/register?error=' + encodeURIComponent(MSG_PASSWORD_MIN_LENGTH))
+    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.registerError.title))
   }
   if (password !== passwordConfirm) {
-    redirect('/register?error=' + encodeURIComponent(MSG_PASSWORDS_MISMATCH))
+    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.registerError.title))
   }
 
   try {
@@ -135,16 +125,16 @@ export async function registerAction(formData: FormData) {
         data = await response.json()
       } catch {
         const text = await response.text()
-        redirect('/register?error=' + encodeURIComponent(text.substring(0, 100)))
+        redirect('/register?msg=' + encodeURIComponent(text.substring(0, 100)))
       }
     } else {
       const text = await response.text()
-      redirect('/register?error=' + encodeURIComponent(text.substring(0, 100)))
+      redirect('/register?msg=' + encodeURIComponent(text.substring(0, 100)))
     }
 
     if (!response.ok) {
-      const detail = (data.detail as string) || MSG_REGISTER_ERROR
-      redirect('/register?error=' + encodeURIComponent(detail))
+      const detail = (data.detail as string) || AUTH_MESSAGES.registerError.title
+      redirect('/register?msg=' + encodeURIComponent(detail))
     }
 
     // Registration succeeded — auto-login
@@ -155,12 +145,17 @@ export async function registerAction(formData: FormData) {
     })
 
     if (!loginResponse.ok) {
-      redirect('/login?info=' + encodeURIComponent(MSG_ACCOUNT_CREATED))
+      redirect('/login?msg=' + encodeURIComponent(AUTH_MESSAGES.registerSuccess.title))
     }
 
     const loginData = await loginResponse.json()
     const cookieStore = await cookies()
-    cookieStore.set('access_token', loginData.access_token as string, {
+    const accessToken = typeof loginData.access_token === 'string' ? loginData.access_token : null
+    if (!accessToken) {
+      redirect('/login?msg=' + encodeURIComponent(AUTH_MESSAGES.sessionExpired.title))
+    }
+
+    cookieStore.set('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -169,18 +164,9 @@ export async function registerAction(formData: FormData) {
     })
 
     revalidatePath('/', 'layout')
-    redirect('/')
-  } catch (error) {
-    if (
-      error &&
-      typeof error === 'object' &&
-      'digest' in error &&
-      typeof (error as { digest?: string }).digest === 'string' &&
-      (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
-    ) {
-      throw error
-    }
-    redirect('/register?error=' + encodeURIComponent(MSG_SERVER_ERROR))
+    redirect('/?msg=' + encodeURIComponent(AUTH_MESSAGES.registerSuccess.title))
+  } catch {
+    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.registerError.title))
   }
 }
 

@@ -12,7 +12,7 @@ export function ThemeToggle() {
   return (
     <Button
       variant="ghost"
-      size="icon-sm"
+      size="icon"
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
     >
