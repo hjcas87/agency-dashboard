@@ -13,7 +13,8 @@ import logging
 import secrets
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.custom.features.tiendanube_connection.schemas import (
@@ -68,12 +69,14 @@ def initiate_auth(
 
 @router.get(
     "/auth/callback",
-    response_model=AuthCallbackResponse,
     summary="OAuth callback — exchange code for token",
 )
 async def auth_callback(
     code: str = Query(..., description="Authorization code from Tiendanube"),
     state: str = Query(..., description="CSRF state token"),
+    redirect: bool = Query(
+        True, description="Redirect to frontend after success"
+    ),
     service: TiendanubeConnectionService = Depends(get_service),
 ) -> AuthCallbackResponse:
     """Handle OAuth callback and exchange code for permanent token.
@@ -81,27 +84,44 @@ async def auth_callback(
     After user authorizes the app, Tiendanube redirects here with
     the authorization code. We exchange it for a permanent token
     and register/update the store.
+
+    If redirect=True (default for browser flow), redirects to
+    frontend with success/error params.
+    If redirect=False, returns JSON response (for programmatic use).
     """
-    # TODO: Verify state matches the one from initiate_auth
+    try:
+        # Exchange code for token (uses client_id/secret from settings)
+        token_data = await service.exchange_token(code)
 
-    # Exchange code for token (uses client_id/secret from settings)
-    token_data = await service.exchange_token(code)
+        # Fetch store info from Tiendanube API
+        store_info = await _fetch_store_info(
+            token_data.user_id,
+            token_data.access_token,
+        )
 
-    # Fetch store info from Tiendanube API
-    store_info = await _fetch_store_info(
-        token_data.user_id,
-        token_data.access_token,
-    )
+        # Register store + save token
+        store = service.register_store(token_data, store_info)
 
-    # Register store + save token
-    store = service.register_store(token_data, store_info)
+        if redirect:
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/(private)/(custom)/connect-store/connected?store_name={store.name}",
+                status_code=302,
+            )
 
-    return AuthCallbackResponse(
-        store_id=store.id,
-        store_name=store.name,
-        access_token=token_data.access_token,
-        message="Store connected successfully",
-    )
+        return AuthCallbackResponse(
+            store_id=store.id,
+            store_name=store.name,
+            access_token=token_data.access_token,
+            message="Store connected successfully",
+        )
+
+    except Exception as e:
+        if redirect:
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/(private)/(custom)/connect-store?error={str(e)}",
+                status_code=302,
+            )
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 async def _fetch_store_info(
