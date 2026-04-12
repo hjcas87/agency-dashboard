@@ -36,6 +36,7 @@ dependencies = [
     "email-validator==2.1.1",
     "rich==13.7.0",
     "psycopg[binary]>=3.3.3",
+    "cryptography>=46.0.7",
 ]
 
 [build-system]

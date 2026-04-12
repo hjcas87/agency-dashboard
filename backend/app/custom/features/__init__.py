@@ -12,13 +12,12 @@ def get_custom_routers() -> List[APIRouter]:
     Cada feature custom debe registrar su router aquí.
     """
     routers = []
-    
-    # Ejemplo: importar routers de features custom
-    # try:
-    #     from app.custom.features.example_feature.routes import router as example_router
-    #     routers.append(example_router)
-    # except ImportError:
-    #     pass
-    
+
+    # Tiendanube Connection — OAuth, store management, catalog sync
+    from app.custom.features.tiendanube_connection.routes import (
+        router as tiendanube_router,
+    )
+    routers.append(tiendanube_router)
+
     return routers
 
