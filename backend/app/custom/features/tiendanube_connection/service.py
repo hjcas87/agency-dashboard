@@ -86,15 +86,13 @@ class TiendanubeConnectionService:
     async def exchange_token(
         self,
         code: str,
-        client_id: str,
-        client_secret: str,
     ) -> TiendanubeTokenResponse:
         """Exchange authorization code for permanent access token.
 
+        Uses client credentials from app settings.
+
         Args:
             code: Authorization code from Tiendanube redirect.
-            client_id: Tiendanube app Client ID.
-            client_secret: Tiendanube app Client Secret.
 
         Returns:
             Parsed token response from Tiendanube.
@@ -103,8 +101,8 @@ class TiendanubeConnectionService:
             ValueError: If token exchange fails.
         """
         payload = {
-            "client_id": client_id,
-            "client_secret": client_secret,
+            "client_id": settings.TIENDANUBE_CLIENT_ID,
+            "client_secret": settings.TIENDANUBE_CLIENT_SECRET,
             "grant_type": "authorization_code",
             "code": code,
         }
@@ -295,7 +293,7 @@ class TiendanubeConnectionService:
         url = f"{TIENDANUBE_API_BASE}/{store.tiendanube_store_id}{path}"
         headers = {
             "Authentication": f"bearer {access_token}",
-            "User-Agent": settings.TIENDANUBE_USER_AGENT,
+            "User-Agent": "mendri-loyalty",
             "Content-Type": "application/json",
         }
 

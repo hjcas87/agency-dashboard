@@ -17,7 +17,6 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.custom.features.tiendanube_connection.schemas import (
-    AuthCallbackRequest,
     AuthCallbackResponse,
     AuthInitiateRequest,
     AuthInitiateResponse,
@@ -43,13 +42,13 @@ def get_service(db: Session = Depends(get_db)) -> TiendanubeConnectionService:
 # ── OAuth Flow ──────────────────────────────────────────────────────
 
 
-@router.post(
+@router.get(
     "/auth/initiate",
     response_model=AuthInitiateResponse,
-    summary="Initiate Tiendanube OAuth flow",
+    summary="Start Tiendanube OAuth flow",
 )
 def initiate_auth(
-    req: AuthInitiateRequest,
+    store_id: str = Query(..., description="Tiendanube store numeric ID"),
     service: TiendanubeConnectionService = Depends(get_service),
 ) -> AuthInitiateResponse:
     """Generate authorization URL to connect a Tiendanube store.
@@ -58,6 +57,10 @@ def initiate_auth(
     After authorization, they'll be redirected back with a code.
     """
     state = secrets.token_urlsafe(32)
+    req = AuthInitiateRequest(
+        client_id=settings.TIENDANUBE_CLIENT_ID or "",
+        store_id=store_id,
+    )
     auth_url = service.initiate_auth(req, state)
     # TODO: Store state in cache/session for callback verification
     return AuthInitiateResponse(auth_url=auth_url, state=state)
@@ -70,8 +73,6 @@ def initiate_auth(
 )
 async def auth_callback(
     code: str = Query(..., description="Authorization code from Tiendanube"),
-    client_id: str = Query(..., description="Your app's Client ID"),
-    client_secret: str = Query(..., description="Your app's Client Secret"),
     state: str = Query(..., description="CSRF state token"),
     service: TiendanubeConnectionService = Depends(get_service),
 ) -> AuthCallbackResponse:
@@ -83,14 +84,13 @@ async def auth_callback(
     """
     # TODO: Verify state matches the one from initiate_auth
 
-    # Exchange code for token
-    token_data = await service.exchange_token(code, client_id, client_secret)
+    # Exchange code for token (uses client_id/secret from settings)
+    token_data = await service.exchange_token(code)
 
     # Fetch store info from Tiendanube API
     store_info = await _fetch_store_info(
         token_data.user_id,
         token_data.access_token,
-        settings.TIENDANUBE_USER_AGENT,
     )
 
     # Register store + save token
@@ -107,24 +107,14 @@ async def auth_callback(
 async def _fetch_store_info(
     store_id: str,
     access_token: str,
-    user_agent: str,
 ) -> TiendanubeStoreInfo:
-    """Fetch store metadata from Tiendanube API.
-
-    Args:
-        store_id: Tiendanube store numeric ID.
-        access_token: Plain text access token.
-        user_agent: User-Agent header value.
-
-    Returns:
-        Parsed store information.
-    """
+    """Fetch store metadata from Tiendanube API."""
     import httpx
 
     url = f"https://api.tiendanube.com/v1/{store_id}/store"
     headers = {
         "Authentication": f"bearer {access_token}",
-        "User-Agent": user_agent,
+        "User-Agent": "mendri-loyalty",
         "Content-Type": "application/json",
     }
 
