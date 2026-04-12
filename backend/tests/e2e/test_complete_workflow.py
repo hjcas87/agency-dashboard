@@ -66,7 +66,7 @@ class TestCompleteWorkflows:
         assert "module" in data
         assert "details" in data
         assert "database" in data["details"]
-        assert "kafka" in data["details"]
+        assert "rabbitmq" in data["details"]
         assert "n8n" in data["details"]
 
     def test_n8n_workflow_trigger_flow(self, client):

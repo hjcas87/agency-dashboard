@@ -55,38 +55,8 @@ def create_app() -> FastAPI:
             "name": "Core: Health",
             "description": "Health checks y estado del sistema (core).",
         },
-        {
-            "name": "Custom: Campaigns",
-            "description": "Gestión de campañas de publicidad (custom).",
-        },
-        {
-            "name": "Custom: Contacts",
-            "description": "Gestión de contactos (custom).",
-        },
-        {
-            "name": "Custom: Journeys",
-            "description": "Gestión de customer journeys (custom).",
-        },
-        {
-            "name": "Custom: Opportunities",
-            "description": "Gestión de oportunidades de venta (custom).",
-        },
-        {
-            "name": "Custom: Activities",
-            "description": "Gestión de actividades (custom).",
-        },
-        {
-            "name": "Custom: Integrations",
-            "description": "Gestión de integraciones (custom).",
-        },
-        {
-            "name": "Custom: Pipelines",
-            "description": "Gestión de pipelines de ventas (custom).",
-        },
-        {
-            "name": "Custom: Automations",
-            "description": "Gestión de automatizaciones (custom).",
-        },
+        # Custom feature tags — add here as features are created:
+        # {"name": "Custom: <Feature>", "description": "Descripción del feature (custom)."},
     ]
     
     app = FastAPI(

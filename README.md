@@ -8,7 +8,7 @@ El proyecto está dividido en tres componentes principales:
 
 - **Frontend**: Next.js 15.5.9 con React 19.2.3, shadcn/ui y Tailwind CSS
 - **Backend**: FastAPI modular con arquitectura por features (core/custom)
-- **Message Broker**: Kafka para mensajería robusta y escalable
+- **Message Broker**: RabbitMQ para mensajería robusta y escalable (Celery)
 - **Automation**: N8N self-hosted con webhooks
 
 ### Estructura de Módulos
@@ -22,19 +22,25 @@ custom/        # Módulos específicos del cliente (extender aquí)
 
 ### Prerrequisitos
 
-- Docker & Docker Compose
+- Docker & Docker Compose (o [Colima](https://github.com/abiosoft/colima) en macOS)
+- Python 3.12+ (gestionado automáticamente por `uv`)
 - Node.js 18+ (para desarrollo local del frontend, opcional)
-- Python 3.11+ (para desarrollo local del backend, opcional)
 - [uv](https://github.com/astral-sh/uv) (gestor de paquetes Python, recomendado)
 
 ### Levantar el Proyecto
 
 ```bash
-# Opción 1: Usar Makefile (recomendado)
+# 1. Copiar archivo de entorno
+cp .env.example backend/.env
+
+# 2. Iniciar infraestructura (PostgreSQL, RabbitMQ, N8N, Celery)
 make dev
 
-# Opción 2: Docker Compose directamente
-docker-compose up -d
+# 3. Backend (en otra terminal)
+cd backend && uv run uvicorn app.main:app --reload
+
+# 4. Frontend (en otra terminal)
+cd frontend && npm install && npm run dev
 ```
 
 ### Ejecutar Tests
@@ -49,8 +55,6 @@ make test-unit
 # Tests con coverage
 make test-cov
 ```
-
-📖 **Ver [Guía de Inicio Rápido](./docs/QUICK_START.md) para más detalles**
 
 ### Comandos Útiles
 
@@ -300,16 +304,17 @@ make format    # Formatear código
 
 Este proyecto usa **uv** para gestión de dependencias (más rápido que pip).
 
+**Nota**: El proyecto requiere Python 3.12+. `uv` descarga y gestiona la versión correcta automáticamente.
+
 ```bash
-# Instalar uv
+# Instalar uv (si no lo tienes)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Instalar dependencias
-cd backend
-uv pip install -e ".[dev]"
+cd backend && uv sync
 
-# Generar lock file
-uv lock
+# Generar lock file (después de agregar dependencias)
+cd backend && uv lock
 
 # Ver más en backend/README.md
 ```

@@ -87,12 +87,13 @@ def mock_settings(monkeypatch):
     test_settings = {
         "SECRET_KEY": "test-secret-key",
         "ENVIRONMENT": "test",
-        "KAFKA_BOOTSTRAP_SERVERS": "localhost:9092",
+        "RABBITMQ_HOST": "localhost",
+        "RABBITMQ_PORT": 5672,
         "N8N_BASE_URL": "http://localhost:5678",
     }
-    
+
     for key, value in test_settings.items():
         monkeypatch.setattr(f"app.config.settings.{key}", value)
-    
+
     return test_settings
 

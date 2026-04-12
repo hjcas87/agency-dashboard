@@ -1,0 +1,29 @@
+{
+  "context": {
+    "fileName": "AGENTS.md",
+    "includeDirectories": [
+      "docs/agents/skills/",
+      "ARCHITECTURE.md"
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(qwenlm.github.io)",
+      "WebFetch(www.fanyamin.com)",
+      "Skill(add-backend-feature)",
+      "Skill(add-frontend-feature)",
+      "Skill(add-feature)",
+      "Skill(add-database-migration)",
+      "Skill(add-integration)",
+      "Skill(add-celery-task)",
+      "Skill(add-n8n-workflow)",
+      "Skill(review-feature)",
+      "Skill(deploy)",
+      "Skill(setup-client-fork)",
+      "Skill(add-or-update-skill)",
+      "Skill(solution-design)"
+    ]
+  },
+  "$version": 3
+}
