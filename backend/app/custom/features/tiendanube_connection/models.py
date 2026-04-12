@@ -4,6 +4,9 @@ SQLAlchemy models for Tiendanube connection feature.
 Models:
 - Store: Represents a connected Tiendanube store
 - TiendanubeToken: Encrypted token storage for security
+
+Note: We use String columns instead of Enum columns for portability
+across PostgreSQL, SQLite, and MySQL.
 """
 import enum
 from datetime import datetime
@@ -32,6 +35,14 @@ class StoreStatus(str, enum.Enum):
     DISCONNECTED = "disconnected"
 
 
+def _storestatus_enum():
+    """Enum column with explicit values matching server_default."""
+    return Enum(
+        "active", "syncing", "error", "disconnected",
+        name="storestatus",
+    )
+
+
 class Store(Base):
     """Represents a Tiendanube store connected to Mendri Loyalty."""
 
@@ -43,7 +54,7 @@ class Store(Base):
     domain = Column(String(255), nullable=True)
     currency = Column(String(10), nullable=True, default="ARS")
     status = Column(
-        Enum(StoreStatus, name="storestatus"),
+        _storestatus_enum(),
         nullable=False,
         server_default="active",
     )
