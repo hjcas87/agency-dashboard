@@ -22,7 +22,9 @@
       "Skill(deploy)",
       "Skill(setup-client-fork)",
       "Skill(add-or-update-skill)",
-      "Skill(solution-design)"
+      "Skill(solution-design)",
+      "Bash(mkdir *)",
+      "Bash(cp *)"
     ]
   },
   "$version": 3

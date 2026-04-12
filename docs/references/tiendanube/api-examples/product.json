@@ -1,0 +1,145 @@
+
+[
+  {
+    "attributes": [
+      {
+        "en": "Size"
+      }
+    ],
+    "categories": [
+      {
+        "created_at": "2013-01-03T09:11:51-03:00",
+        "description": {
+          "en": "",
+          "es": "",
+          "pt": ""
+        },
+        "handle": {
+          "en": "poke-balls",
+          "es": "poke-balls",
+          "pt": "poke-balls"
+        },
+        "id": 4567,
+        "name": {
+          "en": "Poké Balls",
+          "es": "Poké Balls",
+          "pt": "Poké Balls"
+        },
+        "parent": null,
+        "subcategories": [],
+        "google_shopping_category": null,
+        "updated_at": "2013-03-11T09:14:11-03:00"
+      }
+    ],
+    "created_at": "2013-01-03T09:11:51-03:00",
+    "description": {
+      "en": "<p>The best Ball with the ultimate level of performance. It will catch any wild Pokémon without fail.</p>",
+      "es": "<p>La mejor Bola con el nivel máximo de desempeño. Atrapará cualquier Pokémon sin fallar.</p>",
+      "pt": "<p>A melhor Bola com o nível máximo de desempenho. Ele vai pegar qualquer Pokémon selvagem sem falhar.</p>"
+    },
+    "handle": {
+      "en": "master-ball",
+      "es": "master-ball",
+      "pt": "master-ball"
+    },
+    "id": 1234,
+    "images": [
+      {
+        "id": 101,
+        "src": "http://d26lpennugtm8s.cloudfront.net/stores/001/234/products/servine-640-0.jpg",
+        "position": 1,
+        "product_id": 1234
+      },
+      {
+        "id": 112,
+        "src": "http://d26lpennugtm8s.cloudfront.net/stores/001/234/products/onyx-640-0.jpg",
+        "position": 2,
+        "product_id": 1234
+      },
+      {
+        "id": 123,
+        "src": "http://d26lpennugtm8s.cloudfront.net/stores/001/234/products/stoutland-640-0.jpg",
+        "position": 3,
+        "product_id": 1234
+      }
+    ],
+    "name": {
+      "en": "Master Ball",
+      "es": "Master Ball",
+      "pt": "Master Ball"
+    },
+    "brand": null,
+    "video_url": "https://www.youtube.com/watch?v=57aG16_gQcU",
+    "seo_title": "Master Ball",
+    "seo_description": "The best Ball with the ultimate level of performance. It will catch any wild Pokémon without fail.",
+    "published": true,
+    "free_shipping": false,
+    "updated_at": "2013-03-11T09:14:11-03:00",
+    "variants": [
+      {
+        "id": 101,
+        "promotional_price": "19.00",
+        "created_at": "2013-01-03T09:11:51-03:00",
+        "depth": null,
+        "height": null,
+        "values": [
+          {
+            "en": "Small"
+          }
+        ],
+        "price": "25.00",
+        "product_id": 1234,
+        "stock_management": true,
+        "stock": 5,
+        "sku": "BSG1234A",
+        "updated_at": "2013-03-11T09:14:11-03:00",
+        "weight": "2.00",
+        "width": null,
+        "cost": null
+      },
+      {
+        "id": 112,
+        "promotional_price": "19.00",
+        "created_at": "2013-01-03T09:11:51-03:00",
+        "depth": null,
+        "height": null,
+        "values": [
+          {
+            "en": "Medium"
+          }
+        ],
+        "price": "25.00",
+        "product_id": 1234,
+        "stock_management": true,
+        "stock": 5,
+        "sku": "BSG1234B",
+        "updated_at": "2013-03-11T09:14:11-03:00",
+        "weight": "2.25",
+        "width": null,
+        "cost": null
+      },
+      {
+        "id": 133,
+        "promotional_price": "19.00",
+        "created_at": "2013-01-03T09:11:51-03:00",
+        "depth": null,
+        "height": null,
+        "values": [
+          {
+            "en": "Large"
+          }
+        ],
+        "price": "25.00",
+        "product_id": 1234,
+        "stock_management": true,
+        "stock": 5,
+        "sku": "BSG1234C",
+        "updated_at": "2013-03-11T09:14:11-03:00",
+        "weight": "2.50",
+        "width": null,
+        "cost": "10.99"
+      }
+    ],
+    "tags": "Brinquedos, pokeball, oferta, colecionismo"
+  }
+]
