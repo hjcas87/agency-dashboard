@@ -4,9 +4,21 @@ help: ## Mostrar esta ayuda
 	@echo "Comandos disponibles:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-dev: ## Levantar entorno de desarrollo (infraestructura solamente, backend y frontend se ejecutan manualmente)
-	docker-compose up -d postgres rabbitmq n8n nginx celery_worker celery_beat celery_flower
+dev: ## Levantar entorno de desarrollo mínimo (solo PostgreSQL, backend y frontend se ejecutan manualmente)
+	docker-compose up -d postgres
 	@echo "Servicios de infraestructura levantados:"
+	@echo "  PostgreSQL: localhost:5432"
+	@echo ""
+	@echo "Backend y Frontend deben ejecutarse manualmente:"
+	@echo "  Backend: cd backend && uv run uvicorn app.main:app --reload"
+	@echo "  Frontend: cd frontend && npm run dev"
+	@echo ""
+	@echo "Para servicios adicionales (N8N, Celery, etc.):"
+	@echo "  make dev-full"
+
+dev-full: ## Levantar entorno completo con todos los servicios (N8N, Celery, RabbitMQ, etc.)
+	docker-compose up -d postgres rabbitmq n8n nginx celery_worker celery_beat celery_flower
+	@echo "Todos los servicios levantados:"
 	@echo "  PostgreSQL: localhost:5432"
 	@echo "  RabbitMQ: localhost:5672 (Management UI: http://localhost:15672)"
 	@echo "  N8N: http://localhost:5678"
