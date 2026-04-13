@@ -17,6 +17,7 @@ from app.core.features.auth.schemas import (
 )
 from app.core.features.auth.dependencies import get_current_active_user
 from app.core.features.users.models import User
+from app.shared.constants import AUTH_SUCCESS
 
 router = APIRouter(prefix="/auth", tags=["Core: Auth"])
 
@@ -77,7 +78,7 @@ async def logout(
     Nota: En JWT, el logout se maneja en el cliente eliminando el token.
     Este endpoint puede usarse para logging o invalidación de tokens en el futuro.
     """
-    return {"message": "Logged out successfully"}
+    return {"message": AUTH_SUCCESS["logged_out"]}
 
 
 @router.post("/password-reset/request", status_code=status.HTTP_200_OK)

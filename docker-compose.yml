@@ -94,6 +94,9 @@ services:
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-admin}
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
       - ENVIRONMENT=development
+      - API_VERSION=${API_VERSION:-v1}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       - N8N_BASE_URL=http://n8n:5678
       - N8N_WEBHOOK_URL=http://n8n:5678
       - N8N_API_KEY=${N8N_API_KEY:-}
@@ -131,6 +134,9 @@ services:
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-admin}
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
       - ENVIRONMENT=development
+      - API_VERSION=${API_VERSION:-v1}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       - N8N_BASE_URL=http://n8n:5678
       - N8N_WEBHOOK_URL=http://n8n:5678
       - N8N_API_KEY=${N8N_API_KEY:-}
@@ -214,11 +220,12 @@ services:
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-admin}
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
       - ENVIRONMENT=development
+      - API_VERSION=${API_VERSION:-v1}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       - FLOWER_BASIC_AUTH=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
       - N8N_BASE_URL=http://n8n:5678
       - N8N_WEBHOOK_URL=http://n8n:5678
-      - N8N_API_KEY=${N8N_API_KEY:-}
-      - N8N_API_KEY_HEADER=${N8N_API_KEY_HEADER:-X-API-Key}
       - N8N_API_KEY=${N8N_API_KEY:-}
       - N8N_API_KEY_HEADER=${N8N_API_KEY_HEADER:-X-API-Key}
     depends_on:

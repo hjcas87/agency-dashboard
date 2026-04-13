@@ -96,19 +96,19 @@ export async function registerAction(formData: FormData) {
   const passwordConfirm = formData.get('passwordConfirm') as string
 
   if (!email) {
-    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.invalidCredentials.title))
+    return { success: false as const, error: AUTH_MESSAGES.invalidCredentials.title }
   }
   if (!name) {
-    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.invalidCredentials.title))
+    return { success: false as const, error: AUTH_MESSAGES.invalidCredentials.title }
   }
   if (!password) {
-    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.registerError.title))
+    return { success: false as const, error: AUTH_MESSAGES.registerError.title }
   }
   if (password.length < 8) {
-    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.registerError.title))
+    return { success: false as const, error: AUTH_MESSAGES.passwordTooShort.description }
   }
   if (password !== passwordConfirm) {
-    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.registerError.title))
+    return { success: false as const, error: AUTH_MESSAGES.passwordMismatch.description }
   }
 
   try {
@@ -125,16 +125,16 @@ export async function registerAction(formData: FormData) {
         data = await response.json()
       } catch {
         const text = await response.text()
-        redirect('/register?msg=' + encodeURIComponent(text.substring(0, 100)))
+        return { success: false as const, error: text.substring(0, 100) }
       }
     } else {
       const text = await response.text()
-      redirect('/register?msg=' + encodeURIComponent(text.substring(0, 100)))
+      return { success: false as const, error: text.substring(0, 100) }
     }
 
     if (!response.ok) {
       const detail = (data.detail as string) || AUTH_MESSAGES.registerError.title
-      redirect('/register?msg=' + encodeURIComponent(detail))
+      return { success: false as const, error: detail }
     }
 
     // Registration succeeded — auto-login
@@ -145,14 +145,14 @@ export async function registerAction(formData: FormData) {
     })
 
     if (!loginResponse.ok) {
-      redirect('/login?msg=' + encodeURIComponent(AUTH_MESSAGES.registerSuccess.title))
+      return { success: false as const, error: AUTH_MESSAGES.sessionExpired.title }
     }
 
     const loginData = await loginResponse.json()
     const cookieStore = await cookies()
     const accessToken = typeof loginData.access_token === 'string' ? loginData.access_token : null
     if (!accessToken) {
-      redirect('/login?msg=' + encodeURIComponent(AUTH_MESSAGES.sessionExpired.title))
+      return { success: false as const, error: AUTH_MESSAGES.sessionExpired.title }
     }
 
     cookieStore.set('access_token', accessToken, {
@@ -164,9 +164,9 @@ export async function registerAction(formData: FormData) {
     })
 
     revalidatePath('/', 'layout')
-    redirect('/?msg=' + encodeURIComponent(AUTH_MESSAGES.registerSuccess.title))
+    return { success: true as const, error: null }
   } catch {
-    redirect('/register?msg=' + encodeURIComponent(AUTH_MESSAGES.registerError.title))
+    return { success: false as const, error: AUTH_MESSAGES.registerError.description }
   }
 }
 

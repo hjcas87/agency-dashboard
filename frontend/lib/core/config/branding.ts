@@ -1,167 +1,109 @@
-/**
- * Branding configuration for authentication pages.
- *
- * This configuration allows customization of:
- * - Colors and theme
- * - Logo and branding elements
- * - Text content
- * - Layout styles
- * - Background images
- */
-import type React from 'react'
-
-export type AuthLayoutType = 'centered' | 'split-screen' | 'full-width'
-
-export interface BrandingColors {
-  primary: string
-  primaryHover: string
-  secondary?: string
-  background: string
-  cardBackground: string
-  text: string
-  textSecondary: string
-  border: string
-  error: string
-  success: string
-}
-
-export interface BrandingLogo {
-  src?: string
-  alt?: string
-  component?: React.ComponentType<{ className?: string }>
-  text?: string
-  size?: 'sm' | 'md' | 'lg'
-}
-
-export interface BrandingTexts {
-  loginTitle: string
-  loginSubtitle: string
-  loginButton: string
-  resetPasswordTitle: string
-  resetPasswordSubtitle: string
-  resetPasswordButton: string
-  forgotPasswordLink: string
-  backToLogin: string
-  emailLabel: string
-  passwordLabel: string
-  confirmPasswordLabel: string
-  emailPlaceholder: string
-  passwordPlaceholder: string
-  rememberMe?: string
-}
-
-export interface BrandingFormOptions {
-  showRememberMe?: boolean
-  textAlignment?: 'left' | 'center'
-  cardStyle?: {
-    rounded?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
-    shadow?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'none'
-  }
-}
-
-export interface BrandingLayout {
-  type: AuthLayoutType
-  backgroundImage?: string
-  backgroundOverlay?: string
-  leftSideContent?: {
-    title?: string
-    subtitle?: string
-    description?: string
-    image?: string
-  }
-}
+import type React from "react"
 
 export interface AuthBrandingConfig {
-  colors: BrandingColors
-  logo: BrandingLogo
-  texts: BrandingTexts
-  layout: BrandingLayout
-  formOptions?: BrandingFormOptions
-  footer?: {
-    show: boolean
+  logo: {
+    component?: React.ComponentType<{ className?: string }>
+    src?: string
+    alt?: string
     text?: string
-    logo?: BrandingLogo
-    link?: string
+    size?: "sm" | "md" | "lg"
+  }
+  colors: {
+    primary: string
+    primaryHover: string
+    text: string
+    textSecondary: string
+    cardBackground: string
+    border: string
+    success: string
+    error: string
+  }
+  layout: {
+    type: "split-screen" | "centered"
+    leftSideContent?: {
+      title?: string
+      subtitle?: string
+      description?: string
+      image?: string
+    }
+    backgroundImage?: string
+    backgroundOverlay?: string
+  }
+  texts: {
+    loginTitle: string
+    loginSubtitle: string
+    emailLabel: string
+    emailPlaceholder: string
+    passwordLabel: string
+    passwordPlaceholder: string
+    loginButton: string
+    forgotPasswordLink: string
+    rememberMe?: string
+    resetPasswordTitle: string
+    resetPasswordSubtitle: string
+    resetPasswordButton: string
+    backToLogin: string
+    confirmPasswordLabel: string
+  }
+  formOptions?: {
+    cardStyle?: {
+      rounded?: "sm" | "md" | "lg" | "xl" | "2xl"
+      shadow?: "none" | "sm" | "md" | "lg" | "xl"
+    }
+    showRememberMe?: boolean
+  }
+  footer?: {
+    show?: boolean
   }
 }
 
-/**
- * Default branding configuration.
- * Uses shadcn/ui global CSS variables to stay consistent with the dashboard theme.
- */
-export const defaultBrandingConfig: AuthBrandingConfig = {
-  colors: {
-    primary: 'hsl(var(--primary))',
-    primaryHover: 'hsl(var(--primary) / 0.8)',
-    background: 'hsl(var(--background))',
-    cardBackground: 'hsl(var(--card))',
-    text: 'hsl(var(--foreground))',
-    textSecondary: 'hsl(var(--muted-foreground))',
-    border: 'hsl(var(--border))',
-    error: 'hsl(var(--destructive))',
-    success: 'hsl(var(--primary))',
+const defaultConfig: AuthBrandingConfig = {
+  logo: {
+    text: "Agency Dashboard",
+    alt: "Agency Dashboard Logo",
+    size: "md",
   },
-  logo: {},
-  texts: {
-    loginTitle: 'Iniciar sesión',
-    loginSubtitle: 'Ingresá tus credenciales para acceder a Mendri',
-    loginButton: 'Iniciar sesión',
-    resetPasswordTitle: 'Restablecer contraseña',
-    resetPasswordSubtitle: 'Ingresá tu email para recibir un enlace de restablecimiento',
-    resetPasswordButton: 'Enviar enlace',
-    forgotPasswordLink: '¿Olvidaste tu contraseña?',
-    backToLogin: 'Volver al login',
-    emailLabel: 'Email',
-    passwordLabel: 'Contraseña',
-    confirmPasswordLabel: 'Confirmar contraseña',
-    emailPlaceholder: 'tu@email.com',
-    passwordPlaceholder: '••••••••',
+  colors: {
+    primary: "#2563eb",
+    primaryHover: "#1d4ed8",
+    text: "#0f172a",
+    textSecondary: "#64748b",
+    cardBackground: "#ffffff",
+    border: "#e2e8f0",
+    success: "#16a34a",
+    error: "#dc2626",
   },
   layout: {
-    type: 'centered',
+    type: "centered",
+  },
+  texts: {
+    loginTitle: "Iniciar sesión",
+    loginSubtitle: "Ingresá a tu cuenta",
+    emailLabel: "Email",
+    emailPlaceholder: "tu@email.com",
+    passwordLabel: "Contraseña",
+    passwordPlaceholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+    loginButton: "Iniciar sesión",
+    forgotPasswordLink: "¿Olvidaste tu contraseña?",
+    rememberMe: "Recordarme",
+    resetPasswordTitle: "Restablecer contraseña",
+    resetPasswordSubtitle: "Ingresá tu nueva contraseña",
+    resetPasswordButton: "Restablecer contraseña",
+    backToLogin: "Volver al inicio de sesión",
+    confirmPasswordLabel: "Confirmar contraseña",
   },
   formOptions: {
-    showRememberMe: false,
-    textAlignment: 'center',
     cardStyle: {
-      rounded: 'lg',
-      shadow: 'sm',
+      rounded: "2xl",
+      shadow: "lg",
     },
+    showRememberMe: true,
   },
   footer: {
     show: true,
   },
 }
 
-/**
- * Get branding configuration.
- * Allows override from custom/features/auth/branding.ts
- */
 export function getBrandingConfig(): AuthBrandingConfig {
-  try {
-    const customBranding = require('@/lib/custom/features/auth/branding')
-
-    if (customBranding?.brandingConfig) {
-      return {
-        ...defaultBrandingConfig,
-        ...customBranding.brandingConfig,
-        colors: {
-          ...defaultBrandingConfig.colors,
-          ...customBranding.brandingConfig.colors,
-        },
-        texts: {
-          ...defaultBrandingConfig.texts,
-          ...customBranding.brandingConfig.texts,
-        },
-        layout: {
-          ...defaultBrandingConfig.layout,
-          ...customBranding.brandingConfig.layout,
-        },
-      }
-    }
-  } catch {
-    // File doesn't exist, use defaults
-  }
-
-  return defaultBrandingConfig
+  return defaultConfig
 }

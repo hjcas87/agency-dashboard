@@ -27,6 +27,14 @@ from app.core.features.auth.utils import (
 from app.core.features.auth.models import PasswordResetToken
 from app.core.features.auth.tasks import send_email_task
 from app.config import settings
+from app.shared.constants import (
+    AUTH_ERRORS,
+    AUTH_SUCCESS,
+    AUTH_SCHEME,
+    AUTHENTICATE_HEADER,
+    TOKEN_TYPE,
+    JWT_CLAIM_SUB,
+)
 
 
 class AuthService:
@@ -60,34 +68,34 @@ class AuthService:
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password",
+                detail=AUTH_ERRORS["invalid_credentials"],
             )
-        
+
         # Verificar contraseña
         user_password = get_user_password(self.db, user.id)
         if not user_password or not verify_password(login_data.password, user_password.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password",
+                detail=AUTH_ERRORS["invalid_credentials"],
             )
-        
+
         # Verificar que el usuario esté activo
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Inactive user",
+                detail=AUTH_ERRORS["inactive_user"],
             )
-        
+
         # Crear token
-        access_token_expires = timedelta(minutes=30)
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": str(user.id)},
+            data={JWT_CLAIM_SUB: str(user.id)},
             expires_delta=access_token_expires
         )
-        
+
         return {
             "access_token": access_token,
-            "token_type": "bearer",
+            "token_type": TOKEN_TYPE,
             "user": {
                 "id": user.id,
                 "email": user.email,
@@ -109,7 +117,7 @@ class AuthService:
         user = self.user_repository.get_by_email(reset_data.email)
         if not user:
             # Por seguridad, no revelamos si el email existe o no
-            return {"message": "If the email exists, a password reset link has been sent"}
+            return {"message": AUTH_SUCCESS["password_reset_sent"]}
         
         # Crear token de reseteo
         token = create_password_reset_token(self.db, user.id)
@@ -117,7 +125,7 @@ class AuthService:
         # Preparar contenido del email
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
         
-        subject = "Restablecer Contraseña"
+        subject = "Password Reset"
         body = f"""
 Hola {user.name},
 
@@ -177,7 +185,7 @@ Saludos,
             logger.error(f"Error al encolar email de password reset: {str(e)}")
         
         return {
-            "message": "If the email exists, a password reset link has been sent"
+            "message": AUTH_SUCCESS["password_reset_sent"]
         }
 
     def confirm_password_reset(self, reset_data: PasswordResetConfirm) -> dict:
@@ -198,7 +206,7 @@ Saludos,
         if not reset_token:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired token",
+                detail=AUTH_ERRORS["invalid_token"],
             )
         
         # Actualizar contraseña
@@ -208,7 +216,7 @@ Saludos,
         reset_token.used = True
         self.db.commit()
         
-        return {"message": "Password has been reset successfully"}
+        return {"message": AUTH_SUCCESS["password_reset_done"]}
 
     def change_password(
         self,
@@ -236,13 +244,13 @@ Saludos,
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect",
+                detail=AUTH_ERRORS["incorrect_password"],
             )
         
         # Actualizar contraseña
         set_user_password(self.db, user_id, change_data.new_password)
         
-        return {"message": "Password has been changed successfully"}
+        return {"message": AUTH_SUCCESS["password_changed"]}
 
     def register(self, user_data: UserRegister) -> User:
         """
@@ -261,7 +269,7 @@ Saludos,
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email is already registered",
+                detail=AUTH_ERRORS["email_already_exists"],
             )
 
         from app.core.features.users.schemas import UserCreate
@@ -293,7 +301,7 @@ Saludos,
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"User with email {user_data.email} already exists",
+                detail=AUTH_ERRORS["user_exists_detail"].format(email=user_data.email),
             )
         
         # Crear usuario

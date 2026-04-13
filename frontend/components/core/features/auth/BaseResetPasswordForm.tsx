@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useBranding } from './AuthBrandingProvider'
+import { AUTH_MESSAGES, CONTENT_TYPES, FORM_LABELS } from '@/lib/messages'
 import {
   Card,
   CardContent,
@@ -61,12 +62,12 @@ export function BaseResetPasswordForm({
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || 'Error al solicitar reseteo')
+        throw new Error(data.detail || AUTH_MESSAGES.errorRequestingReset.description)
       }
 
       setSuccess(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al solicitar reseteo')
+      setError(err instanceof Error ? err.message : AUTH_MESSAGES.errorRequestingReset.description)
     } finally {
       setLoading(false)
     }
@@ -77,17 +78,17 @@ export function BaseResetPasswordForm({
     setError(null)
 
     if (newPassword !== confirmPassword) {
-      setError('Las contraseñas no coinciden')
+      setError(AUTH_MESSAGES.passwordMismatch.description)
       return
     }
 
     if (newPassword.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres')
+      setError(AUTH_MESSAGES.passwordTooShort.description)
       return
     }
 
     if (!token) {
-      setError('Token no válido')
+      setError(AUTH_MESSAGES.invalidToken.description)
       return
     }
 
@@ -107,7 +108,7 @@ export function BaseResetPasswordForm({
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || 'Error al restablecer contraseña')
+        throw new Error(data.detail || AUTH_MESSAGES.errorConfirmingReset.description)
       }
 
       setSuccess(true)
@@ -116,7 +117,7 @@ export function BaseResetPasswordForm({
         router.push('/login')
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al restablecer contraseña')
+      setError(err instanceof Error ? err.message : AUTH_MESSAGES.errorConfirmingReset.description)
     } finally {
       setLoading(false)
     }
@@ -242,7 +243,7 @@ export function BaseResetPasswordForm({
                 }}
                 disabled={loading}
               >
-                {loading ? 'Enviando...' : branding.texts.resetPasswordButton}
+                {loading ? FORM_LABELS.sendingButton : branding.texts.resetPasswordButton}
               </Button>
               <div className="text-center">
                 <Link
@@ -377,7 +378,7 @@ export function BaseResetPasswordForm({
               }}
               disabled={loading}
             >
-              {loading ? 'Restableciendo...' : 'Restablecer Contraseña'}
+              {loading ? FORM_LABELS.resettingButton : branding.texts.resetPasswordButton}
             </Button>
           </form>
         )}

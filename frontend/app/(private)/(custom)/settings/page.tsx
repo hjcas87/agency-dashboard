@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/core/ui/button'
-import { AUTH_MESSAGES } from '@/lib/messages'
+import { AUTH_MESSAGES, SETTINGS_MESSAGES } from '@/lib/messages'
 import { SETTINGS } from '@/components/core/features/dashboard/settings-config'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
@@ -44,7 +44,7 @@ export default function SettingsPage() {
       const data = (await res.json()) as { auth_url: string }
       window.location.href = data.auth_url
     } catch {
-      toast.error(AUTH_MESSAGES.storeConnectMissingId.text ?? '')
+      toast.error(AUTH_MESSAGES.storeConnectMissingId.description)
     } finally {
       setLoading(false)
     }
@@ -81,7 +81,7 @@ export default function SettingsPage() {
         </Button>
         {hasConnectedStore && (
           <Button variant="outline" onClick={() => void handleDisconnect()} disabled={loading}>
-            Desconectar tienda
+            {SETTINGS_MESSAGES.disconnectStore.buttonLabel}
           </Button>
         )}
       </div>

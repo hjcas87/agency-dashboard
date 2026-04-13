@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import {
   closestCenter,
   DndContext,
@@ -49,11 +48,11 @@ import {
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table'
+import * as React from 'react'
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { useIsMobile } from '@/lib/hooks/use-mobile'
 import { Badge } from '@/components/core/ui/badge'
 import { Button } from '@/components/core/ui/button'
 import {
@@ -100,6 +99,7 @@ import {
   TableRow,
 } from '@/components/core/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/core/ui/tabs'
+import { useIsMobile } from '@/lib/hooks/use-mobile'
 
 export const schema = z.object({
   id: z.number(),

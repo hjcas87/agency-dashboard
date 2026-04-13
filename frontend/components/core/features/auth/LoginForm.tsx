@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/core/ui/button'
 import { Input } from '@/components/core/ui/input'
 import { loginAction } from '@/app/actions/core/auth'
+import { FORM_LABELS } from '@/lib/messages'
 
 export function LoginForm() {
   const searchParams = useSearchParams()
@@ -22,8 +23,6 @@ export function LoginForm() {
   const handleSubmit = async (formData: FormData) => {
     setError(null)
     startTransition(async () => {
-      // loginAction always redirects, never returns
-      // Errors are passed via URL query params
       await loginAction(formData)
     })
   }
@@ -36,35 +35,35 @@ export function LoginForm() {
             <span className="text-white font-bold text-2xl">O</span>
           </div>
         </div>
-        <CardTitle className="text-2xl text-center">Iniciar Sesión</CardTitle>
+        <CardTitle className="text-2xl text-center">{FORM_LABELS.loginTitle}</CardTitle>
         <CardDescription className="text-center">
-          Ingresa tus credenciales para acceder al CRM
+          {FORM_LABELS.loginSubtitle}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              {FORM_LABELS.email}
             </label>
             <Input
               id="email"
               name="email"
               type="email"
-              placeholder="tu@email.com"
+              placeholder={FORM_LABELS.emailPlaceholder}
               required
               disabled={isPending}
             />
           </div>
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm font-medium">
-              Contraseña
+              {FORM_LABELS.password}
             </label>
             <Input
               id="password"
               name="password"
               type="password"
-              placeholder="••••••••"
+              placeholder={FORM_LABELS.passwordPlaceholder}
               required
               disabled={isPending}
             />
@@ -79,11 +78,11 @@ export function LoginForm() {
             className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
             disabled={isPending}
           >
-            {isPending ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            {isPending ? FORM_LABELS.signingIn : FORM_LABELS.loginButton}
           </Button>
           <div className="text-center">
             <a href="/reset-password" className="text-sm text-blue-600 hover:underline">
-              ¿Olvidaste tu contraseña?
+              {FORM_LABELS.forgotPasswordLink}
             </a>
           </div>
         </form>

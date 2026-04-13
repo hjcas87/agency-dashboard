@@ -8,6 +8,11 @@ import httpx
 
 from app.shared.interfaces.external_service import IExternalService
 from app.config import settings
+from app.shared.constants import (
+    N8N_STATUS,
+    HEADER_CONTENT_TYPE,
+    CONTENT_TYPE_JSON,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +50,7 @@ class N8NService(IExternalService):
         endpoint_clean = endpoint.lstrip('/')
         url = f"{base}/{endpoint_clean}" if endpoint_clean else base
         default_headers = {
-            "Content-Type": "application/json",
+            HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON,
         }
         # Agregar API key en header si está configurado (para Header Auth en N8N)
         if self.api_key:
@@ -64,7 +69,7 @@ class N8NService(IExternalService):
                 response.raise_for_status()
 
                 result = {
-                    "status": "success",
+                    "status": N8N_STATUS["SUCCESS"],
                     "status_code": response.status_code,
                     "data": response.json() if response.content else None,
                 }
@@ -121,7 +126,7 @@ class N8NService(IExternalService):
             response = asyncio.run(
                 self.call(endpoint="/healthz", method="GET")
             )
-            return response.get("status") == "success"
+            return response.get("status") == N8N_STATUS["SUCCESS"]
         except Exception:
             return False
 

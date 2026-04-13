@@ -11,6 +11,7 @@ import {
 } from '@/components/core/ui/card'
 import { Input } from '@/components/core/ui/input'
 import { cn } from '@/lib/utils'
+import { FORM_LABELS } from '@/lib/messages'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
@@ -109,7 +110,7 @@ export function BaseLoginForm({ className, onSuccess }: BaseLoginFormProps) {
                   defaultChecked
                   className="h-4 w-4 rounded border-border text-primary accent-primary"
                 />
-                <span className="text-sm">{branding.texts.rememberMe || 'Recordarme'}</span>
+                <span className="text-sm">{branding.texts.rememberMe || FORM_LABELS.rememberMe}</span>
               </label>
               <Link href="/reset-password" className="text-sm text-primary hover:underline">
                 {branding.texts.forgotPasswordLink}
@@ -123,13 +124,6 @@ export function BaseLoginForm({ className, onSuccess }: BaseLoginFormProps) {
           >
             {isPending ? 'Iniciando sesión...' : branding.texts.loginButton}
           </Button>
-
-          <p className="text-center text-sm text-muted-foreground">
-            ¿No tenés cuenta?{' '}
-            <Link href="/register" className="text-primary hover:underline">
-              Creá tu cuenta
-            </Link>
-          </p>
         </form>
       </CardContent>
     </Card>

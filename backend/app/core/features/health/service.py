@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.shared.services.n8n_service import N8NService
 from app.database import engine
 from app.config import settings
+from app.shared.constants import HEALTH_STATUS
 
 
 class HealthFeatureService:
@@ -43,7 +44,7 @@ class HealthFeatureService:
         all_healthy = all(details.values())
 
         return {
-            "status": "healthy" if all_healthy else "degraded",
+            "status": HEALTH_STATUS["HEALTHY"] if all_healthy else HEALTH_STATUS["DEGRADED"],
             "module": module,
             "details": details,
         }

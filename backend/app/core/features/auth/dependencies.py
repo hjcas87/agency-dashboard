@@ -12,6 +12,12 @@ from app.database import get_db
 from app.core.features.users.models import User
 from app.core.features.users.repository import UserRepository
 from app.config import settings
+from app.shared.constants import (
+    AUTH_ERRORS,
+    AUTH_SCHEME,
+    AUTHENTICATE_HEADER,
+    JWT_CLAIM_SUB,
+)
 
 security = HTTPBearer()
 
@@ -22,55 +28,55 @@ def get_current_user(
 ) -> User:
     """
     Dependency para obtener el usuario actual autenticado.
-    
+
     Args:
         credentials: Credenciales HTTP Bearer
         db: Sesión de base de datos
-        
+
     Returns:
         Usuario autenticado
-        
+
     Raises:
         HTTPException: Si el token es inválido o el usuario no existe
     """
     token = credentials.credentials
-    
+
     try:
         payload = jwt.decode(
             token,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
-        user_id: str = payload.get("sub")
+        user_id: str = payload.get(JWT_CLAIM_SUB)
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication credentials",
-                headers={"WWW-Authenticate": "Bearer"},
+                detail=AUTH_ERRORS["invalid_credentials"],
+                headers={AUTHENTICATE_HEADER: AUTH_SCHEME},
             )
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail=AUTH_ERRORS["invalid_credentials"],
+            headers={AUTHENTICATE_HEADER: AUTH_SCHEME},
         )
-    
+
     user_repo = UserRepository(db)
     user = user_repo.get(int(user_id))
-    
+
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail=AUTH_ERRORS["user_not_found"],
+            headers={AUTHENTICATE_HEADER: AUTH_SCHEME},
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user",
+            detail=AUTH_ERRORS["inactive_user"],
         )
-    
+
     return user
 
 

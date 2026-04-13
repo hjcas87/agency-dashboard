@@ -11,6 +11,7 @@ import {
 } from '@/components/core/ui/card'
 import { Button } from '@/components/core/ui/button'
 import { Input } from '@/components/core/ui/input'
+import { AUTH_MESSAGES, CONTENT_TYPES, FORM_LABELS } from '@/lib/messages'
 
 export function ResetPasswordForm() {
   const router = useRouter()
@@ -36,7 +37,7 @@ export function ResetPasswordForm() {
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            [CONTENT_TYPES.JSON.split(':')[0]]: CONTENT_TYPES.JSON,
           },
           body: JSON.stringify({ email }),
         }
@@ -44,12 +45,12 @@ export function ResetPasswordForm() {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || 'Error al solicitar reseteo')
+        throw new Error(data.detail || AUTH_MESSAGES.errorRequestingReset.description)
       }
 
       setSuccess(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al solicitar reseteo')
+      setError(err instanceof Error ? err.message : AUTH_MESSAGES.errorRequestingReset.description)
     } finally {
       setLoading(false)
     }
@@ -60,17 +61,17 @@ export function ResetPasswordForm() {
     setError(null)
 
     if (newPassword !== confirmPassword) {
-      setError('Las contraseñas no coinciden')
+      setError(AUTH_MESSAGES.passwordMismatch.description)
       return
     }
 
     if (newPassword.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres')
+      setError(AUTH_MESSAGES.passwordTooShort.description)
       return
     }
 
     if (!token) {
-      setError('Token no válido')
+      setError(AUTH_MESSAGES.invalidToken.description)
       return
     }
 
@@ -90,7 +91,7 @@ export function ResetPasswordForm() {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || 'Error al restablecer contraseña')
+        throw new Error(data.detail || AUTH_MESSAGES.errorConfirmingReset.description)
       }
 
       setSuccess(true)
@@ -98,7 +99,7 @@ export function ResetPasswordForm() {
         router.push('/login')
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al restablecer contraseña')
+      setError(err instanceof Error ? err.message : AUTH_MESSAGES.errorConfirmingReset.description)
     } finally {
       setLoading(false)
     }
@@ -113,34 +114,34 @@ export function ResetPasswordForm() {
               <span className="text-white font-bold text-2xl">O</span>
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">Restablecer Contraseña</CardTitle>
+          <CardTitle className="text-2xl text-center">{FORM_LABELS.resetPasswordTitle}</CardTitle>
           <CardDescription className="text-center">
-            Ingresa tu email para recibir un enlace de restablecimiento
+            {FORM_LABELS.resetPasswordSubtitle}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {success ? (
             <div className="space-y-4">
               <div className="p-4 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-                Si el email existe, se ha enviado un enlace de restablecimiento.
+                {AUTH_MESSAGES.passwordResetSuccess.description}
               </div>
               <Button
                 onClick={() => router.push('/login')}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
               >
-                Volver al Login
+                {FORM_LABELS.backToLogin}
               </Button>
             </div>
           ) : (
             <form onSubmit={handleRequestReset} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
-                  Email
+                  {FORM_LABELS.email}
                 </label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="tu@email.com"
+                  placeholder={FORM_LABELS.emailPlaceholder}
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
@@ -157,11 +158,11 @@ export function ResetPasswordForm() {
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                 disabled={loading}
               >
-                {loading ? 'Enviando...' : 'Enviar Enlace'}
+                {loading ? FORM_LABELS.sendingButton : FORM_LABELS.resetPasswordButton}
               </Button>
               <div className="text-center">
                 <a href="/login" className="text-sm text-blue-600 hover:underline">
-                  Volver al Login
+                  {FORM_LABELS.backToLogin}
                 </a>
               </div>
             </form>
@@ -179,26 +180,26 @@ export function ResetPasswordForm() {
             <span className="text-white font-bold text-2xl">O</span>
           </div>
         </div>
-        <CardTitle className="text-2xl text-center">Nueva Contraseña</CardTitle>
-        <CardDescription className="text-center">Ingresa tu nueva contraseña</CardDescription>
+        <CardTitle className="text-2xl text-center">{FORM_LABELS.resetPasswordTitle}</CardTitle>
+        <CardDescription className="text-center">{FORM_LABELS.resetPasswordSubtitle}</CardDescription>
       </CardHeader>
       <CardContent>
         {success ? (
           <div className="space-y-4">
             <div className="p-4 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-              Contraseña restablecida exitosamente. Redirigiendo al login...
+              {AUTH_MESSAGES.passwordResetSuccess.description}
             </div>
           </div>
         ) : (
           <form onSubmit={handleConfirmReset} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="newPassword" className="text-sm font-medium">
-                Nueva Contraseña
+                {FORM_LABELS.password}
               </label>
               <Input
                 id="newPassword"
                 type="password"
-                placeholder="••••••••"
+                placeholder={FORM_LABELS.passwordPlaceholder}
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 required
@@ -208,12 +209,12 @@ export function ResetPasswordForm() {
             </div>
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-sm font-medium">
-                Confirmar Contraseña
+                {FORM_LABELS.confirmPassword}
               </label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                placeholder={FORM_LABELS.passwordPlaceholder}
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 required
@@ -231,7 +232,7 @@ export function ResetPasswordForm() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
               disabled={loading}
             >
-              {loading ? 'Restableciendo...' : 'Restablecer Contraseña'}
+              {loading ? FORM_LABELS.resettingButton : FORM_LABELS.resetPasswordButton}
             </Button>
           </form>
         )}

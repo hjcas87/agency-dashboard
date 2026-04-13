@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from app.shared.services.n8n_service import N8NService
 from app.core.features.n8n.tasks import trigger_n8n_workflow
+from app.shared.constants import N8N_MESSAGES, N8N_STATUS, TASK_STATE
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +47,8 @@ class N8NFeatureService:
 
         return {
             "task_id": task.id,
-            "status": "queued",
-            "message": "Workflow trigger queued successfully",
+            "status": N8N_STATUS["QUEUED"],
+            "message": N8N_MESSAGES["queued"],
         }
 
     async def trigger_workflow_sync(
@@ -84,13 +85,13 @@ class N8NFeatureService:
 
         task = celery_app.AsyncResult(task_id)
 
-        if task.state == "PENDING":
+        if task.state == TASK_STATE["PENDING"]:
             return {
                 "task_id": task_id,
                 "state": task.state,
-                "status": "Task is waiting to be processed",
+                "status": N8N_MESSAGES["pending_desc"],
             }
-        elif task.state == "SUCCESS":
+        elif task.state == TASK_STATE["SUCCESS"]:
             return {
                 "task_id": task_id,
                 "state": task.state,
@@ -100,6 +101,6 @@ class N8NFeatureService:
             return {
                 "task_id": task_id,
                 "state": task.state,
-                "error": str(task.info) if task.info else "Unknown error",
+                "error": str(task.info) if task.info else N8N_MESSAGES["unknown_error"],
             }
 
