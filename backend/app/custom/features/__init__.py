@@ -11,9 +11,11 @@ def get_custom_routers() -> list[APIRouter]:
     Register new feature routers here as they are created.
     """
     from app.custom.features.clients.routes import router as clients_router
+    from app.custom.features.proposals.routes import router as proposals_router
 
     routers = [
         clients_router,
+        proposals_router,
     ]
 
     return routers
