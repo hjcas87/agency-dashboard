@@ -70,6 +70,41 @@ pre-commit-install: ## Instalar pre-commit hooks
 pre-commit-run: ## Ejecutar pre-commit en todos los archivos
 	pre-commit run --all-files
 
+deploy: ## Levantar todo en producción (build + up + migrate)
+	docker-compose -f docker-compose.deploy.yml up -d --build
+	@echo "Esperando que PostgreSQL esté listo..."
+	@sleep 5
+	@echo "Ejecutando migraciones..."
+	docker-compose -f docker-compose.deploy.yml exec -T backend uv run alembic upgrade head
+	@echo ""
+	@echo "Deploy completo. Servicios disponibles en:"
+	@echo "  App: https://${DOMAIN}"
+	@echo "  API: https://${DOMAIN}/api/docs"
+	@echo ""
+	@echo "Crear primer usuario con:"
+	@echo "  make deploy-create-user EMAIL=admin@ejemplo.com NAME=Admin PASSWORD=tu-password"
+
+deploy-build: ## Construir imágenes de producción
+	docker-compose -f docker-compose.deploy.yml build
+
+deploy-up: ## Levantar servicios de producción (sin build)
+	docker-compose -f docker-compose.deploy.yml up -d
+
+deploy-down: ## Detener servicios de producción
+	docker-compose -f docker-compose.deploy.yml down
+
+deploy-migrate: ## Ejecutar migraciones en producción
+	docker-compose -f docker-compose.deploy.yml exec -T backend uv run alembic upgrade head
+
+deploy-create-user: ## Crear usuario admin (requiere EMAIL= NAME= PASSWORD=)
+	docker-compose -f docker-compose.deploy.yml exec -T backend uv run python scripts/create_superuser.py --email $(EMAIL) --name "$(NAME)" --password "$(PASSWORD)"
+
+deploy-logs: ## Ver logs de producción
+	docker-compose -f docker-compose.deploy.yml logs -f
+
+deploy-restart: ## Reiniciar todos los servicios de producción
+	docker-compose -f docker-compose.deploy.yml restart
+
 prod: ## Levantar entorno de producción (requiere .env configurado)
 	docker-compose -f docker-compose.prod.yml up -d
 

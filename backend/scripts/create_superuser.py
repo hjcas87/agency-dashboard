@@ -14,9 +14,9 @@ from pathlib import Path
 # Add the project root to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.database import SessionLocal, engine, Base
-from app.core.features.users.models import User, UserRole
 from app.core.features.auth.utils import get_password_hash, set_user_password
+from app.core.features.users.models import User, UserRole
+from app.database import Base, SessionLocal, engine
 
 
 def create_superuser(email: str, name: str, password: str) -> None:
