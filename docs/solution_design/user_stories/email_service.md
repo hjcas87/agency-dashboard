@@ -269,6 +269,69 @@ Si no está configurado, el servicio registra el email en logs pero no envía (m
 
 ---
 
+## Reglas de Frontend (NO NEGOCIABLE)
+
+### Usar siempre shadcn/ui — nunca crear componentes propios desde cero
+
+Este proyecto usa **shadcn/ui** como sistema de componentes. **No se escriben componentes UI desde cero**. Se busca, instala y compone desde shadcn.
+
+```bash
+# Buscar componente disponible
+npx shadcn@latest search dialog
+npx shadcn@latest search textarea
+
+# Instalar componente
+npx shadcn@latest add dialog drawer
+```
+
+Si no existe en shadcn, se busca un **bloque de shadcn** (https://ui.shadcn.com/blocks) o una alternativa compatible.
+
+### Reglas de estilo (docs/references/shadcn/rules/)
+
+1. **Colores semánticos** — `bg-background`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `bg-destructive`. **Nunca** colores raw como `bg-blue-500`, `text-emerald-600`, `bg-gray-900`.
+2. **className solo para layout** — márgenes, anchos, positioning. **Nunca** para override de colores o tipografía del componente.
+3. **gap, no space** — `flex flex-col gap-4`, **nunca** `space-y-4`.
+4. **size-*, no w-* h-*** — `size-10` en vez de `w-10 h-10`.
+5. **cn() para clases condicionales** — importar de `@/lib/utils`.
+6. **No z-index manual** — Dialog, Sheet, Drawer, DropdownMenu manejan su propio stacking.
+
+### Reglas de composición (docs/references/shadcn/rules/composition.md)
+
+1. **Items dentro de su Group** — `SelectItem` dentro de `SelectGroup`, `DropdownMenuItem` dentro de `DropdownMenuGroup`.
+2. **Dialog/Sheet/Drawer siempre necesitan Title** — `DialogTitle`, `DrawerTitle` con `className="sr-only"` si no debe ser visible.
+3. **Card estructura completa** — `CardHeader` + `CardTitle` + `CardDescription` + `CardContent` + `CardFooter`.
+4. **Empty states usan `<Empty>`** — no markup custom.
+5. **Callouts usan `<Alert>`** — no divs con colores de alerta.
+6. **Toast usa `sonner`** — `toast.success()`, `toast.error()`.
+7. **Separadores usan `<Separator>`** — no `<hr>` ni divs con borde.
+8. **Loading usa `<Skeleton>`** — no divs con animate-pulse.
+
+### Reglas de formularios (docs/references/shadcn/rules/forms.md)
+
+1. **FieldGroup + Field** — nunca divs con `space-y-*`.
+2. **InputGroupInput dentro de InputGroup** — nunca `Input` raw dentro de `InputGroup`.
+3. **Textarea dentro de InputGroupTextarea** si está en un InputGroup.
+4. **Botón disabled + Spinner** para loading — no existe `isPending`.
+5. **ToggleGroup para 2-7 opciones** — no buttons manuales con estado activo.
+
+### Reglas de íconos (docs/references/shadcn/rules/icons.md)
+
+1. **Usar `@tabler/icons-react`** — icon library configurada del proyecto.
+2. **data-icon en buttons** — `data-icon="inline-start"` o `data-icon="inline-end"`.
+3. **Sin clases de tamaño en íconos** dentro de componentes shadcn — el componente maneja el tamaño.
+4. **Iconos como objetos** — `icon={CheckIcon}`, no strings.
+
+### Para esta feature en particular
+
+- **EmailSendDialog**: usar `Dialog` con `DialogTitle`, `DialogDescription`, `DialogHeader`, `DialogContent`, `DialogFooter`.
+- **Textarea del cuerpo**: usar `Textarea` de shadcn dentro de `FieldGroup` + `Field`.
+- **Selector de plantillas**: usar `Select` con `SelectGroup`.
+- **Badges de variables**: usar `Badge` con `variant="secondary"`.
+- **Vista previa del email**: usar `Drawer` o `Sheet` con composición completa.
+- **Ningún componente nuevo** se crea en `components/core/ui/` sin pasar por `npx shadcn@latest add`.
+
+---
+
 ## Notas de Diseño
 
 1. **Independencia total**: `app/shared/email/` no importa ninguna feature específica. Las features usan el servicio pasando datos y un builder específico.
