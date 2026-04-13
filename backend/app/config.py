@@ -40,13 +40,8 @@ class Settings(BaseSettings):
     # N8N
     N8N_BASE_URL: str
     N8N_WEBHOOK_URL: str
-    N8N_API_KEY: str | None = None  # API key para autenticación Header Auth (opcional)
-    N8N_API_KEY_HEADER: str = "X-API-Key"  # Nombre del header para la API key (default: X-API-Key)
-
-    # Tiendanube Integration (your app credentials — same for all clients)
-    TIENDANUBE_CLIENT_ID: str | None = None
-    TIENDANUBE_CLIENT_SECRET: str | None = None
-    TIENDANUBE_REDIRECT_URL: str = "http://localhost:8000/api/v1/tiendanube/auth/callback"
+    N8N_API_KEY: str | None = None
+    N8N_API_KEY_HEADER: str = "X-API-Key"
 
     # Email Service
     EMAIL_PROVIDER: str = "smtp"  # "smtp" o "api"

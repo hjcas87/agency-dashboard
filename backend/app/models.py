@@ -10,9 +10,3 @@ from app.core.features.users.models import User  # noqa: F401
 
 # Custom models — add imports here as features are created:
 # from app.custom.features.<feature>.models import <Model>  # noqa: F401
-
-# Tiendanube Connection
-from app.custom.features.tiendanube_connection.models import (  # noqa: F401
-    Store,
-    TiendanubeToken,
-)

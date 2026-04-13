@@ -1,23 +1,19 @@
 """
 Custom features module.
-Cada feature debe ser autocontenido con su propia estructura.
+Each feature should be self-contained with its own structure.
 """
-from typing import List
 from fastapi import APIRouter
 
 
-def get_custom_routers() -> List[APIRouter]:
+def get_custom_routers() -> list[APIRouter]:
     """
-    Retorna lista de routers de features custom.
-    Cada feature custom debe registrar su router aquí.
+    Return list of custom feature routers.
+    Register new feature routers here as they are created.
     """
     routers = []
 
-    # Tiendanube Connection — OAuth, store management, catalog sync
-    from app.custom.features.tiendanube_connection.routes import (
-        router as tiendanube_router,
-    )
-    routers.append(tiendanube_router)
+    # Example:
+    # from app.custom.features.my_feature.routes import router as my_feature_router
+    # routers.append(my_feature_router)
 
     return routers
-

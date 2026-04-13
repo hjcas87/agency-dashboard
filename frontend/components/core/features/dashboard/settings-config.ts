@@ -1,23 +1,18 @@
 /**
- * Settings page configuration — all strings and labels centralized.
- * No magic strings anywhere in the settings feature.
+ * Settings page configuration.
+ * Customize label, descriptions, and endpoints here.
  */
 
 export const SETTINGS = {
   connectStore: {
-    title: 'Conectar con Tiendanube',
-    description:
-      'Conectá tu tienda de Tiendanube con un solo clic. Serás redirigido para autorizar la integración y seleccionar tu tienda.',
+    title: 'Integraciones',
+    description: 'Conectá servicios externos y APIs con tu proyecto.',
     labels: {
-      submit: 'Conectar con Tiendanube',
-      loading: 'Redirigiendo...',
+      submit: 'Conectar servicio',
+      loading: 'Conectando...',
     },
     endpoints: {
-      initiate: '/api/v1/tiendanube/auth/initiate',
-    },
-    validation: {
-      error: 'Error al iniciar la conexión',
-      unexpected: 'Error inesperado',
+      initiate: '/api/v1/integrations/auth/initiate',
     },
   },
-} as const
+}
