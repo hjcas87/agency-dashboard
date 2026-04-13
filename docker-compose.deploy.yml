@@ -52,6 +52,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${DOMAIN}
     container_name: app_frontend
     environment:
       - NEXT_PUBLIC_API_URL=https://${DOMAIN}
