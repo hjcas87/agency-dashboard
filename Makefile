@@ -78,7 +78,7 @@ deploy: ## Levantar todo en producción (pull + mkdir + build + up + migrate)
 	mkdir -p backend/uploads/logos
 	
 	@echo "Iniciando despliegue de contenedores..."
-	docker-compose -f docker-compose.deploy.yml up -d --build
+	docker compose -f docker-compose.deploy.yml up -d --build
 	
 	@echo "Esperando que PostgreSQL esté listo..."
 	@sleep 5
