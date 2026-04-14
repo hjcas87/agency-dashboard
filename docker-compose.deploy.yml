@@ -10,7 +10,7 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: app_postgres
+    container_name: mendri-agency_postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -30,7 +30,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: app_backend
+    container_name: mendri-agency_backend
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
     environment:
       - POSTGRES_HOST=postgres
@@ -54,7 +54,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://${DOMAIN}
-    container_name: app_frontend
+    container_name: mendri-agency_frontend
     environment:
       - NEXT_PUBLIC_API_URL=https://${DOMAIN}
       - NODE_ENV=production
@@ -66,7 +66,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: app_nginx
+    container_name: mendri-agency_nginx
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
@@ -79,10 +79,11 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mendri-app.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.mendri-app.entrypoints=websecure"
-      - "traefik.http.routers.mendri-app.tls.certresolver=cloudflare"
-      - "traefik.http.services.mendri-app.loadbalancer.server.port=80"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.mendri-agency.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.mendri-agency.entrypoints=websecure"
+      - "traefik.http.routers.mendri-agency.tls.certresolver=cloudflare"
+      - "traefik.http.services.mendri-agency.loadbalancer.server.port=80"
 
 volumes:
   postgres_data:
