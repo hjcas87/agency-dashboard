@@ -228,6 +228,78 @@ export const PROPOSAL_MESSAGES = {
   },
 } as const
 
+// ── PDF template messages (user-facing, Spanish) ──────────────
+export const PDF_TEMPLATE_MESSAGES = {
+  loadError: {
+    title: "Error al cargar",
+    description: "No se pudo cargar la plantilla PDF.",
+  },
+  saveSuccess: {
+    title: "Plantilla guardada",
+    description: "La plantilla PDF fue guardada exitosamente.",
+  },
+  saveError: {
+    title: "Error al guardar",
+    description: "No se pudo guardar la plantilla PDF. Intentalo de nuevo.",
+  },
+  resetSuccess: {
+    title: "Plantilla restaurada",
+    description: "La plantilla PDF fue restaurada a valores por defecto.",
+  },
+  resetError: {
+    title: "Error al restaurar",
+    description: "No se pudo restaurar la plantilla PDF. Intentalo de nuevo.",
+  },
+  logoUploadSuccess: {
+    title: "Logo subido",
+    description: "El logo fue subido exitosamente.",
+  },
+  logoUploadError: {
+    title: "Error al subir logo",
+    description: "No se pudo subir el logo. Intentalo de nuevo.",
+  },
+  loading: {
+    title: "Cargando...",
+    description: "Cargando configuración de plantilla PDF.",
+  },
+  uploadingLogo: "Subiendo logo...",
+  clickToUploadLogo: "Click para subir logo (PNG, JPG, SVG, WEBP)",
+  logoConfigured: "Logo configurado",
+  cardTitle: "Configuración de Plantilla PDF",
+  cardDescription: "Personaliza la apariencia de los PDFs generados por el sistema",
+  labels: {
+    logo: "Logo de la Empresa",
+    bgColor: "Color de Fondo",
+    textColor: "Color de Texto",
+    accentColor: "Color de Acento",
+    headerText: "Texto de Cabecera",
+    footerText: "Texto de Pie de Página",
+    headerTextPlaceholder: "Texto introductorio que aparecerá antes de la tabla de tareas...",
+    footerTextPlaceholder: "Texto que aparecerá al final del documento...",
+    restoreButton: "Restaurar por defecto",
+    saveButton: "Guardar",
+  },
+} as const
+
+// ── Email dialog messages (user-facing, Spanish) ───────────────
+export const EMAIL_DIALOG_MESSAGES = {
+  sendSuccess: {
+    title: "Email enviado",
+    description: "El email fue enviado exitosamente.",
+  },
+  sendError: {
+    title: "Error al enviar",
+    description: "No se pudo enviar el email. Intentalo de nuevo.",
+  },
+  validationError: {
+    title: "Campos obligatorios",
+    description: "Por favor completa todos los campos obligatorios.",
+  },
+  loading: "Enviando email...",
+  sendButton: "Enviar Email",
+  cancelButton: "Cancelar",
+} as const
+
 // ── Environment values (internal, English) ─────────────────────
 export const ENVIRONMENT = {
   DEVELOPMENT: "DEVELOPMENT",

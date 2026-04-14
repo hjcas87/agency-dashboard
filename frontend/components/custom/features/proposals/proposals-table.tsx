@@ -1,6 +1,6 @@
 'use client'
 
-import { IconDotsVertical, IconEdit, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
+import { IconDotsVertical, IconEdit, IconFileText, IconMail, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
 import {
   flexRender,
   getCoreRowModel,
@@ -47,6 +47,7 @@ import {
   TableRow,
 } from '@/components/core/ui/table'
 import { PROPOSAL_MESSAGES } from '@/lib/messages'
+import { EmailSendDialog } from '@/components/custom/features/email/email-send-dialog'
 
 export type Proposal = ProposalRecord
 
@@ -61,7 +62,11 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
 }
 
-function getColumns(onDelete: (proposal: Proposal) => void): ColumnDef<Proposal>[] {
+function getColumns(
+  onDelete: (proposal: Proposal) => void,
+  onPdf: (proposal: Proposal) => void,
+  onEmail: (proposal: Proposal) => void,
+): ColumnDef<Proposal>[] {
   return [
     {
       accessorKey: 'name',
@@ -128,7 +133,7 @@ function getColumns(onDelete: (proposal: Proposal) => void): ColumnDef<Proposal>
                 <span className="sr-only">Abrir menú</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem asChild>
                 <a
                   href={`/proposals/${proposal.id}/edit`}
@@ -137,6 +142,20 @@ function getColumns(onDelete: (proposal: Proposal) => void): ColumnDef<Proposal>
                   <IconEdit className="size-4" />
                   Editar
                 </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => onPdf(proposal)}
+              >
+                <IconFileText className="size-4" />
+                Ver PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => onEmail(proposal)}
+              >
+                <IconMail className="size-4" />
+                Enviar Email
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive cursor-pointer"
@@ -160,8 +179,20 @@ export function ProposalsTable({ data }: ProposalsTableProps) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [deleteTarget, setDeleteTarget] = useState<Proposal | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [emailDialogProposal, setEmailDialogProposal] = useState<Proposal | null>(null)
 
-  const columns = useMemo(() => getColumns((proposal: Proposal) => setDeleteTarget(proposal)), [])
+  const columns = useMemo(
+    () =>
+      getColumns(
+        (proposal: Proposal) => setDeleteTarget(proposal),
+        (proposal: Proposal) => {
+          const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+          window.open(`${apiBase}/api/v1/pdf/proposals/${proposal.id}`, '_blank')
+        },
+        (proposal: Proposal) => setEmailDialogProposal(proposal),
+      ),
+    [],
+  )
 
   const table = useReactTable({
     data,
@@ -289,6 +320,17 @@ export function ProposalsTable({ data }: ProposalsTableProps) {
           </div>
         </div>
       )}
+
+      {/* Email send dialog */}
+      <EmailSendDialog
+        open={!!emailDialogProposal}
+        onOpenChange={(open) => {
+          if (!open) setEmailDialogProposal(null)
+        }}
+        subject={emailDialogProposal ? `Presupuesto: ${emailDialogProposal.name}` : ''}
+        proposalId={emailDialogProposal?.id}
+        clientId={emailDialogProposal?.client_id}
+      />
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>

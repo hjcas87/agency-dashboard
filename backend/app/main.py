@@ -2,6 +2,8 @@
 Main FastAPI application entry point.
 """
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -76,6 +78,31 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+    )
+
+    # Serve uploaded files via dedicated endpoint
+    uploads_dir = Path(__file__).parent.parent / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+
+    from fastapi.responses import FileResponse
+    from fastapi import HTTPException as _HTTPException, Request
+
+    async def _serve_upload(request: Request):
+        """Serve uploaded files (logos, etc.)."""
+        file_path = request.path_params.get("file_path", "")
+        full_path = uploads_dir / file_path
+        resolved = full_path.resolve()
+        if not str(resolved).startswith(str(uploads_dir.resolve())):
+            raise _HTTPException(status_code=403, detail="Access denied")
+        if full_path.exists() and full_path.is_file():
+            return FileResponse(str(full_path))
+        raise _HTTPException(status_code=404, detail=f"File not found: {full_path}")
+
+    app.add_api_route(
+        "/uploads/{file_path:path}",
+        _serve_upload,
+        methods=["GET"],
+        tags=["uploads"],
     )
 
     # Include routers

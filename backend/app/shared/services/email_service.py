@@ -2,13 +2,18 @@
 Implementación del servicio de email.
 Soporta SMTP y APIs de email (SendGrid, Mailgun, etc).
 """
+import base64
 import logging
+import smtplib
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Any
 
 import httpx
 
-from app.shared.interfaces.email_service import IEmailService
 from app.config import settings
+from app.shared.interfaces.email_service import Attachment, IEmailService
 
 logger = logging.getLogger(__name__)
 
@@ -32,16 +37,20 @@ class SMTPEmailService(IEmailService):
         subject: str,
         body: str,
         html_body: str | None = None,
+        attachments: list[Attachment] | None = None,
+        cc: str | None = None,
     ) -> bool:
         """
         Envía un email usando SMTP.
-        
+
         Args:
             to: Email del destinatario
             subject: Asunto del email
             body: Cuerpo del email en texto plano
             html_body: Cuerpo del email en HTML (opcional)
-            
+            attachments: Lista de archivos adjuntos (opcional)
+            cc: Email con copia (opcional)
+
         Returns:
             True si se envió exitosamente
         """
@@ -52,17 +61,15 @@ class SMTPEmailService(IEmailService):
                 f"[cyan]Subject:[/cyan] {subject}\n"
                 f"[cyan]Body:[/cyan] {body}"
             )
-            return True  # En desarrollo, retornamos True aunque no se envíe
+            return True
 
         try:
-            import smtplib
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
-
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
             msg["From"] = f"{self.from_name} <{self.from_email}>"
             msg["To"] = to
+            if cc:
+                msg["Cc"] = cc
 
             # Agregar texto plano
             text_part = MIMEText(body, "plain")
@@ -72,6 +79,13 @@ class SMTPEmailService(IEmailService):
             if html_body:
                 html_part = MIMEText(html_body, "html")
                 msg.attach(html_part)
+
+            # Agregar adjuntos
+            if attachments:
+                for attachment in attachments:
+                    part = MIMEApplication(attachment.content, Name=attachment.filename)
+                    part["Content-Disposition"] = f'attachment; filename="{attachment.filename}"'
+                    msg.attach(part)
 
             # Enviar email
             with smtplib.SMTP(self.host, self.port) as server:
@@ -107,16 +121,20 @@ class APIEmailService(IEmailService):
         subject: str,
         body: str,
         html_body: str | None = None,
+        attachments: list[Attachment] | None = None,
+        cc: str | None = None,
     ) -> bool:
         """
         Envía un email usando API.
-        
+
         Args:
             to: Email del destinatario
             subject: Asunto del email
             body: Cuerpo del email en texto plano
             html_body: Cuerpo del email en HTML (opcional)
-            
+            attachments: Lista de archivos adjuntos (opcional)
+            cc: Email con copia (opcional)
+
         Returns:
             True si se envió exitosamente
         """
@@ -125,7 +143,7 @@ class APIEmailService(IEmailService):
                 f"Email API not configured. Logging email instead:\n"
                 f"To: {to}\nSubject: {subject}\nBody: {body}"
             )
-            return True  # En desarrollo, retornamos True aunque no se envíe
+            return True
 
         try:
             headers = {
@@ -142,6 +160,19 @@ class APIEmailService(IEmailService):
             }
             if html_body:
                 payload["html"] = html_body
+            if cc:
+                payload["cc"] = cc
+
+            # Adjuntos: codificar en base64 si la API lo soporta
+            if attachments:
+                payload["attachments"] = [
+                    {
+                        "filename": att.filename,
+                        "content": base64.b64encode(att.content).decode("utf-8"),
+                        "mime_type": att.mime_type,
+                    }
+                    for att in attachments
+                ]
 
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
@@ -174,25 +205,38 @@ class LoggingEmailService(IEmailService):
         subject: str,
         body: str,
         html_body: str | None = None,
+        attachments: list[Attachment] | None = None,
+        cc: str | None = None,
     ) -> bool:
         """
         Loguea el email en lugar de enviarlo (para desarrollo).
-        
+
         Args:
             to: Email del destinatario
             subject: Asunto del email
             body: Cuerpo del email en texto plano
             html_body: Cuerpo del email en HTML (opcional)
-            
+            attachments: Lista de archivos adjuntos (opcional)
+            cc: Email con copia (opcional)
+
         Returns:
             Siempre True (simula éxito)
         """
+        attachment_info = ""
+        if attachments:
+            attachment_info = "\n".join(
+                f"  [cyan]Attachment:[/cyan] {att.filename} ({len(att.content)} bytes, {att.mime_type})"
+                for att in attachments
+            )
+
+        cc_info = f"\n[cyan]CC:[/cyan] {cc}" if cc else ""
         logger.info(
             "[dim]Email (logged, not sent):[/dim]\n"
-            f"[cyan]To:[/cyan] {to}\n"
+            f"[cyan]To:[/cyan] {to}{cc_info}\n"
             f"[cyan]Subject:[/cyan] {subject}\n"
             f"[cyan]Body:[/cyan] {body}\n"
-            f"[cyan]HTML Body:[/cyan] {html_body if html_body else '[dim]N/A[/dim]'}"
+            f"[cyan]HTML Body:[/cyan] {html_body if html_body else '[dim]N/A[/dim]'}\n"
+            f"{attachment_info}"
         )
         return True
 

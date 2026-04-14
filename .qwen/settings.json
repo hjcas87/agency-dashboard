@@ -26,7 +26,13 @@
       "Skill(shadcn-frontend)",
       "Bash(uv *)",
       "Bash(mkdir *)",
-      "Bash(npx *)"
+      "Bash(npx *)",
+      "Bash(pkill *)",
+      "Bash(sleep *)",
+      "Bash(curl *)",
+      "Bash(file *)",
+      "Bash(lsof *)",
+      "Bash(xargs *)"
     ]
   },
   "$version": 3

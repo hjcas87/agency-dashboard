@@ -12,10 +12,14 @@ def get_custom_routers() -> list[APIRouter]:
     """
     from app.custom.features.clients.routes import router as clients_router
     from app.custom.features.proposals.routes import router as proposals_router
+    from app.custom.features.pdf.routes import router as pdf_router
+    from app.custom.features.email.routes import router as email_router
 
     routers = [
         clients_router,
         proposals_router,
+        pdf_router,
+        email_router,
     ]
 
     return routers
