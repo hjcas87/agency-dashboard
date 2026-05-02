@@ -61,6 +61,7 @@ class Proposal(Base):
         onupdate=func.now(),
         nullable=False,
     )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     tasks: Mapped[list["ProposalTask"]] = relationship(
         "ProposalTask",

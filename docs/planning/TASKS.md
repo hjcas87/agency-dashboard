@@ -38,7 +38,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   2. Agregar: `PROPOSAL_VALIDITY_DAYS: int = 10`.
 - **Done**: constante importable desde el service.
 
-### [ ] T-003-2: Agregar `sent_at` al modelo `Proposal`
+### [x] T-003-2: Agregar `sent_at` al modelo `Proposal`
 
 - **Depende de**: T-003-1
 - **Doc**: 003, sección "Datos / migrations"
@@ -48,7 +48,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   2. Posicionarla después de `updated_at`.
 - **Done**: modelo compila, `python -c "from app.custom.features.proposals.models import Proposal"` sin errores.
 
-### [ ] T-003-3: Migration `sent_at` con backfill
+### [x] T-003-3: Migration `sent_at` con backfill
 
 - **Depende de**: T-003-2
 - **Doc**: 003, sección "Datos / migrations"
@@ -61,7 +61,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   5. Verificar en DB: `SELECT id, status, sent_at FROM proposals` — los pre-existentes en estado sent/accepted/rejected tienen sent_at != NULL.
 - **Done**: migration aplicada, backfill funcionó.
 
-### [ ] T-003-4: Service setea `sent_at` automático
+### [x] T-003-4: Service setea `sent_at` automático
 
 - **Depende de**: T-003-3
 - **Doc**: 003, sección "Service / lógica"
@@ -74,7 +74,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. NO modificar otros flujos del service.
 - **Done**: cambiar status de un draft a sent (vía API o test) deja `sent_at` con timestamp actual.
 
-### [ ] T-003-5: Schema response con `sent_at` y `days_until_expiry`
+### [x] T-003-5: Schema response con `sent_at` y `days_until_expiry`
 
 - **Depende de**: T-003-4
 - **Doc**: 003, sección "API"
@@ -86,7 +86,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   4. Importar `PROPOSAL_VALIDITY_DAYS` desde `constants.py`.
 - **Done**: response del endpoint `GET /api/v1/proposals/{id}` incluye ambos campos.
 
-### [ ] T-003-6: Test backend de set `sent_at`
+### [x] T-003-6: Test backend de set `sent_at`
 
 - **Depende de**: T-003-5
 - **Doc**: 003, sección "Criterios de done"

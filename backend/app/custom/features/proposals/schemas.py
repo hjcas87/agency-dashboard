@@ -1,6 +1,7 @@
 """
 Pydantic schemas for the Proposal feature.
 """
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
@@ -88,6 +89,8 @@ class ProposalResponse(BaseModel):
     total_usd: Decimal
     created_at: str
     updated_at: str
+    sent_at: datetime | None = None
+    days_until_expiry: int | None = None
     tasks: list[ProposalTaskResponse] = []
 
     class Config:

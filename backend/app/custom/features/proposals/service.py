@@ -1,11 +1,13 @@
 """
 Service layer for the Proposal feature.
 """
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.custom.features.proposals.constants import PROPOSAL_VALIDITY_DAYS
 from app.custom.features.proposals.messages import (
     ERR_INVALID_STATUS_VALUE,
     ERR_NOT_FOUND,
@@ -94,6 +96,13 @@ class ProposalService:
             if client:
                 client_name = client.name
 
+        sent_at = proposal.sent_at
+        if sent_at is not None:
+            expiry = sent_at + timedelta(days=PROPOSAL_VALIDITY_DAYS)
+            days_until_expiry = (expiry - datetime.now(timezone.utc)).days
+        else:
+            days_until_expiry = None
+
         return ProposalResponse(
             id=proposal.id,
             name=proposal.name,
@@ -112,6 +121,8 @@ class ProposalService:
             total_usd=totals["total_usd"],
             created_at=proposal.created_at.isoformat() if proposal.created_at else "",
             updated_at=proposal.updated_at.isoformat() if proposal.updated_at else "",
+            sent_at=sent_at,
+            days_until_expiry=days_until_expiry,
             tasks=[
                 ProposalTaskResponse(
                     id=t.id,
@@ -242,6 +253,12 @@ class ProposalService:
             )
 
         proposal.status = target
+
+        if target in (ProposalStatus.SENT, ProposalStatus.ACCEPTED) and proposal.sent_at is None:
+            proposal.sent_at = datetime.now(timezone.utc)
+        elif target is ProposalStatus.SENT and current is ProposalStatus.DRAFT:
+            proposal.sent_at = datetime.now(timezone.utc)
+
         self.db.commit()
         self.db.refresh(proposal)
         return self._to_response(proposal)
