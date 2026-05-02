@@ -12,8 +12,13 @@ from app.database import engine, Base
 from app.core.router import api_router
 from app.core.logging_config import setup_logging, get_logger
 
-# Import all models to ensure SQLAlchemy can resolve relationships
-# This must be imported before Base.metadata.create_all()
+# Side-effect import: loading `app.models` is what registers every
+# SQLAlchemy mapped class with `Base.metadata`. The lifespan handler
+# below calls `Base.metadata.create_all()` in DEVELOPMENT, and that
+# read of the metadata depends on every class having been imported —
+# any model not loaded here yields a missing table at startup. F401
+# suppressed because the import is intentional side effect, no name
+# is referenced from `app.models` in this file.
 import app.models  # noqa: F401
 
 # Setup logging with Rich

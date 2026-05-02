@@ -6,8 +6,8 @@ so attribute access yields plain types instead of `Column[T]`.
 """
 from datetime import datetime
 
-from sqlalchemy import DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -22,6 +22,11 @@ class Client(Base):
     of the app does not depend on them. The IvaCondition enum reused
     here comes from `shared/afip/enums` — single source of truth across
     invoicing and client data.
+
+    `email` is the **primary** contact email (used as `to:` when sending
+    proposals/invoices). Additional addressees — accountancy, finance,
+    secretaries who must always be CC'd — live in `additional_emails`
+    and are appended to `cc:` automatically by the email send route.
     """
 
     __tablename__ = "clients"
@@ -43,6 +48,12 @@ class Client(Base):
     cuit: Mapped[str | None] = mapped_column(String(11), nullable=True, index=True)
     iva_condition: Mapped[IvaCondition | None] = mapped_column(String(2), nullable=True)
 
+    additional_emails: Mapped[list["ClientEmail"]] = relationship(
+        back_populates="client",
+        cascade="all, delete-orphan",
+        order_by="ClientEmail.id",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -55,3 +66,44 @@ class Client(Base):
 
     def __repr__(self) -> str:
         return f"<Client(id={self.id}, name='{self.name}', email='{self.email}')>"
+
+
+class ClientEmail(Base):
+    """Secondary email address for a client.
+
+    The client's `email` column stays as the primary contact (`to:` in
+    sends). This table holds *additional* recipients that must always
+    be CC'd when reaching out — typically accountancy / treasury /
+    secretaries. The `label` is a free-form note ("Tesorería",
+    "Administración") so the operator can recognise each row in the
+    edit form, but it doesn't affect routing.
+    """
+
+    __tablename__ = "client_emails"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    label: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    client: Mapped["Client"] = relationship(back_populates="additional_emails")
+
+    def __repr__(self) -> str:
+        return (
+            f"<ClientEmail(id={self.id}, client_id={self.client_id}, "
+            f"email='{self.email}', label='{self.label}')>"
+        )

@@ -1,10 +1,34 @@
 """
 Pydantic schemas for the Client feature.
 """
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.shared.afip.constants import CUIT_LENGTH
 from app.shared.afip.enums import IvaCondition
+
+
+class ClientEmailIn(BaseModel):
+    """Inbound payload for one of a client's additional (CC) emails.
+
+    The primary email lives on `Client.email`; this schema only carries
+    the secondary recipients that must always be CC'd when reaching out
+    (typical: tesorería / administración mailboxes shared with a contact)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+    label: str | None = Field(default=None, max_length=100)
+
+
+class ClientEmailResponse(BaseModel):
+    """Outbound shape for an additional email — `id` is what the form
+    uses to keep React keys stable across edits."""
+
+    id: int
+    email: str
+    label: str | None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 def _normalize_cuit(value: str | None) -> str | None:
@@ -30,6 +54,7 @@ class ClientCreate(BaseModel):
     address: str | None = None
     cuit: str | None = None
     iva_condition: IvaCondition | None = None
+    additional_emails: list[ClientEmailIn] = Field(default_factory=list)
 
     @field_validator("cuit")
     @classmethod
@@ -38,7 +63,12 @@ class ClientCreate(BaseModel):
 
 
 class ClientUpdate(BaseModel):
-    """Schema for updating an existing client."""
+    """Schema for updating an existing client.
+
+    `additional_emails` is treated as a *full replacement* when present:
+    whatever list the operator submits becomes the new set of secondary
+    emails. Pass `None` (or omit the field) to leave them untouched.
+    """
 
     name: str | None = None
     company: str | None = None
@@ -47,6 +77,7 @@ class ClientUpdate(BaseModel):
     address: str | None = None
     cuit: str | None = None
     iva_condition: IvaCondition | None = None
+    additional_emails: list[ClientEmailIn] | None = None
 
     @field_validator("cuit")
     @classmethod
@@ -65,9 +96,9 @@ class ClientResponse(BaseModel):
     address: str | None
     cuit: str | None
     iva_condition: IvaCondition | None
+    additional_emails: list[ClientEmailResponse] = Field(default_factory=list)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CuitLookupResponse(BaseModel):

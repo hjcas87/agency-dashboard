@@ -18,6 +18,10 @@ import { Input } from '@/components/core/ui/input'
 
 import { createClientAction, type CuitLookupResult } from '@/app/actions/custom/clients'
 import {
+  AdditionalEmailsSection,
+  type AdditionalEmailDraft,
+} from '@/components/custom/features/clients/additional-emails-section'
+import {
   ClientAfipSection,
   type ClientAfipFields,
 } from '@/components/custom/features/clients/client-afip-section'
@@ -74,6 +78,7 @@ export function ClientForm() {
   const [formError, setFormError] = useState<string | null>(null)
   const [core, setCore] = useState<ClientCoreFields>(EMPTY_CORE)
   const [afip, setAfip] = useState<ClientAfipFields>(EMPTY_AFIP)
+  const [additionalEmails, setAdditionalEmails] = useState<AdditionalEmailDraft[]>([])
 
   function handleSubmit(formData: FormData) {
     setFormError(null)
@@ -193,6 +198,12 @@ export function ClientForm() {
                 setCore(next.core)
                 setAfip(next.afip)
               }}
+              disabled={isPending}
+            />
+
+            <AdditionalEmailsSection
+              values={additionalEmails}
+              onChange={setAdditionalEmails}
               disabled={isPending}
             />
 

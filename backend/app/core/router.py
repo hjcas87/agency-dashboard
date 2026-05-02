@@ -4,8 +4,13 @@ Main API router that aggregates all feature routers.
 
 from fastapi import APIRouter
 
-# Import all models first to ensure SQLAlchemy can resolve relationships
-# This must be imported before any routers that use models
+# Side-effect import: ensure every SQLAlchemy mapped class is bound to
+# `Base.metadata` before any route module is imported below. Route
+# modules transitively import their own models, but the central
+# registry covers cases where two features share a relationship via
+# a class name that's not directly referenced in a route file. F401
+# suppressed because no name from `app.models` is used in this file —
+# we want the import for its side effect.
 import app.models  # noqa: F401
 from app.core.features.auth.routes import router as auth_router
 from app.core.features.health.routes import router as health_router

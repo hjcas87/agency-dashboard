@@ -9,6 +9,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 // returns without intermediate mapping.
 export type IvaCondition = 'RI' | 'MT' | 'EX' | 'NA' | 'CF' | 'NC'
 
+export interface ClientAdditionalEmail {
+  id: number
+  email: string
+  label: string | null
+}
+
 export interface ClientRecord {
   id: number
   name: string
@@ -18,6 +24,7 @@ export interface ClientRecord {
   address: string | null
   cuit: string | null
   iva_condition: IvaCondition | null
+  additional_emails: ClientAdditionalEmail[]
 }
 
 export interface CuitLookupResult {
@@ -75,6 +82,25 @@ function buildClientBody(formData: FormData): Record<string, unknown> {
   if (address) body.address = address
   if (cuit) body.cuit = cuit
   if (ivaCondition) body.iva_condition = ivaCondition
+
+  // Additional emails come in as a JSON-stringified hidden input
+  // because FormData can't carry a structured list. Each entry is
+  // `{ email, label? }`. We strip empties and ship the rest verbatim.
+  const additionalRaw = formData.get('additional_emails') as string | null
+  if (additionalRaw) {
+    try {
+      const parsed = JSON.parse(additionalRaw) as { email?: string; label?: string }[]
+      const cleaned = parsed
+        .map(entry => ({
+          email: entry.email?.trim() ?? '',
+          label: entry.label?.trim() || null,
+        }))
+        .filter(entry => entry.email.length > 0)
+      body.additional_emails = cleaned
+    } catch {
+      // Silent — malformed JSON is a programmer error, not user input.
+    }
+  }
   return body
 }
 

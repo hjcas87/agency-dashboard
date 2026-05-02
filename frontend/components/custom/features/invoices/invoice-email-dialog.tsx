@@ -30,6 +30,7 @@ interface InvoiceEmailDialogProps {
 export function InvoiceEmailDialog({ invoice, open, onOpenChange }: InvoiceEmailDialogProps) {
   const [isPending, startTransition] = useTransition()
   const [to, setTo] = useState('')
+  const [cc, setCc] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
 
@@ -55,8 +56,12 @@ export function InvoiceEmailDialog({ invoice, open, onOpenChange }: InvoiceEmail
     )
   }, [open, invoice])
 
-  // Pre-fill recipient from the client's email — fetched from the backend.
-  // Independent effect, no dependency on `to` to avoid the reset loop.
+  // Pre-fill recipient + CC from the client record. The primary email
+  // becomes `to:`; every additional email registered on the client
+  // (treasury / admin / secretary mailboxes) auto-fills `cc:` so the
+  // operator doesn't have to remember who-else to keep in the loop.
+  // Independent effect, no dependency on `to`/`cc` to avoid the
+  // reset loop pattern fixed in commit 63454b4.
   useEffect(() => {
     if (!open || !invoice) return
     let cancelled = false
@@ -66,6 +71,13 @@ export function InvoiceEmailDialog({ invoice, open, onOpenChange }: InvoiceEmail
         if (cancelled || !res.ok) return
         const client = await res.json()
         if (client.email) setTo(client.email)
+        if (Array.isArray(client.additional_emails)) {
+          const ccList = client.additional_emails
+            .map((entry: { email?: string }) => entry?.email)
+            .filter((email: string | undefined): email is string => Boolean(email))
+            .join(', ')
+          if (ccList) setCc(ccList)
+        }
       } catch {
         // Silent — operator types manually
       }
@@ -81,12 +93,25 @@ export function InvoiceEmailDialog({ invoice, open, onOpenChange }: InvoiceEmail
       toast.error('Completá destinatario, asunto y mensaje.')
       return
     }
+    // Backend `EmailSendRequest.cc` is a single string (comma-separated
+    // by convention). Trim and drop empty pieces so a stray comma
+    // doesn't slip through.
+    const ccTrimmed = cc
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean)
+      .join(', ')
     startTransition(async () => {
       try {
         const res = await fetch(`${API_BASE}/api/v1/email/invoices/${invoice.id}/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to, subject, body }),
+          body: JSON.stringify({
+            to,
+            subject,
+            body,
+            cc: ccTrimmed || undefined,
+          }),
         })
         if (res.ok) {
           toast.success('Email enviado')
@@ -127,6 +152,19 @@ export function InvoiceEmailDialog({ invoice, open, onOpenChange }: InvoiceEmail
               placeholder="cliente@ejemplo.com"
               disabled={isPending}
             />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="email-cc">CC</FieldLabel>
+            <Input
+              id="email-cc"
+              value={cc}
+              onChange={e => setCc(e.target.value)}
+              placeholder="tesoreria@cliente.com, admin@cliente.com"
+              disabled={isPending}
+            />
+            <p className="text-xs text-muted-foreground">
+              Pre-cargado con los emails adicionales del cliente. Separá con comas si querés sumar más.
+            </p>
           </Field>
           <Field>
             <FieldLabel htmlFor="email-subject">Asunto</FieldLabel>

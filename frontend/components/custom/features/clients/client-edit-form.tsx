@@ -18,9 +18,14 @@ import { Input } from '@/components/core/ui/input'
 
 import {
   updateClientAction,
+  type ClientAdditionalEmail,
   type CuitLookupResult,
   type IvaCondition,
 } from '@/app/actions/custom/clients'
+import {
+  AdditionalEmailsSection,
+  type AdditionalEmailDraft,
+} from '@/components/custom/features/clients/additional-emails-section'
 import {
   ClientAfipSection,
   type ClientAfipFields,
@@ -37,6 +42,7 @@ interface ClientEditFormProps {
     address: string | null
     cuit: string | null
     iva_condition: IvaCondition | null
+    additional_emails: ClientAdditionalEmail[]
   }
 }
 
@@ -91,6 +97,13 @@ export function ClientEditForm({ client }: ClientEditFormProps) {
     cuit: client.cuit ?? '',
     ivaCondition: client.iva_condition,
   })
+  const [additionalEmails, setAdditionalEmails] = useState<AdditionalEmailDraft[]>(
+    () =>
+      client.additional_emails.map(entry => ({
+        email: entry.email,
+        label: entry.label ?? '',
+      }))
+  )
 
   function handleSubmit(formData: FormData) {
     setFormError(null)
@@ -208,6 +221,12 @@ export function ClientEditForm({ client }: ClientEditFormProps) {
                 setCore(next.core)
                 setAfip(next.afip)
               }}
+              disabled={isPending}
+            />
+
+            <AdditionalEmailsSection
+              values={additionalEmails}
+              onChange={setAdditionalEmails}
               disabled={isPending}
             />
 
