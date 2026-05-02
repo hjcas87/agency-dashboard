@@ -6,18 +6,56 @@ import { toast } from 'sonner'
 import { IconArrowLeft, IconDeviceFloppy } from '@tabler/icons-react'
 
 import { Button } from '@/components/core/ui/button'
+import { Field, FieldGroup, FieldLabel } from '@/components/core/ui/field'
 import { Input } from '@/components/core/ui/input'
-import { Label } from '@/components/core/ui/label'
 import { Separator } from '@/components/core/ui/separator'
+
+import { createClientAction, type CuitLookupResult } from '@/app/actions/custom/clients'
+import {
+  ClientAfipSection,
+  type ClientAfipFields,
+} from '@/components/custom/features/clients/client-afip-section'
 import { CLIENT_MESSAGES } from '@/lib/messages'
-import { createClientAction } from '@/app/actions/custom/clients'
+
+interface ClientCoreFields {
+  name: string
+  company: string
+  email: string
+  phone: string
+}
+
+const EMPTY_CORE: ClientCoreFields = { name: '', company: '', email: '', phone: '' }
+const EMPTY_AFIP: ClientAfipFields = { cuit: '', ivaCondition: null }
+
+function applyAfipAutofill(
+  core: ClientCoreFields,
+  afip: ClientAfipFields,
+  result: CuitLookupResult
+): { core: ClientCoreFields; afip: ClientAfipFields } {
+  // Don't overwrite anything the operator already typed.
+  const composedName = [result.first_name, result.last_name].filter(Boolean).join(' ').trim() || ''
+  return {
+    core: {
+      name: core.name || composedName,
+      company: core.company || result.company_name || '',
+      email: core.email,
+      phone: core.phone,
+    },
+    afip: {
+      cuit: result.cuit,
+      ivaCondition: afip.ivaCondition ?? result.iva_condition,
+    },
+  }
+}
 
 export function ClientForm() {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
+  const [core, setCore] = useState<ClientCoreFields>(EMPTY_CORE)
+  const [afip, setAfip] = useState<ClientAfipFields>(EMPTY_AFIP)
 
-  async function handleSubmit(formData: FormData) {
+  function handleSubmit(formData: FormData) {
     setFormError(null)
     startTransition(async () => {
       const result = await createClientAction(formData)
@@ -55,48 +93,89 @@ export function ClientForm() {
 
       <Separator />
 
-      {/* Form */}
       <form action={handleSubmit} className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4">
-          {/* Name */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="name">
               Nombre <span className="text-destructive">*</span>
-            </Label>
-            <Input id="name" name="name" placeholder="Nombre del cliente" required disabled={isPending} />
-          </div>
+            </FieldLabel>
+            <Input
+              id="name"
+              name="name"
+              placeholder="Nombre del cliente"
+              required
+              disabled={isPending}
+              value={core.name}
+              onChange={e => setCore(prev => ({ ...prev, name: e.target.value }))}
+            />
+          </Field>
 
-          {/* Company */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="company">Empresa</Label>
-            <Input id="company" name="company" placeholder="Nombre de la empresa (opcional)" disabled={isPending} />
-          </div>
+          <Field>
+            <FieldLabel htmlFor="company">Empresa</FieldLabel>
+            <Input
+              id="company"
+              name="company"
+              placeholder="Nombre de la empresa (opcional)"
+              disabled={isPending}
+              value={core.company}
+              onChange={e => setCore(prev => ({ ...prev, company: e.target.value }))}
+            />
+          </Field>
 
-          {/* Email */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="email">
+          <Field>
+            <FieldLabel htmlFor="email">
               Email <span className="text-destructive">*</span>
-            </Label>
-            <Input id="email" name="email" type="email" placeholder="cliente@email.com" required disabled={isPending} />
-          </div>
+            </FieldLabel>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="cliente@email.com"
+              required
+              disabled={isPending}
+              value={core.email}
+              onChange={e => setCore(prev => ({ ...prev, email: e.target.value }))}
+            />
+          </Field>
 
-          {/* Phone */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="phone">Teléfono</Label>
-            <Input id="phone" name="phone" type="tel" placeholder="+54 11 1234-5678" disabled={isPending} />
-          </div>
-        </div>
+          <Field>
+            <FieldLabel htmlFor="phone">Teléfono</FieldLabel>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="+54 11 1234-5678"
+              disabled={isPending}
+              value={core.phone}
+              onChange={e => setCore(prev => ({ ...prev, phone: e.target.value }))}
+            />
+          </Field>
+        </FieldGroup>
 
-        {/* Error message */}
+        <ClientAfipSection
+          values={afip}
+          onChange={setAfip}
+          onAfipAutofill={result => {
+            const next = applyAfipAutofill(core, afip, result)
+            setCore(next.core)
+            setAfip(next.afip)
+          }}
+          disabled={isPending}
+        />
+
         {formError && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
             {formError}
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex items-center justify-end gap-3">
-          <Button variant="outline" type="button" onClick={() => router.push('/clients')} disabled={isPending}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => router.push('/clients')}
+            disabled={isPending}
+          >
             Cancelar
           </Button>
           <Button type="submit" disabled={isPending}>

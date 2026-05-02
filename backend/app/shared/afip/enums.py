@@ -294,17 +294,40 @@ class AfipResult(StrEnum):
 
 
 class TaxStatus(StrEnum):
-    """`estado` field of Padrón A5 responses."""
+    """`estado` of a tax line in a Padrón A5 response.
+
+    Empirically observed values (homo, Apr 2026 dump):
+    - AC: activo en el régimen / impuesto.
+    - EX: exento.
+    - NA: no alcanzado.
+    - BD: baja definitiva.
+    - NI: no inscripto.
+    """
 
     ACTIVE = "AC"
     EXEMPT = "EX"
+    NOT_REACHED = "NA"
     INACTIVE = "BD"
     NOT_INSCRIBED = "NI"
+
+
+class AfipTaxId(IntEnum):
+    """`idImpuesto` values returned by Padrón A5 / used across ARCA.
+
+    Catalog is large; this enum only covers the ids the integration
+    branches on. Extend when a new code becomes load-bearing.
+    """
+
+    GANANCIAS_PERSONAS_FISICAS = 11
+    MONOTRIBUTO = 20
+    IVA = 30
+    IVA_NOT_REACHED = 34
 
 
 __all__ = [
     "AfipEnvironment",
     "AfipResult",
+    "AfipTaxId",
     "CancellationFlag",
     "Concept",
     "CurrencyId",

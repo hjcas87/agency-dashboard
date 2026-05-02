@@ -1,12 +1,20 @@
 """
 Routes for the Client feature.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from collections.abc import Generator
+
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.custom.features.clients.schemas import (
+    ClientCreate,
+    ClientResponse,
+    ClientUpdate,
+    CuitLookupResponse,
+)
 from app.custom.features.clients.service import ClientService
-from app.custom.features.clients.schemas import ClientCreate, ClientUpdate, ClientResponse
+from app.database import get_db
+from app.shared.afip import AfipService, get_afip_service
 
 router = APIRouter(prefix="/clients", tags=["Custom: Clients"])
 
@@ -14,6 +22,12 @@ router = APIRouter(prefix="/clients", tags=["Custom: Clients"])
 def get_client_service(db: Session = Depends(get_db)) -> ClientService:
     """Dependency to obtain the client service."""
     return ClientService(db)
+
+
+def afip_dependency(db: Session = Depends(get_db)) -> Generator[AfipService, None, None]:
+    """Wrap `get_afip_service` so FastAPI can inject the request-scoped
+    AfipService into routes that need to query Padrón A5."""
+    yield from get_afip_service(db)
 
 
 @router.get("/", response_model=list[ClientResponse])
@@ -61,3 +75,16 @@ def delete_client(
 ) -> None:
     """Delete a client."""
     return service.delete_client(client_id)
+
+
+@router.get("/lookup-cuit/{cuit}", response_model=CuitLookupResponse)
+def lookup_cuit(
+    cuit: str,
+    service: ClientService = Depends(get_client_service),
+    afip: AfipService = Depends(afip_dependency),
+) -> CuitLookupResponse:
+    """Query AFIP's Padrón A5 by CUIT and return a payload the client
+    form can use to autocomplete (company / name / inferred IVA
+    condition / fiscal address). Always optional: clients without a
+    CUIT keep working unchanged."""
+    return service.lookup_cuit_in_afip(cuit, afip)
