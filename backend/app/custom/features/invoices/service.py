@@ -742,6 +742,24 @@ class InvoiceService:
             detail=ERR_AFIP_ISSUE_FAILED.format(error=" | ".join(parts)),
         )
 
+    def _is_partial_billing(self, invoice: Invoice) -> bool:
+        """An invoice is "partial" when it's tied to a proposal AND its
+        amount is strictly less than the proposal's total — i.e. it
+        only covers a fraction of what was budgeted. NCs (which carry
+        `cancels_invoice_id`) are excluded so they don't get the badge.
+
+        N+1 query in `list_invoices` is acceptable today (small data;
+        invoice listings rarely exceed 50 rows). Move to a join-once
+        precomputed map if it ever shows up in profiling."""
+        if invoice.proposal_id is None or invoice.cancels_invoice_id is not None:
+            return False
+        proposal = self.proposal_repo.get_with_tasks(invoice.proposal_id)
+        if proposal is None:
+            return False
+        totals = ProposalService.calculate_totals(proposal, list(proposal.tasks))
+        proposal_total = Decimal(totals["total_ars"])
+        return Decimal(invoice.total_amount_ars) < proposal_total
+
     def _to_response(self, invoice: Invoice) -> InvoiceResponse:
         """Hydrate an Invoice with the joined AfipInvoiceLog data the
         UI needs (CAE, observations, etc.) and the client's name. For
@@ -760,6 +778,7 @@ class InvoiceService:
                 client_name = client.name
 
         line_items = [InvoiceLineItem.model_validate(item) for item in (invoice.line_items or [])]
+        is_partial = self._is_partial_billing(invoice)
 
         return InvoiceResponse(
             id=invoice.id,
@@ -778,6 +797,7 @@ class InvoiceService:
             commercial_reference=invoice.commercial_reference,
             is_internal=invoice.is_internal,
             internal_number=invoice.internal_number,
+            is_partial=is_partial,
             afip_invoice_log_id=invoice.afip_invoice_log_id,
             cae=log.cae if log else None,
             cae_expiration=log.cae_expiration if log else None,

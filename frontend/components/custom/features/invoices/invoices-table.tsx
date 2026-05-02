@@ -251,10 +251,22 @@ function getColumns(
             ? IconCheck
             : IconX
         return (
-          <Badge variant={variant} className="gap-1">
-            <Icon className="size-3" />
-            {label}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-1">
+            <Badge variant={variant} className="gap-1">
+              <Icon className="size-3" />
+              {label}
+            </Badge>
+            {/* "Parcial" sub-badge — only shown when the invoice covers
+                a fraction of its parent proposal. Lets the operator
+                distinguish at a glance multi-billing rows from
+                one-shot invoices. Hidden when cancelled (the cancellation
+                badge already carries the dominant signal). */}
+            {row.original.is_partial && !row.original.cancelled_at && (
+              <Badge variant="outline" className="text-xs">
+                Parcial
+              </Badge>
+            )}
+          </div>
         )
       },
       // Filter values map to the four states statusFor() yields. The

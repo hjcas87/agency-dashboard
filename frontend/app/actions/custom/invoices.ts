@@ -31,6 +31,7 @@ export interface InvoiceRecord {
   commercial_reference: string | null
   is_internal: boolean
   internal_number: number | null
+  is_partial: boolean
   cancelled_at: string | null
   cancels_invoice_id: number | null
   cancelled_by_invoice_id: number | null

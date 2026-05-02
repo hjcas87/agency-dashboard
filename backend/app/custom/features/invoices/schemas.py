@@ -143,6 +143,13 @@ class InvoiceResponse(BaseModel):
     is_internal: bool = False
     internal_number: int | None = None
 
+    # True when the invoice covers a fraction of its parent proposal —
+    # i.e. has `proposal_id` set and its `total_amount_ars` is strictly
+    # less than the proposal's full total. Surfaced as a sub-badge in
+    # the listing so the operator can spot at a glance which invoices
+    # are part of a multi-billing series.
+    is_partial: bool = False
+
     cancelled_at: str | None = None
     cancels_invoice_id: int | None = None
     cancelled_by_invoice_id: int | None = None
