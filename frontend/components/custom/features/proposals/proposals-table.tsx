@@ -1,6 +1,14 @@
 'use client'
 
-import { IconDotsVertical, IconEdit, IconFileText, IconMail, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
+import {
+  IconDotsVertical,
+  IconEdit,
+  IconFileText,
+  IconMail,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+} from '@tabler/icons-react'
 import {
   flexRender,
   getCoreRowModel,
@@ -29,7 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/core/ui/alert-dialog'
-import { Badge } from '@/components/core/ui/badge'
 import { Button } from '@/components/core/ui/button'
 import {
   DropdownMenu,
@@ -38,6 +45,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/core/ui/dropdown-menu'
 import { Input } from '@/components/core/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/core/ui/select'
 import {
   Table,
   TableBody,
@@ -48,6 +62,7 @@ import {
 } from '@/components/core/ui/table'
 import { PROPOSAL_MESSAGES } from '@/lib/messages'
 import { EmailSendDialog } from '@/components/custom/features/email/email-send-dialog'
+import { ProposalStatusCell } from '@/components/custom/features/proposals/proposal-status-cell'
 
 export type Proposal = ProposalRecord
 
@@ -55,17 +70,10 @@ interface ProposalsTableProps {
   data: Proposal[]
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  sent: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-  accepted: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-  rejected: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
-}
-
 function getColumns(
   onDelete: (proposal: Proposal) => void,
   onPdf: (proposal: Proposal) => void,
-  onEmail: (proposal: Proposal) => void,
+  onEmail: (proposal: Proposal) => void
 ): ColumnDef<Proposal>[] {
   return [
     {
@@ -86,14 +94,8 @@ function getColumns(
       accessorKey: 'status',
       header: 'Estado',
       cell: ({ row }) => {
-        const status = row.getValue('status') as string
-        const label =
-          PROPOSAL_MESSAGES.labels[status as keyof typeof PROPOSAL_MESSAGES.labels] ?? status
-        return (
-          <Badge variant="secondary" className={STATUS_COLORS[status]}>
-            {label}
-          </Badge>
-        )
+        const proposal = row.original
+        return <ProposalStatusCell proposalId={proposal.id} status={proposal.status} />
       },
     },
     {
@@ -143,17 +145,11 @@ function getColumns(
                   Editar
                 </a>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => onPdf(proposal)}
-              >
+              <DropdownMenuItem className="cursor-pointer" onClick={() => onPdf(proposal)}>
                 <IconFileText className="size-4" />
                 Ver PDF
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => onEmail(proposal)}
-              >
+              <DropdownMenuItem className="cursor-pointer" onClick={() => onEmail(proposal)}>
                 <IconMail className="size-4" />
                 Enviar Email
               </DropdownMenuItem>
@@ -189,9 +185,9 @@ export function ProposalsTable({ data }: ProposalsTableProps) {
           const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
           window.open(`${apiBase}/api/v1/pdf/proposals/${proposal.id}`, '_blank')
         },
-        (proposal: Proposal) => setEmailDialogProposal(proposal),
+        (proposal: Proposal) => setEmailDialogProposal(proposal)
       ),
-    [],
+    []
   )
 
   const table = useReactTable({
@@ -242,6 +238,23 @@ export function ProposalsTable({ data }: ProposalsTableProps) {
             onChange={e => table.getColumn('name')?.setFilterValue(e.target.value)}
             className="h-8 w-64"
           />
+          <Select
+            value={(table.getColumn('status')?.getFilterValue() as string) ?? '__all__'}
+            onValueChange={value =>
+              table.getColumn('status')?.setFilterValue(value === '__all__' ? undefined : value)
+            }
+          >
+            <SelectTrigger className="h-8 w-40">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos los estados</SelectItem>
+              <SelectItem value="draft">Borrador</SelectItem>
+              <SelectItem value="sent">Enviado</SelectItem>
+              <SelectItem value="accepted">Aceptado</SelectItem>
+              <SelectItem value="rejected">Rechazado</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Button asChild size="sm">
           <a href="/proposals/new">
@@ -324,7 +337,7 @@ export function ProposalsTable({ data }: ProposalsTableProps) {
       {/* Email send dialog */}
       <EmailSendDialog
         open={!!emailDialogProposal}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) setEmailDialogProposal(null)
         }}
         subject={emailDialogProposal ? `Presupuesto: ${emailDialogProposal.name}` : ''}
