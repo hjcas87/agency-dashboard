@@ -207,7 +207,7 @@ class QuoteOverlayBuilder:
         if not tasks:
             return [self._read_first_page(ASSET_QUOTE_BASE)]
 
-        remaining = self._build_task_flowables(tasks)
+        remaining = self._build_task_groups(tasks)
         pages: list[PageObject] = []
 
         while remaining:
@@ -217,7 +217,7 @@ class QuoteOverlayBuilder:
             pages.append(base_page)
 
             if consumed == 0:
-                # Defensive: a single task larger than the container
+                # Defensive: a single task taller than the container
                 # would loop forever. Drop it with a warning so the
                 # rest of the booklet can render.
                 logger.warning(
@@ -230,47 +230,65 @@ class QuoteOverlayBuilder:
 
         return pages
 
-    def _render_task_page(self, flowables: list[Any]) -> tuple[int, PageObject]:
-        """Render as many flowables as fit into a single quote_base
-        page. Returns (consumed_count, overlay_page)."""
+    def _render_task_page(self, groups: list[list[Any]]) -> tuple[int, PageObject]:
+        """Pack as many task groups (title + description) as fit into
+        one quote_base page, treating each group as atomic — if a
+        group's combined height doesn't fit, it goes to the next page
+        whole, never leaving an orphan title.
+        """
         buffer = BytesIO()
         c = rl_canvas.Canvas(buffer, pagesize=A4)
-        frame = self._make_inner_frame(QUOTE_BASE_CONTAINER)
+
+        zone = QUOTE_BASE_CONTAINER
+        pad = cm_to_pt(zone.inner_padding_cm)
+        avail_w = cm_to_pt(zone.width_cm) - 2 * pad
+        avail_h = cm_to_pt(zone.height_cm) - 2 * pad
+        task_gap = cm_to_pt(TASK_GAP_CM)
+
+        frame = self._make_inner_frame(zone)
+
+        used_h = 0.0
         consumed = 0
-        for fl in flowables:
-            if frame.add(fl, c) == 0:
+        for index, group in enumerate(groups):
+            heights = [fl.wrap(avail_w, avail_h)[1] for fl in group]
+            group_h = sum(heights)
+            gap_before = task_gap if index > 0 else 0.0
+            if used_h + gap_before + group_h > avail_h:
                 break
+
+            if gap_before > 0:
+                frame.add(Spacer(1, gap_before), c)
+                used_h += gap_before
+            for flowable, h in zip(group, heights, strict=True):
+                frame.add(flowable, c)
+                used_h += h
             consumed += 1
+
         c.showPage()
         c.save()
         buffer.seek(0)
         return consumed, PdfReader(buffer).pages[0]
 
     @staticmethod
-    def _build_task_flowables(tasks: list[QuoteTask]) -> list[Any]:
-        """Build the flowable list for the task loop.
-
-        Title and description are emitted as separate paragraphs so the
-        paginator can split a long task across pages if it really has
-        to — keeping them together via KeepTogether interacts poorly
-        with frame.add() outside a full Platypus document. The visible
-        gaps (title→desc, task→task) keep the list readable even in
-        that edge case.
+    def _build_task_groups(tasks: list[QuoteTask]) -> list[list[Any]]:
+        """Each task is built as a flowable group (title + intra-spacer
+        + description). Groups are atomic units the paginator either
+        keeps together on the current page or moves wholly to the next.
         """
         title_style = _build_text_style(FONT_BOLD)
         desc_style = _build_text_style(FONT_REGULAR)
         title_to_desc = cm_to_pt(TITLE_TO_DESC_GAP_CM)
-        task_gap = cm_to_pt(TASK_GAP_CM)
 
-        flowables: list[Any] = []
+        groups: list[list[Any]] = []
         for i, task in enumerate(tasks, start=1):
-            flowables.append(Paragraph(f"{i} - {escape(task.name).upper()}", title_style))
+            group: list[Any] = [
+                Paragraph(f"{i} - {escape(task.name).upper()}", title_style),
+            ]
             if task.description:
-                flowables.append(Spacer(1, title_to_desc))
-                flowables.append(Paragraph(escape(task.description), desc_style))
-            if i < len(tasks):
-                flowables.append(Spacer(1, task_gap))
-        return flowables
+                group.append(Spacer(1, title_to_desc))
+                group.append(Paragraph(escape(task.description), desc_style))
+            groups.append(group)
+        return groups
 
     # ── Deliverables page ────────────────────────────────────
     @staticmethod
