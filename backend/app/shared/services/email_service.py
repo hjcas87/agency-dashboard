@@ -89,17 +89,30 @@ class SMTPEmailService(IEmailService):
             logger.info(f"[green]✓[/green] Email sent successfully to [cyan]{to}[/cyan] via SMTP")
             return True
 
-        except (TimeoutError, OSError) as exc:
+        # Most-specific exception types first.
+        # smtplib.SMTPException inherits from OSError in CPython, so a
+        # (TimeoutError, OSError) catch placed above this block would
+        # swallow auth/protocol errors and mis-label them as network
+        # failures. Keep this ordering.
+        except smtplib.SMTPAuthenticationError as exc:
             logger.error(
-                f"[red]✗[/red] SMTP connection to [cyan]{self.host}:{self.port}[/cyan] "
-                f"timed out or refused: [yellow]{exc}[/yellow]"
+                f"[red]✗[/red] SMTP authentication failed at "
+                f"[cyan]{self.host}:{self.port}[/cyan]: [yellow]{exc}[/yellow]. "
+                "Verificá SMTP_USERNAME y SMTP_PASSWORD."
             )
             return False
-        except smtplib.SMTPAuthenticationError as exc:
-            logger.error(f"[red]✗[/red] SMTP authentication failed: [yellow]{exc}[/yellow]")
-            return False
         except smtplib.SMTPException as exc:
-            logger.error(f"[red]✗[/red] SMTP error: [yellow]{exc}[/yellow]")
+            logger.error(
+                f"[red]✗[/red] SMTP protocol error at "
+                f"[cyan]{self.host}:{self.port}[/cyan]: [yellow]{exc}[/yellow]"
+            )
+            return False
+        except (TimeoutError, ConnectionError) as exc:
+            logger.error(
+                f"[red]✗[/red] Could not reach SMTP server "
+                f"[cyan]{self.host}:{self.port}[/cyan] "
+                f"(timeout/refused): [yellow]{exc}[/yellow]"
+            )
             return False
         except Exception as exc:
             # Catch-all kept narrow: log with traceback so unknown failures
