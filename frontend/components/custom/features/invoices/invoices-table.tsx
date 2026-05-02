@@ -132,6 +132,17 @@ function getColumns(onSendEmail: (invoice: InvoiceRecord) => void): ColumnDef<In
       accessorKey: 'issue_date',
       header: 'Fecha',
       cell: ({ row }) => <span className="text-muted-foreground">{row.original.issue_date}</span>,
+      // Filter value shape: `${from}|${to}` — either side may be empty.
+      // Both dates compare lexicographically because issue_date is
+      // already an ISO yyyy-mm-dd string from the backend.
+      filterFn: (row, _columnId, value: string) => {
+        if (!value) return true
+        const [from, to] = value.split('|')
+        const date = row.original.issue_date
+        if (from && date < from) return false
+        if (to && date > to) return false
+        return true
+      },
     },
     {
       accessorKey: 'total_amount_ars',
@@ -170,6 +181,24 @@ function getColumns(onSendEmail: (invoice: InvoiceRecord) => void): ColumnDef<In
             {label}
           </Badge>
         )
+      },
+      // Filter values map to the four states statusFor() yields. The
+      // toolbar select drives this, so the union here matches.
+      filterFn: (row, _columnId, value: string) => {
+        if (!value || value === 'TODOS') return true
+        const inv = row.original
+        switch (value) {
+          case 'INTERNAL':
+            return inv.is_internal === true
+          case 'APPROVED':
+            return !inv.is_internal && inv.afip_success && inv.afip_observations.length === 0
+          case 'WITH_OBS':
+            return !inv.is_internal && inv.afip_success && inv.afip_observations.length > 0
+          case 'REJECTED':
+            return !inv.is_internal && !inv.afip_success
+          default:
+            return true
+        }
       },
     },
     {
@@ -258,17 +287,36 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
   }
 
   const kindFilter = (table.getColumn('kind')?.getFilterValue() as string) ?? 'TODOS'
+  const statusFilter = (table.getColumn('status')?.getFilterValue() as string) ?? 'TODOS'
+  const dateFilter = (table.getColumn('issue_date')?.getFilterValue() as string) ?? ''
+  const [dateFrom, dateTo] = dateFilter.split('|')
+
+  function setDateRange(from: string | undefined, to: string | undefined) {
+    const next = `${from ?? ''}|${to ?? ''}`
+    // Clear when both halves empty so the table doesn't waste cycles
+    // running the no-op filter.
+    table.getColumn('issue_date')?.setFilterValue(next === '|' ? undefined : next)
+  }
+
+  const hasAnyFilter =
+    Boolean((table.getColumn('client_name')?.getFilterValue() as string) ?? '') ||
+    kindFilter !== 'TODOS' ||
+    statusFilter !== 'TODOS' ||
+    Boolean(dateFilter)
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <IconSearch className="size-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por cliente..."
-          value={(table.getColumn('client_name')?.getFilterValue() as string) ?? ''}
-          onChange={e => table.getColumn('client_name')?.setFilterValue(e.target.value)}
-          className="h-8 w-64"
-        />
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex items-center gap-2">
+          <IconSearch className="size-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cliente..."
+            value={(table.getColumn('client_name')?.getFilterValue() as string) ?? ''}
+            onChange={e => table.getColumn('client_name')?.setFilterValue(e.target.value)}
+            className="h-8 w-64"
+          />
+        </div>
+
         <Select
           value={kindFilter}
           onValueChange={value =>
@@ -284,6 +332,52 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
             <SelectItem value="INTERNAL">Solo internos (X)</SelectItem>
           </SelectContent>
         </Select>
+
+        <Select
+          value={statusFilter}
+          onValueChange={value =>
+            table.getColumn('status')?.setFilterValue(value === 'TODOS' ? undefined : value)
+          }
+        >
+          <SelectTrigger className="h-8 w-48">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TODOS">Todos los estados</SelectItem>
+            <SelectItem value="APPROVED">Aprobadas</SelectItem>
+            <SelectItem value="WITH_OBS">Con observaciones</SelectItem>
+            <SelectItem value="REJECTED">Rechazadas</SelectItem>
+            <SelectItem value="INTERNAL">Comprobantes internos</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="flex items-center gap-1">
+          <Input
+            type="date"
+            aria-label="Desde"
+            value={dateFrom ?? ''}
+            onChange={e => setDateRange(e.target.value || undefined, dateTo)}
+            className="h-8 w-36"
+          />
+          <span className="text-xs text-muted-foreground">a</span>
+          <Input
+            type="date"
+            aria-label="Hasta"
+            value={dateTo ?? ''}
+            onChange={e => setDateRange(dateFrom, e.target.value || undefined)}
+            className="h-8 w-36"
+          />
+        </div>
+
+        {hasAnyFilter && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => table.resetColumnFilters()}
+          >
+            Limpiar
+          </Button>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-lg border">

@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.custom.features.clients.repository import ClientRepository
 from app.custom.features.email.messages import ERRORS, LOG_MESSAGES, RESPONSES
+from app.custom.features.invoices.repository import InvoiceRepository
+from app.custom.features.pdf.routes import generate_invoice_pdf
 from app.custom.features.proposals.repository import ProposalRepository
 from app.database import get_db
 from app.shared.email.schemas import (
@@ -152,21 +154,29 @@ async def send_invoice_email(
     request: EmailSendRequest,
     db: Session = Depends(get_db),
 ) -> dict:
-    """Send an invoice by email with the printed Factura PDF attached."""
-    from app.custom.features.invoices.repository import InvoiceRepository
-    from app.custom.features.pdf.routes import generate_invoice_pdf
-
+    """Send an invoice (or internal X comprobante) by email with the
+    printed PDF attached. Filename adapts to the kind so the recipient
+    sees `presupuesto_X-00000001.pdf` for internals and
+    `factura_<n>.pdf` for AFIP-issued comprobantes."""
     invoice_repo = InvoiceRepository(db)
     invoice = invoice_repo.get(invoice_id)
     if invoice is None:
         raise HTTPException(status_code=404, detail="Factura no encontrada")
 
-    # Re-use the PDF endpoint logic to build the attachment.
     pdf_response = await generate_invoice_pdf(invoice_id, db)
     pdf_bytes = pdf_response.body if hasattr(pdf_response, "body") else b""
+    if invoice.is_internal:
+        suffix = (
+            f"X-{str(invoice.internal_number).zfill(8)}"
+            if invoice.internal_number is not None
+            else f"X-{invoice_id}"
+        )
+        filename = f"presupuesto_{suffix}.pdf"
+    else:
+        filename = f"factura_{invoice_id}.pdf"
     attachments = [
         Attachment(
-            filename=f"factura_{invoice_id}.pdf",
+            filename=filename,
             content=bytes(pdf_bytes),
             mime_type="application/pdf",
         )
