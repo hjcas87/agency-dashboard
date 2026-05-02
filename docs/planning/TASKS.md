@@ -97,7 +97,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. Test 3: cambiar de sent a draft y de vuelta a sent → `sent_at` se actualiza al timestamp más reciente.
 - **Done**: tests pasan con `make test`.
 
-### [ ] T-003-7: Regenerar API types frontend
+### [x] T-003-7: Regenerar API types frontend
 
 - **Depende de**: T-003-5
 - **Doc**: CLAUDE.md, sección "Frontend API types"
@@ -108,7 +108,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. Verificar que `types.ts` ahora incluye `sent_at` y `days_until_expiry` en los tipos de proposal.
 - **Done**: types regenerados sin edit manual.
 
-### [ ] T-003-8: Componente `ValidityBadge`
+### [x] T-003-8: Componente `ValidityBadge`
 
 - **Depende de**: T-003-7
 - **Doc**: 003, HU-V-2
@@ -123,7 +123,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   7. Strings en módulo de mensajes, NO inline.
 - **Done**: componente renderiza correctamente los 4 estados al pasar valores de prueba (verificar visualmente o con storybook si existe).
 
-### [ ] T-003-9: Usar `ValidityBadge` en tabla de presupuestos
+### [x] T-003-9: Usar `ValidityBadge` en tabla de presupuestos
 
 - **Depende de**: T-003-8
 - **Doc**: 003, HU-V-2
@@ -133,7 +133,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   2. Pasar `proposal.days_until_expiry` al componente.
 - **Done**: tabla muestra el badge correcto en cada fila enviada.
 
-### [ ] T-003-10: Lint + build frontend
+### [x] T-003-10: Lint + build frontend
 
 - **Depende de**: T-003-9
 - **Archivos**: ninguno (solo verificar)

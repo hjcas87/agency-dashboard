@@ -27,6 +27,8 @@ export interface ProposalRecord {
   total_usd: string
   created_at: string
   updated_at: string
+  sent_at: string | null
+  days_until_expiry: number | null
 }
 
 export async function getProposals(): Promise<ProposalRecord[]> {

@@ -63,6 +63,7 @@ import {
 import { PROPOSAL_MESSAGES } from '@/lib/messages'
 import { EmailSendDialog } from '@/components/custom/features/email/email-send-dialog'
 import { ProposalStatusCell } from '@/components/custom/features/proposals/proposal-status-cell'
+import { ValidityBadge } from '@/components/custom/features/proposals/validity-badge'
 
 export type Proposal = ProposalRecord
 
@@ -97,6 +98,13 @@ function getColumns(
         const proposal = row.original
         return <ProposalStatusCell proposalId={proposal.id} status={proposal.status} />
       },
+    },
+    {
+      id: 'validity',
+      header: 'Vigencia',
+      cell: ({ row }) => (
+        <ValidityBadge daysUntilExpiry={row.original.days_until_expiry} />
+      ),
     },
     {
       accessorKey: 'total_ars',

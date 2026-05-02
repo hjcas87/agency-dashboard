@@ -1,7 +1,7 @@
 """
 Service layer for the Proposal feature.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from fastapi import HTTPException, status
@@ -99,7 +99,7 @@ class ProposalService:
         sent_at = proposal.sent_at
         if sent_at is not None:
             expiry = sent_at + timedelta(days=PROPOSAL_VALIDITY_DAYS)
-            days_until_expiry = (expiry - datetime.now(timezone.utc)).days
+            days_until_expiry = (expiry - datetime.now(UTC)).days
         else:
             days_until_expiry = None
 
@@ -255,9 +255,9 @@ class ProposalService:
         proposal.status = target
 
         if target in (ProposalStatus.SENT, ProposalStatus.ACCEPTED) and proposal.sent_at is None:
-            proposal.sent_at = datetime.now(timezone.utc)
+            proposal.sent_at = datetime.now(UTC)
         elif target is ProposalStatus.SENT and current is ProposalStatus.DRAFT:
-            proposal.sent_at = datetime.now(timezone.utc)
+            proposal.sent_at = datetime.now(UTC)
 
         self.db.commit()
         self.db.refresh(proposal)

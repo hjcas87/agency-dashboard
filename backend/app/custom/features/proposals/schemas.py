@@ -6,8 +6,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-
 # ── ProposalTask schemas ─────────────────────────────────────────
+
 
 class ProposalTaskCreate(BaseModel):
     """Schema for creating a proposal task."""
@@ -42,6 +42,7 @@ class ProposalTaskUpdate(BaseModel):
 
 
 # ── Proposal schemas ─────────────────────────────────────────────
+
 
 class ProposalCreate(BaseModel):
     """Schema for creating a proposal."""

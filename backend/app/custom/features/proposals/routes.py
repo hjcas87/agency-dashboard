@@ -4,14 +4,14 @@ Routes for the Proposal feature.
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.custom.features.proposals.service import ProposalService
 from app.custom.features.proposals.schemas import (
     ProposalCreate,
-    ProposalUpdate,
-    ProposalStatusUpdate,
     ProposalResponse,
+    ProposalStatusUpdate,
+    ProposalUpdate,
 )
+from app.custom.features.proposals.service import ProposalService
+from app.database import get_db
 
 router = APIRouter(prefix="/proposals", tags=["Custom: Proposals"])
 

@@ -226,6 +226,11 @@ export const PROPOSAL_MESSAGES = {
     accepted: "Aceptado",
     rejected: "Rechazado",
   },
+  validity: {
+    vigente: "Vigente",
+    expiresSoon: (days: number) => `Vence en ${days} día${days === 1 ? "" : "s"}`,
+    expired: (days: number) => `Vencido hace ${Math.abs(days)} día${Math.abs(days) === 1 ? "" : "s"}`,
+  },
 } as const
 
 // ── PDF template messages (user-facing, Spanish) ──────────────
