@@ -7,6 +7,7 @@ import {
   IconBan,
   IconCheck,
   IconDotsVertical,
+  IconDownload,
   IconFileText,
   IconInfoCircle,
   IconMail,
@@ -109,6 +110,61 @@ function statusFor(invoice: InvoiceRecord): { label: string; variant: 'default' 
     return { label: 'Con observaciones', variant: 'outline' }
   }
   return { label: 'Aprobada', variant: 'default' }
+}
+
+// CSV cell escape: wrap in double quotes if the value contains a
+// comma, quote, or line break; double up internal quotes per RFC 4180.
+function csvCell(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return ''
+  const str = String(value)
+  if (/[",\n\r]/.test(str)) return `"${str.replace(/"/g, '""')}"`
+  return str
+}
+
+function buildCsv(invoices: InvoiceRecord[]): string {
+  const header = [
+    'Fecha',
+    'Tipo',
+    'Número',
+    'Cliente',
+    'CUIT receptor',
+    'Total ARS',
+    'CAE',
+    'Vto CAE',
+    'Estado',
+    'Referencia comercial',
+  ]
+  const lines = invoices.map(inv => {
+    const { label: status } = statusFor(inv)
+    return [
+      inv.issue_date,
+      typeLabel(inv),
+      formatReceiptNumber(inv),
+      inv.client_name ?? '',
+      inv.document_number ?? '',
+      inv.total_amount_ars,
+      inv.cae ?? '',
+      inv.cae_expiration ?? '',
+      status,
+      inv.commercial_reference ?? '',
+    ]
+      .map(csvCell)
+      .join(',')
+  })
+  return [header.map(csvCell).join(','), ...lines].join('\n')
+}
+
+function downloadCsv(filename: string, content: string): void {
+  // BOM so Excel opens it as UTF-8 on Windows without garbled accents.
+  const blob = new Blob(['﻿', content], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
 }
 
 interface InvoicesTableProps {
@@ -455,6 +511,26 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
             Limpiar
           </Button>
         )}
+
+        <div className="ml-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const rows = table.getFilteredRowModel().rows.map(r => r.original)
+              if (rows.length === 0) {
+                toast.error('No hay facturas para exportar con el filtro actual.')
+                return
+              }
+              const today = new Date().toISOString().slice(0, 10)
+              downloadCsv(`facturas_${today}.csv`, buildCsv(rows))
+              toast.success(`${rows.length} factura(s) exportadas.`)
+            }}
+          >
+            <IconDownload data-icon="inline-start" />
+            Exportar CSV
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border">
