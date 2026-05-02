@@ -43,3 +43,18 @@
 **Decision**: Use `psycopg[binary]` (v3) instead of `psycopg2-binary`.
 **Context**: psycopg2 requires `pg_config` to compile on some systems. psycopg v3 has pre-built wheels.
 **Consequences**: No system dependencies needed for PostgreSQL driver.
+
+### ADR-0006: AFIP/ARCA integration as a shared service
+**Status**: Accepted
+**Date**: 2026-05-01
+
+**Decision**: Implement the AFIP/ARCA electronic invoicing integration (WSAA + WSFEv1 + Padrón A5 + FCE MiPyMEs) as a reusable shared service at `backend/app/shared/afip/`, mirroring the shape of `shared/email/` and `shared/pdf/`. The service exposes no HTTP routes — only a typed Python API consumed by custom feature services (e.g. `custom/features/invoices/`).
+
+**Context**: A working Django implementation exists in production (3.5k LOC). It is read-only reference now (path `afip/` is `.gitignore`d). The integration must be reusable across Argentine clients of the agency (multiple forks consume it), so it cannot live in `core/features/` (which would force every fork to ship it whether they need it or not) and cannot live in `custom/features/` (which would lock it to one client). It also cannot define HTTP routes, because the consumer of the service decides when and how to invoice — `shared/afip/` is a library, not a feature.
+
+**Consequences**:
+- Every Argentine client fork can call into `app.shared.afip.service` without changes to core; non-Argentine forks ignore it.
+- The persistent `Invoice` business entity stays out of `shared/afip/`. `shared/afip/models.py` only persists what AFIP itself returns — `AfipToken` (WSAA TA cache) and `AfipInvoiceLog` (audit trail of what was sent and received). The client's `Invoice` model lives in `custom/features/invoices/` and references `AfipInvoiceLog` by FK. This is the deviation from the legacy Django module, which had `Invoice` directly tied to `Quote`.
+- Configuration is driven by env vars (`AFIP_CUIT`, `AFIP_POINT_OF_SALE`, `AFIP_CERT_PATH`, `AFIP_KEY_PATH`, `AFIP_ENVIRONMENT`, `AFIP_CURRENCY_ID`); cert and key files live outside the repo (path is configurable, gitignored when local).
+- CMS signing migrates from `openssl smime -sign` (subprocess on system binary) to `cryptography.hazmat.primitives.cms` (already a backend dependency). HTTP client migrates from `requests` to `httpx` with a custom `ssl.SSLContext` configured to `SECLEVEL=1` (required because AFIP servers still negotiate legacy DH keys). XML construction stops using f-strings; `lxml` is used to guarantee escape and well-formedness.
+- Detailed design lives at `backend/app/shared/afip/README.md`. Normative reference (ARCA manual RG 4291 v4.0) lives at `docs/references/afip/`.
