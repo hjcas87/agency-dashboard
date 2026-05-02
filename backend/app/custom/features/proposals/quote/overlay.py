@@ -2,17 +2,23 @@
 Quote PDF overlay engine.
 
 Renders the dynamic content layer (task list, deliverables summary,
-total amount, estimated days) on top of 5 designer-built base PDF
-assets and merges everything into a single 5-page client booklet.
+total amount, estimated days) on top of designer-built base PDF
+assets and merges everything into a single client-facing booklet.
 
-Text style is fixed by the design source: Open Sans Bold, 12 pt, white.
-Layout zones live in `layout.py` and every drawing is scoped to those
-zones — nothing is drawn outside them.
+Typography mirrors the design source: Open Sans 12 pt, white. Bold for
+the task loop, the total caption and the estimated-days caption;
+Regular for the deliverables summary so the long-form paragraph is
+visually distinct from the structured list.
+
+When the task loop overflows the quote_base container, additional
+quote_base pages are inserted automatically until every task fits.
 """
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 from xml.sax.saxutils import escape
 
 from pypdf import PageObject, PdfReader, PdfWriter
@@ -24,7 +30,7 @@ from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas as rl_canvas
-from reportlab.platypus import Frame, Paragraph
+from reportlab.platypus import Frame, Paragraph, Spacer
 
 from app.core.logging_config import get_logger
 from app.custom.features.proposals.quote.layout import (
@@ -47,16 +53,25 @@ ASSETS_DIR = Path(__file__).parent / "assets"
 FONTS_DIR = ASSETS_DIR / "fonts"
 
 # ── Typography (mirrors the design source) ──────────────────────
-FONT_NAME = "OpenSans-Bold"
-FONT_PATH = FONTS_DIR / "OpenSans-Bold.ttf"
+FONT_BOLD = "OpenSans-Bold"
+FONT_REGULAR = "OpenSans-Regular"
+FONT_BOLD_PATH = FONTS_DIR / "OpenSans-Bold.ttf"
+FONT_REGULAR_PATH = FONTS_DIR / "OpenSans-Regular.ttf"
 FONT_SIZE_PT = 12
 LINE_LEADING_PT = 14
 
+# Vertical gap inserted between consecutive task blocks on the
+# quote_base page, on top of the natural line break leading.
+TASK_GAP_CM = 0.5
 
-def _ensure_font_registered() -> None:
-    """Idempotently register Open Sans Bold with ReportLab."""
-    if FONT_NAME not in pdfmetrics.getRegisteredFontNames():
-        pdfmetrics.registerFont(TTFont(FONT_NAME, str(FONT_PATH)))
+
+def _ensure_fonts_registered() -> None:
+    """Idempotently register Open Sans Bold + Regular with ReportLab."""
+    registered = pdfmetrics.getRegisteredFontNames()
+    if FONT_BOLD not in registered:
+        pdfmetrics.registerFont(TTFont(FONT_BOLD, str(FONT_BOLD_PATH)))
+    if FONT_REGULAR not in registered:
+        pdfmetrics.registerFont(TTFont(FONT_REGULAR, str(FONT_REGULAR_PATH)))
 
 
 # ── Coordinate helpers ──────────────────────────────────────────
@@ -110,10 +125,10 @@ def format_total_text(amount: Decimal, currency: str) -> str:
     return f"TOTAL: $ {body} ARS"
 
 
-def _build_text_style() -> ParagraphStyle:
+def _build_text_style(font_name: str = FONT_BOLD) -> ParagraphStyle:
     return ParagraphStyle(
-        "QuoteText",
-        fontName=FONT_NAME,
+        f"QuoteText_{font_name}",
+        fontName=font_name,
         fontSize=FONT_SIZE_PT,
         leading=LINE_LEADING_PT,
         textColor=white,
@@ -123,16 +138,26 @@ def _build_text_style() -> ParagraphStyle:
 
 
 class QuoteOverlayBuilder:
-    """Assembles the 5-page client-facing quote PDF."""
+    """Assembles the client-facing quote PDF.
+
+    The booklet has a fixed structure (cover → quote_base → deliverables
+    → terms → final), but the quote_base section can grow to N pages
+    depending on how many tasks fit per container.
+    """
 
     def build(self, data: QuoteData) -> bytes:
         """Render the booklet with dynamic content drawn on top of
         each base asset. Returns the merged PDF as raw bytes."""
-        _ensure_font_registered()
-        logger.info("quote.overlay.build.start", extra={"pages": len(ASSET_ORDER)})
+        _ensure_fonts_registered()
+        logger.info("quote.overlay.build.start", extra={"tasks": len(data.tasks)})
         writer = PdfWriter()
 
         for asset_name in ASSET_ORDER:
+            if asset_name == ASSET_QUOTE_BASE:
+                for page in self._build_quote_base_pages(data.tasks):
+                    writer.add_page(page)
+                continue
+
             base_page = self._read_first_page(asset_name)
             overlay_page = self._build_overlay_for_asset(asset_name, data)
             if overlay_page is not None:
@@ -155,14 +180,12 @@ class QuoteOverlayBuilder:
 
     # ── Per-asset overlay dispatcher ─────────────────────────
     def _build_overlay_for_asset(self, asset_name: str, data: QuoteData) -> PageObject | None:
-        if asset_name == ASSET_QUOTE_BASE:
-            return self._render_overlay(lambda c: self._draw_task_loop(c, data.tasks))
         if asset_name == ASSET_DELIVERABLES:
             return self._render_overlay(lambda c: self._draw_deliverables(c, data))
         return None
 
     @staticmethod
-    def _render_overlay(draw_callback) -> PageObject:
+    def _render_overlay(draw_callback: Callable[[rl_canvas.Canvas], None]) -> PageObject:
         buffer = BytesIO()
         c = rl_canvas.Canvas(buffer, pagesize=A4)
         draw_callback(c)
@@ -171,35 +194,76 @@ class QuoteOverlayBuilder:
         buffer.seek(0)
         return PdfReader(buffer).pages[0]
 
-    # ── Drawing: quote_base task loop ────────────────────────
-    @staticmethod
-    def _draw_task_loop(c: rl_canvas.Canvas, tasks: list[QuoteTask]) -> None:
+    # ── Quote base: paginated task loop ──────────────────────
+    def _build_quote_base_pages(self, tasks: list[QuoteTask]) -> list[PageObject]:
+        """Render the task list across as many quote_base pages as
+        needed. Always returns at least one page so the booklet
+        structure is preserved when there are no tasks."""
         if not tasks:
-            return
-        html = QuoteOverlayBuilder._tasks_to_html(tasks)
-        QuoteOverlayBuilder._draw_paragraph_in_zone(
-            c, QUOTE_BASE_CONTAINER, html, _build_text_style()
-        )
+            return [self._read_first_page(ASSET_QUOTE_BASE)]
+
+        remaining = self._build_task_flowables(tasks)
+        pages: list[PageObject] = []
+
+        while remaining:
+            base_page = self._read_first_page(ASSET_QUOTE_BASE)
+            consumed, overlay_page = self._render_task_page(remaining)
+            base_page.merge_page(overlay_page)
+            pages.append(base_page)
+
+            if consumed == 0:
+                # Defensive: a single task larger than the container
+                # would loop forever. Drop it with a warning so the
+                # rest of the booklet can render.
+                logger.warning(
+                    "quote.overlay.task.too_large",
+                    extra={"page": len(pages), "remaining": len(remaining)},
+                )
+                remaining = remaining[1:]
+            else:
+                remaining = remaining[consumed:]
+
+        return pages
+
+    def _render_task_page(self, flowables: list[Any]) -> tuple[int, PageObject]:
+        """Render as many flowables as fit into a single quote_base
+        page. Returns (consumed_count, overlay_page)."""
+        buffer = BytesIO()
+        c = rl_canvas.Canvas(buffer, pagesize=A4)
+        frame = self._make_inner_frame(QUOTE_BASE_CONTAINER)
+        consumed = 0
+        for fl in flowables:
+            if frame.add(fl, c) == 0:
+                break
+            consumed += 1
+        c.showPage()
+        c.save()
+        buffer.seek(0)
+        return consumed, PdfReader(buffer).pages[0]
 
     @staticmethod
-    def _tasks_to_html(tasks: list[QuoteTask]) -> str:
-        lines: list[str] = []
+    def _build_task_flowables(tasks: list[QuoteTask]) -> list[Any]:
+        """Build the flowable list for the task loop: one Paragraph
+        per task plus a Spacer between consecutive tasks."""
+        bold_style = _build_text_style(FONT_BOLD)
+        gap = cm_to_pt(TASK_GAP_CM)
+        flowables: list[Any] = []
         for i, task in enumerate(tasks, start=1):
-            lines.append(f"{i} - {escape(task.name).upper()}")
+            html = f"{i} - {escape(task.name).upper()}"
             if task.description:
-                lines.append(escape(task.description))
-            lines.append("")
-        while lines and not lines[-1]:
-            lines.pop()
-        return "<br/>".join(lines)
+                html += "<br/>" + escape(task.description)
+            flowables.append(Paragraph(html, bold_style))
+            if i < len(tasks):
+                flowables.append(Spacer(1, gap))
+        return flowables
 
-    # ── Drawing: deliverables page ───────────────────────────
+    # ── Deliverables page ────────────────────────────────────
     @staticmethod
     def _draw_deliverables(c: rl_canvas.Canvas, data: QuoteData) -> None:
         if data.deliverables_summary:
             html = escape(data.deliverables_summary).replace("\n", "<br/>")
             QuoteOverlayBuilder._draw_paragraph_in_zone(
-                c, DELIVERABLES_CONTAINER, html, _build_text_style()
+                c, DELIVERABLES_CONTAINER, html, _build_text_style(FONT_REGULAR)
             )
 
         QuoteOverlayBuilder._draw_total(c, data.total_amount, data.currency)
@@ -216,7 +280,7 @@ class QuoteOverlayBuilder:
         # tops align with the visual centre of the line — descenders
         # land in the bottom 20%.
         y = top_to_y_pt(zone.top_cm, zone.height_cm) + cm_to_pt(zone.height_cm) * 0.2
-        c.setFont(FONT_NAME, FONT_SIZE_PT)
+        c.setFont(FONT_BOLD, FONT_SIZE_PT)
         c.setFillColor(white)
         c.drawRightString(right_x, y, text)
 
@@ -225,21 +289,19 @@ class QuoteOverlayBuilder:
         zone = DELIVERABLES_DAYS_FIELD
         x = cm_to_pt(zone.left_cm)
         y = top_to_y_pt(zone.top_cm, zone.height_cm) + cm_to_pt(zone.height_cm) * 0.2
-        c.setFont(FONT_NAME, FONT_SIZE_PT)
+        c.setFont(FONT_BOLD, FONT_SIZE_PT)
         c.setFillColor(white)
         c.drawString(x, y, days)
 
     # ── Shared paragraph layout ──────────────────────────────
     @staticmethod
-    def _draw_paragraph_in_zone(
-        c: rl_canvas.Canvas, zone: LayoutZone, html: str, style: ParagraphStyle
-    ) -> None:
+    def _make_inner_frame(zone: LayoutZone) -> Frame:
         pad = cm_to_pt(zone.inner_padding_cm)
         x = cm_to_pt(zone.left_cm) + pad
         y = top_to_y_pt(zone.top_cm, zone.height_cm) + pad
         w = cm_to_pt(zone.width_cm) - 2 * pad
         h = cm_to_pt(zone.height_cm) - 2 * pad
-        frame = Frame(
+        return Frame(
             x,
             y,
             w,
@@ -250,4 +312,10 @@ class QuoteOverlayBuilder:
             bottomPadding=0,
             showBoundary=0,
         )
+
+    @staticmethod
+    def _draw_paragraph_in_zone(
+        c: rl_canvas.Canvas, zone: LayoutZone, html: str, style: ParagraphStyle
+    ) -> None:
+        frame = QuoteOverlayBuilder._make_inner_frame(zone)
         frame.add(Paragraph(html, style), c)

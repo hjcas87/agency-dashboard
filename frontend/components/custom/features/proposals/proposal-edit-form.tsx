@@ -43,6 +43,11 @@ interface ClientOption {
   name: string
 }
 
+// Mirror of `DELIVERABLES_SUMMARY_MAX_CHARS` in
+// backend/app/custom/features/proposals/schemas.py — keep them in sync.
+const DELIVERABLES_SUMMARY_MAX = 1300
+const DELIVERABLES_SUMMARY_WARN = 1200
+
 interface ProposalEditFormProps {
   proposal: {
     id: number
@@ -412,11 +417,15 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
           <Textarea
             id="deliverablesSummary"
             value={deliverablesSummary}
-            onChange={e => setDeliverablesSummary(e.target.value)}
+            onChange={e => setDeliverablesSummary(e.target.value.slice(0, DELIVERABLES_SUMMARY_MAX))}
             placeholder="Texto que verá el cliente en la sección de entregables. Si lo dejás vacío esa zona del PDF queda en blanco."
             rows={6}
+            maxLength={DELIVERABLES_SUMMARY_MAX}
             disabled={isReadOnly}
           />
+          <div className={`text-xs text-right ${deliverablesSummary.length > DELIVERABLES_SUMMARY_WARN ? 'text-amber-600' : 'text-muted-foreground'}`}>
+            {deliverablesSummary.length} / {DELIVERABLES_SUMMARY_MAX}
+          </div>
         </div>
       </div>
 

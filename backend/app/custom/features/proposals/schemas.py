@@ -44,6 +44,14 @@ class ProposalTaskUpdate(BaseModel):
 # ── Proposal schemas ─────────────────────────────────────────────
 
 
+# Empirical fit of the deliverables_summary container measured at
+# 12 pt / leading 14 / ~448 pt wide × 283 pt tall: ~1420 chars worst-
+# case, ~1469 chars on realistic prose. We cap at 1300 to keep ~9 %
+# safety against operator-typed line breaks that consume more vertical
+# space than the average word-wrapped line.
+DELIVERABLES_SUMMARY_MAX_CHARS = 1300
+
+
 class ProposalCreate(BaseModel):
     """Schema for creating a proposal."""
 
@@ -54,7 +62,9 @@ class ProposalCreate(BaseModel):
     exchange_rate: Decimal = Field(..., gt=0)
     adjustment_percentage: Decimal = Field(default=0, ge=-100, le=100)
     estimated_days: str | None = Field(default=None, max_length=64)
-    deliverables_summary: str | None = None
+    deliverables_summary: str | None = Field(
+        default=None, max_length=DELIVERABLES_SUMMARY_MAX_CHARS
+    )
     tasks: list[ProposalTaskCreate] = Field(..., min_length=1)
 
 
@@ -68,7 +78,9 @@ class ProposalUpdate(BaseModel):
     exchange_rate: Decimal | None = Field(None, gt=0)
     adjustment_percentage: Decimal | None = Field(None, ge=-100, le=100)
     estimated_days: str | None = Field(default=None, max_length=64)
-    deliverables_summary: str | None = None
+    deliverables_summary: str | None = Field(
+        default=None, max_length=DELIVERABLES_SUMMARY_MAX_CHARS
+    )
     tasks: list[ProposalTaskCreate] | None = None
 
 

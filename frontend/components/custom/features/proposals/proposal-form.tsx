@@ -25,6 +25,11 @@ interface ClientOption {
   name: string
 }
 
+// Mirror of `DELIVERABLES_SUMMARY_MAX_CHARS` in
+// backend/app/custom/features/proposals/schemas.py — keep them in sync.
+const DELIVERABLES_SUMMARY_MAX = 1300
+const DELIVERABLES_SUMMARY_WARN = 1200
+
 export function ProposalForm({ initialData }: { initialData?: { name: string; client_id: number | null; currency?: ProposalCurrency; hourly_rate_ars: string; exchange_rate: string; adjustment_percentage: string; estimated_days?: string | null; deliverables_summary?: string | null; tasks: ProposalTask[] } }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -223,10 +228,14 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
           <Textarea
             id="deliverablesSummary"
             value={deliverablesSummary}
-            onChange={e => setDeliverablesSummary(e.target.value)}
+            onChange={e => setDeliverablesSummary(e.target.value.slice(0, DELIVERABLES_SUMMARY_MAX))}
             placeholder="Texto que verá el cliente en la sección de entregables. Si lo dejás vacío esa zona del PDF queda en blanco."
             rows={6}
+            maxLength={DELIVERABLES_SUMMARY_MAX}
           />
+          <div className={`text-xs text-right ${deliverablesSummary.length > DELIVERABLES_SUMMARY_WARN ? 'text-amber-600' : 'text-muted-foreground'}`}>
+            {deliverablesSummary.length} / {DELIVERABLES_SUMMARY_MAX}
+          </div>
         </div>
       </div>
 
