@@ -34,6 +34,7 @@ interface ClientEditFormProps {
     company: string | null
     email: string
     phone: string | null
+    address: string | null
     cuit: string | null
     iva_condition: IvaCondition | null
   }
@@ -44,6 +45,13 @@ interface ClientCoreFields {
   company: string
   email: string
   phone: string
+  address: string
+}
+
+function composeFiscalAddress(result: CuitLookupResult): string {
+  return [result.fiscal_address, result.fiscal_locality, result.fiscal_province]
+    .filter(part => part && part.trim())
+    .join(', ')
 }
 
 function applyAfipAutofill(
@@ -52,12 +60,14 @@ function applyAfipAutofill(
   result: CuitLookupResult
 ): { core: ClientCoreFields; afip: ClientAfipFields } {
   const composedName = [result.first_name, result.last_name].filter(Boolean).join(' ').trim() || ''
+  const composedAddress = composeFiscalAddress(result)
   return {
     core: {
       name: core.name || composedName,
       company: core.company || result.company_name || '',
       email: core.email,
       phone: core.phone,
+      address: core.address || composedAddress,
     },
     afip: {
       cuit: result.cuit,
@@ -75,6 +85,7 @@ export function ClientEditForm({ client }: ClientEditFormProps) {
     company: client.company ?? '',
     email: client.email,
     phone: client.phone ?? '',
+    address: client.address ?? '',
   })
   const [afip, setAfip] = useState<ClientAfipFields>({
     cuit: client.cuit ?? '',
@@ -173,6 +184,18 @@ export function ClientEditForm({ client }: ClientEditFormProps) {
                   disabled={isPending}
                   value={core.phone}
                   onChange={e => setCore(prev => ({ ...prev, phone: e.target.value }))}
+                />
+              </Field>
+
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="address">Domicilio</FieldLabel>
+                <Input
+                  id="address"
+                  name="address"
+                  placeholder="Calle 123, Localidad, Provincia"
+                  disabled={isPending}
+                  value={core.address}
+                  onChange={e => setCore(prev => ({ ...prev, address: e.target.value }))}
                 />
               </Field>
             </FieldGroup>

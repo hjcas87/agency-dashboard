@@ -17,7 +17,7 @@ so the invoice stays auditable even if the proposal changes later.
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, Text
+from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Numeric, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -42,12 +42,27 @@ class Invoice(Base):
     )
 
     # ARCA audit reference. RESTRICT — never delete the AFIP log if a
-    # business invoice points at it.
-    afip_invoice_log_id: Mapped[int] = mapped_column(
-        ForeignKey("afip_invoice_log.id", ondelete="RESTRICT"), nullable=False, index=True
+    # business invoice points at it. Nullable because internal receipts
+    # ("Comprobante interno X") never reach AFIP and therefore have no
+    # log row to link.
+    afip_invoice_log_id: Mapped[int | None] = mapped_column(
+        ForeignKey("afip_invoice_log.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
     )
 
-    # Snapshot of the receipt that was issued.
+    # Internal receipts are local-only — same flow / table / PDF as a
+    # real Factura, but they don't go through AFIP, don't carry CAE,
+    # and the printed PDF carries the letter "X" plus a "no válido como
+    # factura" disclaimer. Used for non-billable work (internal control,
+    # cost-share between partners, etc.). `internal_number` is a global
+    # auto-incrementing counter assigned at issuance time.
+    is_internal: Mapped[bool] = mapped_column(nullable=False, server_default="false")
+    internal_number: Mapped[int | None] = mapped_column(nullable=True, index=True)
+
+    # Snapshot of the receipt that was issued. For internal receipts
+    # `receipt_type` is 0 — the renderer keys off `is_internal` and the
+    # field is just preserved for forward compatibility.
     receipt_type: Mapped[int] = mapped_column(nullable=False)  # ARCA CbteTipo
     concept: Mapped[int] = mapped_column(nullable=False)  # 1=products, 2=services, 3=both
     issue_date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -55,9 +70,12 @@ class Invoice(Base):
     service_date_to: Mapped[date | None] = mapped_column(Date, nullable=True)
     total_amount_ars: Mapped[Any] = mapped_column(Numeric(13, 2), nullable=False)
 
-    # Receiver document — what was actually sent to AFIP.
-    document_type: Mapped[int] = mapped_column(nullable=False)
-    document_number: Mapped[int] = mapped_column(nullable=False)
+    # Receiver document — what was actually sent to AFIP. Both nullable
+    # because internal receipts have no AFIP-side identification.
+    # `document_number` uses BigInteger because a CUIT is 11 digits
+    # (max 99,999,999,999) which overflows a 32-bit INT.
+    document_type: Mapped[int | None] = mapped_column(nullable=True)
+    document_number: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     # Snapshot of line items as JSONB. Each entry is
     # `{"name": str, "amount": str}` — Decimal is preserved as str so

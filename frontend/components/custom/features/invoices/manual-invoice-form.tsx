@@ -31,12 +31,30 @@ import {
 } from '@/components/core/ui/select'
 
 import type { ClientRecord } from '@/app/actions/custom/clients'
-import { issueInvoiceManualAction } from '@/app/actions/custom/invoices'
+import {
+  issueInvoiceManualAction,
+  type InvoiceKind,
+} from '@/app/actions/custom/invoices'
 
 const CONCEPT_OPTIONS: { value: '1' | '2' | '3'; label: string }[] = [
   { value: '1', label: 'Productos' },
   { value: '2', label: 'Servicios' },
   { value: '3', label: 'Productos y servicios' },
+]
+
+// Operator-facing comprobante options. Today only Factura C and the
+// internal X are wired up — extend this when Factura A/B come online.
+const COMPROBANTE_OPTIONS: { value: 'C' | 'X'; label: string; description: string }[] = [
+  {
+    value: 'C',
+    label: 'Factura C',
+    description: 'Se emite contra AFIP y queda registrada con CAE.',
+  },
+  {
+    value: 'X',
+    label: 'Comprobante interno (X)',
+    description: 'Solo para control interno. No pasa por AFIP, no tiene validez fiscal.',
+  },
 ]
 
 interface LineItemDraft {
@@ -59,6 +77,7 @@ export function ManualInvoiceForm({ clients }: ManualInvoiceFormProps) {
   const [serviceFrom, setServiceFrom] = useState('')
   const [serviceTo, setServiceTo] = useState('')
   const [reference, setReference] = useState('')
+  const [comprobante, setComprobante] = useState<'C' | 'X'>('C')
   const [lines, setLines] = useState<LineItemDraft[]>([{ ...EMPTY_LINE }])
 
   const requiresServiceDates = concept === '2' || concept === '3'
@@ -98,6 +117,7 @@ export function ManualInvoiceForm({ clients }: ManualInvoiceFormProps) {
       return
     }
 
+    const kind: InvoiceKind = comprobante === 'X' ? 'INTERNAL' : 'AFIP'
     startTransition(async () => {
       const result = await issueInvoiceManualAction({
         client_id: parseInt(clientId, 10),
@@ -107,11 +127,19 @@ export function ManualInvoiceForm({ clients }: ManualInvoiceFormProps) {
         service_date_to: requiresServiceDates ? serviceTo : undefined,
         line_items: cleanedLines,
         commercial_reference: reference || undefined,
+        kind,
+        receipt_type: 11,
       })
       if (result.success) {
-        toast.success(
-          `Factura C N°${result.data.receipt_number ?? '?'} emitida — CAE ${result.data.cae ?? '—'}`
-        )
+        if (result.data.is_internal) {
+          toast.success(
+            `Comprobante interno X N°${result.data.internal_number ?? '?'} emitido`
+          )
+        } else {
+          toast.success(
+            `Factura C N°${result.data.receipt_number ?? '?'} emitida — CAE ${result.data.cae ?? '—'}`
+          )
+        }
         router.push(`/invoices/${result.data.id}`)
         router.refresh()
       } else {
@@ -134,14 +162,41 @@ export function ManualInvoiceForm({ clients }: ManualInvoiceFormProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Factura C</CardTitle>
+          <CardTitle>Nuevo comprobante</CardTitle>
           <CardDescription>
-            Emití una Factura C contra AFIP sin partir de un presupuesto.
+            Emití un comprobante manual sin partir de un presupuesto. Elegí
+            Factura C para emitirlo contra AFIP, o Comprobante interno (X)
+            para uso de control interno sin validez fiscal.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <FieldGroup className="grid gap-4 md:grid-cols-2">
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="comprobante-kind">
+                  Tipo de comprobante <span className="text-destructive">*</span>
+                </FieldLabel>
+                <Select
+                  value={comprobante}
+                  onValueChange={value => setComprobante(value as 'C' | 'X')}
+                  disabled={isPending}
+                >
+                  <SelectTrigger id="comprobante-kind">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMPROBANTE_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  {COMPROBANTE_OPTIONS.find(o => o.value === comprobante)?.description}
+                </FieldDescription>
+              </Field>
+
               <Field>
                 <FieldLabel htmlFor="client">
                   Cliente <span className="text-destructive">*</span>

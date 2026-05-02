@@ -82,8 +82,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <CardHeader>
           <CardTitle>Datos de la factura</CardTitle>
           <CardDescription>
-            Snapshot de lo que se mandó a AFIP. El CAE queda registrado en{' '}
-            <span className="font-mono">afip_invoice_log</span>.
+            Resumen de lo que se mandó a AFIP. El CAE queda autorizado y registrado en el comprobante.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -110,7 +109,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <Field
             label="CAE"
             value={invoice.cae ? `${invoice.cae} (vto ${invoice.cae_expiration ?? '—'})` : '—'}
-            mono
           />
           {invoice.commercial_reference && (
             <Field label="Referencia comercial" value={invoice.commercial_reference} />
@@ -189,19 +187,11 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   )
 }
 
-function Field({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string
-  value: React.ReactNode
-  mono?: boolean
-}) {
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className={mono ? 'font-mono text-sm' : 'text-sm'}>{value}</span>
+      <span className="text-sm">{value}</span>
     </div>
   )
 }

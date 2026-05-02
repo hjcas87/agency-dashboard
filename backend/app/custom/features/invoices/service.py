@@ -1,22 +1,27 @@
 """Service layer for the Invoice feature.
 
-Orchestrates the issuance flow:
+Orchestrates two issuance flows:
 
-    request -> validate proposal/client -> compute totals -> ask
-    AfipService.issue_invoice -> persist Invoice referencing the
-    AfipInvoiceLog row -> return InvoiceResponse.
+* `AFIP` — request CAE from ARCA, persist `afip_invoice_log` audit row,
+  then persist `Invoice` referencing it.
+* `INTERNAL` — local-only "Comprobante interno X". Skips AFIP entirely,
+  allocates a global sequential `internal_number`, persists the
+  `Invoice` with `is_internal=True` and no `afip_invoice_log_id`.
 
-This service depends on AfipService for the wire call, the
-ProposalRepository / ClientRepository for the business context, and
-its own InvoiceRepository for persistence.
+The choice is driven by `IssueFromProposalRequest.kind` /
+`IssueManualRequest.kind`. The receipt_type (Factura A / B / C / FCE)
+only matters when `kind == AFIP`.
 """
+import logging
 from datetime import date
 from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.custom.features.clients.models import Client
 from app.custom.features.clients.repository import ClientRepository
 from app.custom.features.invoices.messages import (
     ERR_AFIP_ISSUE_FAILED,
@@ -31,6 +36,7 @@ from app.custom.features.invoices.models import Invoice
 from app.custom.features.invoices.repository import InvoiceRepository
 from app.custom.features.invoices.schemas import (
     BillableProposalResponse,
+    InvoiceKind,
     InvoiceLineItem,
     InvoiceResponse,
     IssueFromProposalRequest,
@@ -47,7 +53,18 @@ from app.shared.afip import (
     IvaCondition,
     ReceiptType,
 )
+from app.shared.afip.enums import is_class_c, is_fce
 from app.shared.afip.models import AfipInvoiceLog
+from app.shared.afip.schemas import InvoiceResult
+
+logger = logging.getLogger(__name__)
+
+
+def _allows_cf_fallback(receipt_type: ReceiptType) -> bool:
+    """Class C receipts (Factura/NC/ND C) can fall back to Consumidor
+    Final if the AFIP padrón rejects the client's CUIT. FCE never —
+    those always require a CUIT-validated receiver (ARCA 1487)."""
+    return is_class_c(receipt_type) and not is_fce(receipt_type)
 
 
 class InvoiceService:
@@ -147,9 +164,10 @@ class InvoiceService:
         ]
         total_ars = totals["total_ars"]
 
-        return self._issue_factura_c(
-            client_id=client.id,
-            client_cuit=client.cuit,
+        return self._issue(
+            kind=request.kind,
+            receipt_type=request.receipt_type,
+            client=client,
             proposal_id=proposal.id,
             issue_date=request.issue_date,
             concept=request.concept.value,
@@ -169,9 +187,10 @@ class InvoiceService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERR_CLIENT_NOT_FOUND)
 
         total_ars = sum((line.amount for line in request.line_items), Decimal("0"))
-        return self._issue_factura_c(
-            client_id=client.id,
-            client_cuit=client.cuit,
+        return self._issue(
+            kind=request.kind,
+            receipt_type=request.receipt_type,
+            client=client,
             proposal_id=None,
             issue_date=request.issue_date,
             concept=request.concept.value,
@@ -185,11 +204,12 @@ class InvoiceService:
 
     # ── Internals ────────────────────────────────────────────────
 
-    def _issue_factura_c(
+    def _issue(
         self,
         *,
-        client_id: int,
-        client_cuit: str | None,
+        kind: InvoiceKind,
+        receipt_type: ReceiptType,
+        client: Client,
         proposal_id: int | None,
         issue_date: date,
         concept: int,
@@ -200,23 +220,215 @@ class InvoiceService:
         commercial_reference: str | None,
         afip: AfipService,
     ) -> InvoiceResponse:
-        """Build the AFIP request, fire it, persist the local Invoice
-        when AFIP returns a CAE."""
-        # Factura C accepts any IvaCondition (it's the catch-all class).
-        # If the client has no CUIT we fall back to Consumidor Final.
-        if client_cuit:
-            document_type = int(DocType.CUIT)
-            document_number = int(client_cuit)
-            iva_condition = IvaCondition.CF  # default; AFIP accepts any for C
-        else:
-            document_type = int(DocType.FINAL_CONSUMER)
-            document_number = 0
-            iva_condition = IvaCondition.CF
+        """Dispatch on `kind`: internal receipts skip AFIP entirely;
+        AFIP receipts go through the ARCA flow with a Class-C-only CF
+        fallback."""
+        if kind is InvoiceKind.INTERNAL:
+            return self._issue_internal(
+                client_id=client.id,
+                proposal_id=proposal_id,
+                issue_date=issue_date,
+                concept=concept,
+                service_date_from=service_date_from,
+                service_date_to=service_date_to,
+                total_ars=total_ars,
+                line_items=line_items,
+                commercial_reference=commercial_reference,
+            )
+        return self._issue_afip(
+            receipt_type=receipt_type,
+            client=client,
+            proposal_id=proposal_id,
+            issue_date=issue_date,
+            concept=concept,
+            service_date_from=service_date_from,
+            service_date_to=service_date_to,
+            total_ars=total_ars,
+            line_items=line_items,
+            commercial_reference=commercial_reference,
+            afip=afip,
+        )
 
-        afip_request = InvoiceRequest(
-            receipt_type=ReceiptType.INVOICE_C,
+    def _issue_internal(
+        self,
+        *,
+        client_id: int,
+        proposal_id: int | None,
+        issue_date: date,
+        concept: int,
+        service_date_from: date | None,
+        service_date_to: date | None,
+        total_ars: Decimal,
+        line_items: list[InvoiceLineItem],
+        commercial_reference: str | None,
+    ) -> InvoiceResponse:
+        """Persist a local-only "Comprobante interno X". No AFIP call,
+        no CAE, no QR. The number is allocated as `MAX(internal_number)
+        + 1` — global sequence across the whole table."""
+        next_internal = (
+            self.db.query(func.coalesce(func.max(Invoice.internal_number), 0)).scalar() or 0
+        )
+        invoice = Invoice(
+            proposal_id=proposal_id,
+            client_id=client_id,
+            afip_invoice_log_id=None,
+            is_internal=True,
+            internal_number=next_internal + 1,
+            receipt_type=0,  # not an AFIP receipt — sentinel for "internal"
+            concept=concept,
+            issue_date=issue_date,
+            service_date_from=service_date_from,
+            service_date_to=service_date_to,
+            total_amount_ars=total_ars,
+            document_type=None,
+            document_number=None,
+            line_items=[{"name": line.name, "amount": str(line.amount)} for line in line_items],
+            commercial_reference=commercial_reference,
+        )
+        self.repository.add(invoice)
+        return self._to_response(invoice)
+
+    def _issue_afip(
+        self,
+        *,
+        receipt_type: ReceiptType,
+        client: Client,
+        proposal_id: int | None,
+        issue_date: date,
+        concept: int,
+        service_date_from: date | None,
+        service_date_to: date | None,
+        total_ars: Decimal,
+        line_items: list[InvoiceLineItem],
+        commercial_reference: str | None,
+        afip: AfipService,
+    ) -> InvoiceResponse:
+        """Run the AFIP issuance flow. For receipt classes that require
+        receiver identification (A, B, FCE-*) the client must have a
+        CUIT loaded — we reject upfront with 400, no AFIP round-trip.
+
+        For Class-C receipts (Factura C, NC C, ND C) we first attempt
+        with the client's real CUIT/IvaCondition; if AFIP rejects with
+        a padrón error (typically obs 10015), we retry as Consumidor
+        Final on the same request. The first attempt's audit row stays
+        in `afip_invoice_log` for traceability.
+        """
+        cf_fallback_allowed = _allows_cf_fallback(receipt_type)
+
+        # Hard requirement for A / B / FCE: the receiver must be
+        # identified by CUIT before we even talk to AFIP.
+        if not cf_fallback_allowed and not client.cuit:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"El comprobante {receipt_type.name} requiere CUIT del "
+                    "receptor — cargá el CUIT del cliente antes de emitir."
+                ),
+            )
+
+        # First attempt: identify the receiver if we can. For C without
+        # a CUIT, skip straight to the Consumidor Final path.
+        primary_result: InvoiceResult | None = None
+        if client.cuit:
+            primary_request = self._build_afip_request(
+                receipt_type=receipt_type,
+                concept=concept,
+                document_type=DocType.CUIT,
+                document_number=int(client.cuit),
+                iva_condition=client.iva_condition or IvaCondition.CF,
+                issue_date=issue_date,
+                service_date_from=service_date_from,
+                service_date_to=service_date_to,
+                total_ars=total_ars,
+                commercial_reference=commercial_reference,
+            )
+            primary_result = afip.issue_invoice(primary_request)
+            if (
+                primary_result.success
+                and primary_result.cae is not None
+                and primary_result.log_id is not None
+            ):
+                return self._persist_afip_invoice(
+                    result=primary_result,
+                    client_id=client.id,
+                    proposal_id=proposal_id,
+                    concept=concept,
+                    issue_date=issue_date,
+                    service_date_from=service_date_from,
+                    service_date_to=service_date_to,
+                    total_ars=total_ars,
+                    document_type=int(DocType.CUIT),
+                    document_number=int(client.cuit),
+                    line_items=line_items,
+                    commercial_reference=commercial_reference,
+                )
+
+            # AFIP rejected the receiver-identified attempt.
+            if not cf_fallback_allowed:
+                self._raise_afip_error(primary_result)
+            logger.warning(
+                "Class-C primary attempt rejected by AFIP for client %s, "
+                "falling back to Consumidor Final: %s",
+                client.id,
+                _format_afip_messages(primary_result),
+            )
+
+        # Class C only: retry as (or start as) Consumidor Final.
+        fallback_request = self._build_afip_request(
+            receipt_type=receipt_type,
+            concept=concept,
+            document_type=DocType.FINAL_CONSUMER,
+            document_number=0,
+            iva_condition=IvaCondition.CF,
+            issue_date=issue_date,
+            service_date_from=service_date_from,
+            service_date_to=service_date_to,
+            total_ars=total_ars,
+            commercial_reference=commercial_reference,
+        )
+        fallback_result = afip.issue_invoice(fallback_request)
+        if (
+            not fallback_result.success
+            or fallback_result.cae is None
+            or fallback_result.log_id is None
+        ):
+            # If the primary attempt also failed, prepend its message so
+            # the operator sees the full picture.
+            self._raise_afip_error(fallback_result, primary=primary_result)
+
+        return self._persist_afip_invoice(
+            result=fallback_result,
+            client_id=client.id,
+            proposal_id=proposal_id,
+            concept=concept,
+            issue_date=issue_date,
+            service_date_from=service_date_from,
+            service_date_to=service_date_to,
+            total_ars=total_ars,
+            document_type=int(DocType.FINAL_CONSUMER),
+            document_number=0,
+            line_items=line_items,
+            commercial_reference=commercial_reference,
+        )
+
+    def _build_afip_request(
+        self,
+        *,
+        receipt_type: ReceiptType,
+        concept: int,
+        document_type: DocType,
+        document_number: int,
+        iva_condition: IvaCondition,
+        issue_date: date,
+        service_date_from: date | None,
+        service_date_to: date | None,
+        total_ars: Decimal,
+        commercial_reference: str | None,
+    ) -> InvoiceRequest:
+        return InvoiceRequest(
+            receipt_type=receipt_type,
             concept=Concept(concept),
-            document_type=DocType(document_type),
+            document_type=document_type,
             document_number=document_number,
             iva_condition=iva_condition,
             issue_date=issue_date,
@@ -228,25 +440,32 @@ class InvoiceService:
             exempt_amount=Decimal("0"),
             taxes_amount=Decimal("0"),
             total_amount=total_ars,
-            iva_blocks=[],  # Class C must not include IVA detail.
+            iva_blocks=[],  # Class C must not include IVA detail; A/B add it later.
             commercial_reference=commercial_reference,
         )
 
-        result = afip.issue_invoice(afip_request)
-        if not result.success or result.cae is None or result.log_id is None:
-            error_msg = (
-                "; ".join(f"[{e.code}] {e.message}" for e in result.errors)
-                or "AFIP no devolvió CAE"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=ERR_AFIP_ISSUE_FAILED.format(error=error_msg),
-            )
-
+    def _persist_afip_invoice(
+        self,
+        *,
+        result: InvoiceResult,
+        client_id: int,
+        proposal_id: int | None,
+        concept: int,
+        issue_date: date,
+        service_date_from: date | None,
+        service_date_to: date | None,
+        total_ars: Decimal,
+        document_type: int,
+        document_number: int,
+        line_items: list[InvoiceLineItem],
+        commercial_reference: str | None,
+    ) -> InvoiceResponse:
         invoice = Invoice(
             proposal_id=proposal_id,
             client_id=client_id,
             afip_invoice_log_id=result.log_id,
+            is_internal=False,
+            internal_number=None,
             receipt_type=int(result.receipt_type),
             concept=concept,
             issue_date=issue_date,
@@ -261,14 +480,36 @@ class InvoiceService:
         self.repository.add(invoice)
         return self._to_response(invoice)
 
+    @staticmethod
+    def _raise_afip_error(
+        result: InvoiceResult, primary: InvoiceResult | None = None
+    ) -> None:
+        """Translate an AFIP rejection into an HTTP 502. When `primary`
+        is set, both attempts' messages are joined so the operator can
+        see why the CUIT path failed and why the Consumidor-Final path
+        also failed."""
+        parts: list[str] = []
+        if primary is not None:
+            parts.append(f"Intento con CUIT: {_format_afip_messages(primary)}")
+            parts.append(f"Intento como Consumidor Final: {_format_afip_messages(result)}")
+        else:
+            parts.append(_format_afip_messages(result))
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=ERR_AFIP_ISSUE_FAILED.format(error=" | ".join(parts)),
+        )
+
     def _to_response(self, invoice: Invoice) -> InvoiceResponse:
         """Hydrate an Invoice with the joined AfipInvoiceLog data the
-        UI needs (CAE, observations, etc.) and the client's name."""
-        log = (
-            self.db.query(AfipInvoiceLog)
-            .filter(AfipInvoiceLog.id == invoice.afip_invoice_log_id)
-            .first()
-        )
+        UI needs (CAE, observations, etc.) and the client's name. For
+        internal receipts the AFIP-side fields are all null."""
+        log: AfipInvoiceLog | None = None
+        if invoice.afip_invoice_log_id is not None:
+            log = (
+                self.db.query(AfipInvoiceLog)
+                .filter(AfipInvoiceLog.id == invoice.afip_invoice_log_id)
+                .first()
+            )
         client_name: str | None = None
         if invoice.client_id:
             client = self.client_repo.get(invoice.client_id)
@@ -292,6 +533,8 @@ class InvoiceService:
             document_number=invoice.document_number,
             line_items=line_items,
             commercial_reference=invoice.commercial_reference,
+            is_internal=invoice.is_internal,
+            internal_number=invoice.internal_number,
             afip_invoice_log_id=invoice.afip_invoice_log_id,
             cae=log.cae if log else None,
             cae_expiration=log.cae_expiration if log else None,
@@ -303,6 +546,15 @@ class InvoiceService:
             created_at=invoice.created_at.isoformat() if invoice.created_at else "",
             updated_at=invoice.updated_at.isoformat() if invoice.updated_at else "",
         )
+
+
+def _format_afip_messages(result: InvoiceResult) -> str:
+    """Flatten an InvoiceResult's errors + observations into a single
+    human-readable string for the toast."""
+    parts: list[str] = []
+    parts.extend(f"[{e.code}] {e.message}" for e in result.errors)
+    parts.extend(f"[{o.code}] {o.message}" for o in result.observations)
+    return "; ".join(parts) or "AFIP no devolvió CAE"
 
 
 def _coerce_line_items(raw: list[Any]) -> list[InvoiceLineItem]:

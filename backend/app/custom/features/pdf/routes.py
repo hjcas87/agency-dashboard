@@ -17,7 +17,7 @@ from app.custom.features.invoices.repository import InvoiceRepository
 from app.custom.features.proposals.models import Proposal
 from app.custom.features.proposals.repository import ProposalRepository
 from app.database import get_db
-from app.shared.afip.enums import DocType
+from app.shared.afip.enums import iva_condition_label
 from app.shared.afip.models import AfipInvoiceLog
 from app.shared.afip.qr import build_qr_url, render_qr_png
 from app.shared.pdf.generator import PdfGenerator
@@ -155,12 +155,29 @@ async def generate_invoice_pdf(
     if invoice is None:
         raise HTTPException(status_code=404, detail="Factura no encontrada")
 
-    log = db.query(AfipInvoiceLog).filter(AfipInvoiceLog.id == invoice.afip_invoice_log_id).first()
+    # Internal "X" comprobantes don't have an AFIP log; everything in
+    # this branch (QR, CAE, point-of-sale) is skipped for them and the
+    # renderer keys off `invoice.is_internal` to draw the X-flavoured
+    # header + disclaimer footer.
+    log: AfipInvoiceLog | None = None
+    if invoice.afip_invoice_log_id is not None:
+        log = (
+            db.query(AfipInvoiceLog)
+            .filter(AfipInvoiceLog.id == invoice.afip_invoice_log_id)
+            .first()
+        )
     client = client_repo.get(invoice.client_id) if invoice.client_id else None
 
     qr_url = ""
     qr_png: bytes | None = None
-    if log and log.cae and log.receipt_number is not None and log.point_of_sale is not None:
+    if (
+        log
+        and log.cae
+        and log.receipt_number is not None
+        and log.point_of_sale is not None
+        and invoice.document_type is not None
+        and invoice.document_number is not None
+    ):
         qr_url = build_qr_url(
             issue_date=invoice.issue_date,
             issuer_cuit=ISSUER.cuit,
@@ -176,14 +193,23 @@ async def generate_invoice_pdf(
         )
         qr_png = render_qr_png(qr_url)
 
-    customer_doc_label = "CUIT" if invoice.document_type == int(DocType.CUIT) else "Doc."
-    customer_doc_number = str(invoice.document_number) if invoice.document_number else "0"
+    # The customer block on the printed receipt is sourced ENTIRELY
+    # from the Client record — the AFIP request might have used DocType
+    # 99 / DocNro 0 (Consumidor Final) for monotributo low-amount cases,
+    # but the printed receipt still names the actual buyer with their
+    # real CUIT, IVA condition and address. The renderer's
+    # `_or_placeholder` helper prints "________" for fields the client
+    # hasn't filled in yet — so we always pass the raw client value, no
+    # "0" or empty-string fallbacks here.
     customer_legal_name = ""
+    customer_cuit = ""
+    customer_iva_label = ""
     customer_address = ""
-    customer_iva = ""
     if client:
         customer_legal_name = client.company or client.name or ""
-        customer_iva = client.iva_condition or ""
+        customer_cuit = client.cuit or ""
+        customer_iva_label = iva_condition_label(client.iva_condition)
+        customer_address = client.address or ""
 
     invoice_data = {
         "issuer": {
@@ -197,9 +223,13 @@ async def generate_invoice_pdf(
         },
         "customer": {
             "legal_name": customer_legal_name,
-            "doc_label": customer_doc_label,
-            "doc_number": customer_doc_number,
-            "iva_condition_label": customer_iva,
+            # The label is always "CUIT" — it's the only document type
+            # the operator captures on a Client today. If a client has
+            # no CUIT loaded, the renderer prints a placeholder under
+            # this label.
+            "doc_label": "CUIT",
+            "doc_number": customer_cuit,
+            "iva_condition_label": customer_iva_label,
             "address": customer_address,
         },
         "invoice": {
@@ -211,6 +241,11 @@ async def generate_invoice_pdf(
             "period_to": invoice.service_date_to or invoice.issue_date,
             "due_date": invoice.issue_date,
             "condition_of_sale": "Otra",
+            # Internal-mode flags consumed by the renderer to switch the
+            # C-box letter to "X", drop the QR/CAE block and print the
+            # "no válido como factura" disclaimer.
+            "is_internal": invoice.is_internal,
+            "internal_number": invoice.internal_number,
         },
         "items": [
             {

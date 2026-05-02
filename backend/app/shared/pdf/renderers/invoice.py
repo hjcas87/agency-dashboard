@@ -49,6 +49,7 @@ from app.shared.pdf.template import PdfTemplate
 # whole document re-themes by changing this single value.
 BORDER = HexColor("#cccccc")
 HEADER_BG = HexColor("#cccccc")
+BORDER_W = 0.75
 
 # ARCA receipt-letter mapping — only the codes this renderer knows how
 # to label. Receipts outside the table fall back to the raw value.
@@ -144,9 +145,9 @@ class InvoicePdfRenderer(PdfRenderer):
 
     # AFIP-style receipts go nearly edge-to-edge — 5mm margin on each side
     # leaves a 200mm-wide content area on A4 (210 - 10 = 200). The bottom
-    # margin reserves a fixed strip for the totals + QR/ARCA/CAE block,
-    # which is drawn by `make_page_callback` so it always sits at the
-    # foot of the page regardless of how tall the items table grows.
+    # margin is computed dynamically in `render` to reserve enough space
+    # for the items table + totals + QR/ARCA/CAE block, which are all
+    # pinned to the foot of the page by `make_page_callback`.
     page_margins_mm = (8, 5, 56, 5)
 
     # Total content width all sub-tables target.
@@ -158,8 +159,38 @@ class InvoicePdfRenderer(PdfRenderer):
     HEADER_CONTENT_HEIGHT_MM = 42
     LETTER_BOX_HEIGHT_MM = 16
 
+    # Spacing rules for the bottom-pinned block. PAGE_BOTTOM_PAD_MM is the
+    # gap between the page edge and the QR/ARCA/CAE row; BOTTOM_GAP_MM is
+    # used between each of the three stacked tables (items / totals /
+    # footer).
+    PAGE_BOTTOM_PAD_MM = 8
+    BOTTOM_GAP_MM = 4
+
     def render(self, data: dict, template: PdfTemplate) -> list:
         styles = self._build_styles(template)
+
+        # The totals + QR/ARCA/CAE block reserves space at the bottom of
+        # the page (drawn by `make_page_callback`). The items table flows
+        # in the normal story above so it can grow downward freely.
+        totals = self._build_totals(data, styles)
+        footer = self._build_footer(data, styles)
+
+        content_w = self.CONTENT_WIDTH_MM * mm
+        _, totals_h = totals.wrap(content_w, 9999 * mm)
+        _, footer_h = footer.wrap(content_w, 9999 * mm)
+
+        bottom_mm = (
+            self.PAGE_BOTTOM_PAD_MM
+            + (totals_h + footer_h) / mm
+            + self.BOTTOM_GAP_MM
+        )
+        self.page_margins_mm = (
+            self.page_margins_mm[0],
+            self.page_margins_mm[1],
+            bottom_mm,
+            self.page_margins_mm[3],
+        )
+
         story: list[Any] = [
             self._build_main_header(data, styles),
             Spacer(1, 2 * mm),
@@ -172,12 +203,7 @@ class InvoicePdfRenderer(PdfRenderer):
     def make_page_callback(
         self, data: dict, template: PdfTemplate
     ) -> Callable:
-        """Draw totals + QR/ARCA/CAE block pinned to the bottom of every page.
-
-        The items table flows in the normal story above; this block stays
-        at a fixed offset from the page bottom so the receipt always
-        looks "footer-anchored" like the canonical AFIP printout.
-        """
+        """Draw totals + QR/ARCA/CAE pinned to the bottom of every page."""
         styles = self._build_styles(template)
         totals = self._build_totals(data, styles)
         footer = self._build_footer(data, styles)
@@ -185,12 +211,12 @@ class InvoicePdfRenderer(PdfRenderer):
         left_margin = self.page_margins_mm[3] * mm
 
         def _on_page(canvas, doc) -> None:
-            _, footer_h = footer.wrapOn(canvas, content_w, 60 * mm)
-            footer_y = 8 * mm
+            _, footer_h = footer.wrapOn(canvas, content_w, 100 * mm)
+            footer_y = self.PAGE_BOTTOM_PAD_MM * mm
             footer.drawOn(canvas, left_margin, footer_y)
 
-            totals.wrapOn(canvas, content_w, 30 * mm)
-            totals_y = footer_y + footer_h + 4 * mm
+            _, totals_h = totals.wrapOn(canvas, content_w, 100 * mm)
+            totals_y = footer_y + footer_h + self.BOTTOM_GAP_MM * mm
             totals.drawOn(canvas, left_margin, totals_y)
 
         return _on_page
@@ -351,10 +377,21 @@ class InvoicePdfRenderer(PdfRenderer):
         issuer = data.get("issuer", {})
         invoice = data.get("invoice", {})
 
-        receipt_type = int(invoice.get("receipt_type", 0))
-        letter = RECEIPT_LETTER_BY_CODE.get(receipt_type, "?")
-        code = RECEIPT_CODE_BY_TYPE.get(receipt_type, str(receipt_type).zfill(3))
-        name = RECEIPT_NAME_BY_TYPE.get(receipt_type, "COMPROBANTE")
+        # Internal "X" comprobantes have no AFIP CbteTipo. The renderer
+        # short-circuits the receipt-type lookup and prints fixed
+        # internal-mode labels in their place. The header word is
+        # "PRESUPUESTO" — the disclaimer footer is what carries the
+        # "no válido como factura" warning, so the header doesn't need
+        # to scream INTERNAL at the reader.
+        if invoice.get("is_internal"):
+            letter = "X"
+            code = "INT"
+            name = "PRESUPUESTO"
+        else:
+            receipt_type = int(invoice.get("receipt_type", 0))
+            letter = RECEIPT_LETTER_BY_CODE.get(receipt_type, "?")
+            code = RECEIPT_CODE_BY_TYPE.get(receipt_type, str(receipt_type).zfill(3))
+            name = RECEIPT_NAME_BY_TYPE.get(receipt_type, "COMPROBANTE")
 
         left_cell = self._build_left_header_cell(issuer, styles)
         c_column = self._build_letter_column(letter, code, styles)
@@ -375,7 +412,7 @@ class InvoicePdfRenderer(PdfRenderer):
                     ("SPAN", (0, 0), (-1, 0)),
                     ("ALIGN", (0, 0), (-1, 0), "CENTER"),
                     ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
-                    ("LINEBELOW", (0, 0), (-1, 0), 0.4, BORDER),
+                    ("LINEBELOW", (0, 0), (-1, 0), BORDER_W, BORDER),
                     ("TOPPADDING", (0, 0), (-1, 0), 4),
                     ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
                     # Content row: top-aligned. No internal vertical
@@ -383,7 +420,7 @@ class InvoicePdfRenderer(PdfRenderer):
                     ("VALIGN", (0, 1), (-1, 1), "TOP"),
                     ("ALIGN", (1, 1), (1, 1), "CENTER"),
                     # Outer perimeter.
-                    ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
+                    ("BOX", (0, 0), (-1, -1), BORDER_W, BORDER),
                     # Padding for issuer / receipt-id columns; zero for
                     # the C-column so its inner box+trunk hug the edges.
                     ("LEFTPADDING", (0, 1), (0, 1), 6),
@@ -455,8 +492,8 @@ class InvoicePdfRenderer(PdfRenderer):
         letter_box.setStyle(
             TableStyle(
                 [
-                    ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
-                    ("LINEBELOW", (0, 0), (-1, 0), 0.4, BORDER),
+                    ("BOX", (0, 0), (-1, -1), BORDER_W, BORDER),
+                    ("LINEBELOW", (0, 0), (-1, 0), BORDER_W, BORDER),
                     ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -480,7 +517,7 @@ class InvoicePdfRenderer(PdfRenderer):
         trunk.setStyle(
             TableStyle(
                 [
-                    ("LINEAFTER", (0, 0), (0, 0), 0.4, BORDER),
+                    ("LINEAFTER", (0, 0), (0, 0), BORDER_W, BORDER),
                     ("LEFTPADDING", (0, 0), (-1, -1), 0),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                     ("TOPPADDING", (0, 0), (-1, -1), 0),
@@ -513,17 +550,28 @@ class InvoicePdfRenderer(PdfRenderer):
     def _build_right_header_cell(
         self, invoice: dict, issuer: dict, receipt_name: str, styles: dict
     ) -> list:
-        pos = int(invoice.get("point_of_sale", 0))
-        nro = int(invoice.get("receipt_number", 0))
-        pos_comp = Paragraph(
-            f"<b>Punto de Venta:</b> {str(pos).zfill(5)}"
-            f"&nbsp;&nbsp;&nbsp;&nbsp;<b>Comp. Nro:</b> {str(nro).zfill(8)}",
-            styles["Value"],
-        )
+        # Internal "X" comprobantes don't have a point-of-sale or AFIP
+        # CbteNro — they carry a global `internal_number` instead. The
+        # rest of the issuer block (CUIT / IIBB / activity start) still
+        # makes sense as a generic identifier of who emitted it.
+        if invoice.get("is_internal"):
+            internal_nro = int(invoice.get("internal_number", 0))
+            id_paragraph = Paragraph(
+                f"<b>Presupuesto N°:</b> {str(internal_nro).zfill(8)}",
+                styles["Value"],
+            )
+        else:
+            pos = int(invoice.get("point_of_sale", 0))
+            nro = int(invoice.get("receipt_number", 0))
+            id_paragraph = Paragraph(
+                f"<b>Punto de Venta:</b> {str(pos).zfill(5)}"
+                f"&nbsp;&nbsp;&nbsp;&nbsp;<b>Comp. Nro:</b> {str(nro).zfill(8)}",
+                styles["Value"],
+            )
         return [
             Paragraph(receipt_name, styles["ReceiptName"]),
             Spacer(1, 3 * mm),
-            pos_comp,
+            id_paragraph,
             self._labeled(
                 "Fecha de Emisión: ",
                 _fmt_date(invoice.get("issue_date")),
@@ -563,25 +611,29 @@ class InvoicePdfRenderer(PdfRenderer):
         customer_left = [
             self._labeled(
                 f"{customer.get('doc_label', 'CUIT')}: ",
-                customer.get("doc_number", ""),
+                _or_placeholder(customer.get("doc_number")),
                 styles,
             ),
             self._labeled(
                 "Condición frente al IVA: ",
-                customer.get("iva_condition_label", ""),
+                _or_placeholder(customer.get("iva_condition_label")),
+                styles,
+            ),
+            self._labeled(
+                "Condición de venta: ",
+                _or_placeholder(invoice.get("condition_of_sale")),
                 styles,
             ),
         ]
         customer_right = [
             self._labeled(
                 "Apellido y Nombre / Razón Social: ",
-                customer.get("legal_name", ""),
+                _or_placeholder(customer.get("legal_name")),
                 styles,
             ),
-            self._labeled("Domicilio: ", customer.get("address", ""), styles),
             self._labeled(
-                "Condición de venta: ",
-                invoice.get("condition_of_sale", "Otra"),
+                "Domicilio: ",
+                _or_placeholder(customer.get("address")),
                 styles,
             ),
         ]
@@ -595,8 +647,8 @@ class InvoicePdfRenderer(PdfRenderer):
                 [
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
                     ("SPAN", (1, 1), (1, 1)),  # placeholder
-                    ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
-                    ("LINEBELOW", (0, 0), (-1, 0), 0.4, BORDER),
+                    ("BOX", (0, 0), (-1, -1), BORDER_W, BORDER),
+                    ("LINEBELOW", (0, 0), (-1, 0), BORDER_W, BORDER),
                     ("LEFTPADDING", (0, 0), (-1, -1), 4),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 4),
                     ("TOPPADDING", (0, 0), (-1, -1), 3),
@@ -639,13 +691,16 @@ class InvoicePdfRenderer(PdfRenderer):
                 ]
             )
 
+        # Column widths sum to 200mm (the full edge-to-edge content area).
+        # `% Bonif.` was 14mm and would wrap onto two lines with 8pt bold;
+        # bumped to 18mm and the slack came out of `Producto / Servicio`.
         col_widths = [
             14 * mm,
-            60 * mm,
+            56 * mm,
             18 * mm,
             18 * mm,
             24 * mm,
-            14 * mm,
+            18 * mm,
             20 * mm,
             32 * mm,
         ]
@@ -654,14 +709,19 @@ class InvoicePdfRenderer(PdfRenderer):
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
-                    ("LINEBELOW", (0, 0), (-1, 0), 0.4, BORDER),
-                    ("BOX", (0, 0), (-1, -1), 0.4, BORDER),
-                    ("INNERGRID", (0, 0), (-1, -1), 0.25, BORDER),
+                    ("LINEBELOW", (0, 0), (-1, 0), BORDER_W, BORDER),
+                    ("BOX", (0, 0), (-1, -1), BORDER_W, BORDER),
+                    ("INNERGRID", (0, 0), (-1, -1), BORDER_W, BORDER),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("LEFTPADDING", (0, 0), (-1, -1), 4),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-                    ("TOPPADDING", (0, 0), (-1, -1), 4),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    # Body rows keep generous vertical padding; the grey
+                    # header row is tightened so the banner stays slim
+                    # and matches the AFIP printout density.
+                    ("TOPPADDING", (0, 1), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 1), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, 0), 1),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 1),
                 ]
             )
         )
@@ -685,16 +745,24 @@ class InvoicePdfRenderer(PdfRenderer):
                 Paragraph(_fmt_money(totals.get("total", 0)), styles["TotalGrand"]),
             ],
         ]
-        # Right-aligned by allocating space on the left.
+        # Right-aligned by allocating space on the left. The whole block
+        # is wrapped in a single perimeter border that runs edge-to-edge
+        # of the content area, with no internal grid lines — only the
+        # outer rectangle. The first row gets 5mm of top padding and the
+        # last row gets 5mm bottom padding so the text doesn't kiss the
+        # recuadro vertically; inter-row spacing stays tight.
         table = Table(rows, colWidths=[160 * mm, 40 * mm])
         table.setStyle(
             TableStyle(
                 [
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 2),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 2),
-                    ("TOPPADDING", (0, 0), (-1, -1), 1),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                    ("BOX", (0, 0), (-1, -1), BORDER_W, BORDER),
+                    ("LEFTPADDING", (0, 0), (0, -1), 5 * mm),
+                    ("RIGHTPADDING", (-1, 0), (-1, -1), 5 * mm),
+                    ("TOPPADDING", (0, 0), (-1, -1), 2),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                    ("TOPPADDING", (0, 0), (-1, 0), 5 * mm),
+                    ("BOTTOMPADDING", (0, -1), (-1, -1), 5 * mm),
                 ]
             )
         )
@@ -703,6 +771,14 @@ class InvoicePdfRenderer(PdfRenderer):
     # ── Footer (QR + CAE + page) ─────────────────────────────────
 
     def _build_footer(self, data: dict, styles: dict) -> Table:
+        # Internal "X" comprobantes have no QR/CAE/ARCA. The footer is a
+        # full-width disclaimer block that makes it unmistakable that
+        # the document is for internal control only.
+        if data.get("invoice", {}).get("is_internal"):
+            return self._build_internal_footer(styles)
+        return self._build_afip_footer(data, styles)
+
+    def _build_afip_footer(self, data: dict, styles: dict) -> Table:
         afip = data.get("afip", {})
 
         qr_cell: list = []
@@ -729,9 +805,13 @@ class InvoicePdfRenderer(PdfRenderer):
                 styles["FooterBold"],
             ),
         ]
+        # QR cell is 32mm — just enough to hold the 28mm-wide QR plus a
+        # small visual gap (~4mm) before the ARCA block. The QR itself is
+        # left-aligned so it stays anchored to the page edge while the
+        # text moves leftward to hug it.
         return Table(
             [[qr_cell, center_cell, right_cell]],
-            colWidths=[40 * mm, 90 * mm, 70 * mm],
+            colWidths=[32 * mm, 98 * mm, 70 * mm],
             style=TableStyle(
                 [
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -743,6 +823,50 @@ class InvoicePdfRenderer(PdfRenderer):
             ),
         )
 
+    def _build_internal_footer(self, styles: dict) -> Table:
+        """Footer for internal "X" comprobantes — a single bordered
+        disclaimer banner spanning the full content width."""
+        disclaimer_style = ParagraphStyle(
+            "InternalDisclaimer",
+            parent=styles["Original"],
+            fontSize=10,
+            alignment=TA_CENTER,
+            leading=12,
+        )
+        sub_style = ParagraphStyle(
+            "InternalDisclaimerSub",
+            parent=styles["Footer"],
+            fontSize=8,
+            alignment=TA_CENTER,
+            leading=10,
+            textColor=black,
+        )
+        return Table(
+            [
+                [Paragraph("DOCUMENTO NO VÁLIDO COMO FACTURA", disclaimer_style)],
+                [
+                    Paragraph(
+                        "Comprobante de uso interno — sin validez fiscal. "
+                        "No fue autorizado por AFIP / ARCA.",
+                        sub_style,
+                    )
+                ],
+            ],
+            colWidths=[self.CONTENT_WIDTH_MM * mm],
+            style=TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("BOX", (0, 0), (-1, -1), BORDER_W, BORDER),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (0, 0), 5 * mm),
+                    ("BOTTOMPADDING", (0, 0), (0, 0), 1),
+                    ("TOPPADDING", (0, 1), (0, 1), 1),
+                    ("BOTTOMPADDING", (0, 1), (0, 1), 5 * mm),
+                ]
+            ),
+        )
+
     # ── Helpers ──────────────────────────────────────────────────
 
     def _labeled(self, label: str, value: str, styles: dict) -> Paragraph:
@@ -750,6 +874,18 @@ class InvoicePdfRenderer(PdfRenderer):
 
 
 # --- Format helpers -------------------------------------------------------
+
+# Visual stand-in for missing customer data — AFIP receipts traditionally
+# show an underline placeholder so a human reader sees that the field
+# was left blank, rather than a silent gap.
+_PLACEHOLDER = "_" * 18
+
+
+def _or_placeholder(value: Any) -> str:
+    if value is None:
+        return _PLACEHOLDER
+    text = str(value).strip()
+    return text if text else _PLACEHOLDER
 
 
 def _fmt_date(value: Any) -> str:

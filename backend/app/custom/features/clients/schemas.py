@@ -27,6 +27,7 @@ class ClientCreate(BaseModel):
     company: str | None = None
     email: EmailStr
     phone: str | None = None
+    address: str | None = None
     cuit: str | None = None
     iva_condition: IvaCondition | None = None
 
@@ -43,6 +44,7 @@ class ClientUpdate(BaseModel):
     company: str | None = None
     email: EmailStr | None = None
     phone: str | None = None
+    address: str | None = None
     cuit: str | None = None
     iva_condition: IvaCondition | None = None
 
@@ -60,6 +62,7 @@ class ClientResponse(BaseModel):
     company: str | None
     email: str
     phone: str | None
+    address: str | None
     cuit: str | None
     iva_condition: IvaCondition | None
 

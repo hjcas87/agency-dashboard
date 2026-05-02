@@ -56,6 +56,11 @@ class PdfGenerator:
             raise ValueError("Renderer not set. Call set_renderer() first.")
 
         buffer = BytesIO()
+        # Render first — `render` may dynamically compute and update
+        # `renderer.page_margins_mm` based on data (e.g. the invoice
+        # renderer reserves bottom-margin space for the items table +
+        # totals + footer that it pins to the foot of the page).
+        story = self.renderer.render(data, self.template)
         top, right, bottom, left = self.renderer.page_margins_mm
         doc = SimpleDocTemplate(
             buffer,
@@ -66,7 +71,6 @@ class PdfGenerator:
             rightMargin=right * mm,
         )
 
-        story = self.renderer.render(data, self.template)
         page_callback = self.renderer.make_page_callback(data, self.template)
         if page_callback:
             doc.build(story, onFirstPage=page_callback, onLaterPages=page_callback)

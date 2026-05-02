@@ -25,11 +25,13 @@ export interface InvoiceRecord {
   service_date_from: string | null
   service_date_to: string | null
   total_amount_ars: string
-  document_type: number
-  document_number: number
+  document_type: number | null
+  document_number: number | null
   line_items: InvoiceLineItem[]
   commercial_reference: string | null
-  afip_invoice_log_id: number
+  is_internal: boolean
+  internal_number: number | null
+  afip_invoice_log_id: number | null
   cae: string | null
   cae_expiration: string | null
   afip_success: boolean
@@ -110,6 +112,16 @@ export async function getBillableProposals(): Promise<BillableProposal[]> {
   }
 }
 
+// Mirrors backend `app.custom.features.invoices.schemas.InvoiceKind`.
+// `AFIP` runs the full ARCA flow; `INTERNAL` skips AFIP and produces a
+// local-only "Comprobante interno X".
+export type InvoiceKind = 'AFIP' | 'INTERNAL'
+
+// Mirrors backend `app.shared.afip.enums.ReceiptType` — only the values
+// the operator picks today. The backend defaults to `INVOICE_C` when
+// the field is omitted.
+export type ReceiptType = 1 | 6 | 11 | 2 | 3 | 7 | 8 | 12 | 13
+
 export interface IssueFromProposalInput {
   proposal_id: number
   issue_date: string // yyyy-mm-dd
@@ -117,6 +129,8 @@ export interface IssueFromProposalInput {
   service_date_from?: string
   service_date_to?: string
   commercial_reference?: string
+  kind?: InvoiceKind
+  receipt_type?: ReceiptType
 }
 
 export async function issueInvoiceFromProposalAction(
@@ -148,6 +162,8 @@ export interface IssueManualInput {
   service_date_to?: string
   line_items: { name: string; amount: string }[]
   commercial_reference?: string
+  kind?: InvoiceKind
+  receipt_type?: ReceiptType
 }
 
 export async function issueInvoiceManualAction(input: IssueManualInput): Promise<IssueOutcome> {

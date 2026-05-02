@@ -32,6 +32,12 @@ class Client(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
+    # Free-form fiscal address — printed verbatim on the invoice PDF
+    # under "Domicilio". Auto-populated from the AFIP padrón lookup
+    # (concatenated address + locality + province) but the operator can
+    # override it manually before saving.
+    address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # AFIP — both optional. CUIT is 11 digits without separators; the
     # schema/service layer normalizes user input before persisting here.
     cuit: Mapped[str | None] = mapped_column(String(11), nullable=True, index=True)

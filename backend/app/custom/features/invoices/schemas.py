@@ -1,10 +1,24 @@
 """Pydantic schemas for the Invoice feature."""
 from datetime import date
 from decimal import Decimal
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.shared.afip.enums import Concept
+from app.shared.afip.enums import Concept, ReceiptType
+
+
+class InvoiceKind(StrEnum):
+    """What kind of comprobante the operator wants to issue.
+
+    `AFIP` runs the full ARCA flow (request CAE, persist `afip_invoice_log`).
+    `INTERNAL` is a local-only "Comprobante interno X" — same row, same
+    PDF skeleton, but no AFIP call, no QR/CAE, and the printed PDF
+    carries the letter "X" plus a "no válido como factura" disclaimer.
+    """
+
+    AFIP = "AFIP"
+    INTERNAL = "INTERNAL"
 
 
 class InvoiceLineItem(BaseModel):
@@ -18,7 +32,12 @@ class InvoiceLineItem(BaseModel):
 
 
 class IssueFromProposalRequest(BaseModel):
-    """Operator request to invoice an existing proposal as Factura C."""
+    """Operator request to invoice an existing proposal.
+
+    `kind` selects the AFIP flow vs. an internal "Comprobante X".
+    `receipt_type` is only consulted when `kind == AFIP`; ignored for
+    internal receipts (they aren't fiscally typed).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -28,6 +47,8 @@ class IssueFromProposalRequest(BaseModel):
     service_date_from: date | None = None
     service_date_to: date | None = None
     commercial_reference: str | None = Field(default=None, max_length=255)
+    kind: InvoiceKind = InvoiceKind.AFIP
+    receipt_type: ReceiptType = ReceiptType.INVOICE_C
 
     @model_validator(mode="after")
     def _check_service_dates(self) -> "IssueFromProposalRequest":
@@ -48,10 +69,8 @@ class IssueFromProposalRequest(BaseModel):
 
 
 class IssueManualRequest(BaseModel):
-    """Operator request to invoice a free-form list of lines as Factura
-    C, without a proposal. The client either already exists in the CRM
-    (`client_id` set) or this request fails — client creation is a
-    separate flow."""
+    """Operator request to invoice a free-form list of lines (no
+    proposal). The client must already exist in the CRM."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -62,6 +81,8 @@ class IssueManualRequest(BaseModel):
     service_date_to: date | None = None
     line_items: list[InvoiceLineItem] = Field(min_length=1)
     commercial_reference: str | None = Field(default=None, max_length=255)
+    kind: InvoiceKind = InvoiceKind.AFIP
+    receipt_type: ReceiptType = ReceiptType.INVOICE_C
 
     @model_validator(mode="after")
     def _check_service_dates(self) -> "IssueManualRequest":
@@ -86,7 +107,9 @@ class IssueManualRequest(BaseModel):
 
 class InvoiceResponse(BaseModel):
     """Persistent invoice as the operator sees it — joins the AFIP log
-    fields the UI cares about (CAE / number / status) directly."""
+    fields the UI cares about (CAE / number / status) directly. For
+    internal receipts (`is_internal=true`) the AFIP-side fields are all
+    null and `internal_number` is the operator-facing identifier."""
 
     id: int
     proposal_id: int | None
@@ -98,13 +121,16 @@ class InvoiceResponse(BaseModel):
     service_date_from: date | None
     service_date_to: date | None
     total_amount_ars: Decimal
-    document_type: int
-    document_number: int
+    document_type: int | None
+    document_number: int | None
     line_items: list[InvoiceLineItem]
     commercial_reference: str | None
 
+    is_internal: bool = False
+    internal_number: int | None = None
+
     # Pulled from afip_invoice_log via the FK.
-    afip_invoice_log_id: int
+    afip_invoice_log_id: int | None = None
     cae: str | None = None
     cae_expiration: date | None = None
     afip_success: bool = False

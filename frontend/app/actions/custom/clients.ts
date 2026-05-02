@@ -15,6 +15,7 @@ export interface ClientRecord {
   company: string | null
   email: string
   phone: string | null
+  address: string | null
   cuit: string | null
   iva_condition: IvaCondition | null
 }
@@ -64,12 +65,14 @@ function buildClientBody(formData: FormData): Record<string, unknown> {
   const company = formData.get('company') as string
   const email = formData.get('email') as string
   const phone = formData.get('phone') as string
+  const address = formData.get('address') as string
   const cuit = formData.get('cuit') as string
   const ivaCondition = formData.get('iva_condition') as string
 
   const body: Record<string, unknown> = { name, email }
   if (company) body.company = company
   if (phone) body.phone = phone
+  if (address) body.address = address
   if (cuit) body.cuit = cuit
   if (ivaCondition) body.iva_condition = ivaCondition
   return body
