@@ -6,9 +6,15 @@ import { toast } from 'sonner'
 import { IconArrowLeft, IconDeviceFloppy } from '@tabler/icons-react'
 
 import { Button } from '@/components/core/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/core/ui/card'
 import { Field, FieldGroup, FieldLabel } from '@/components/core/ui/field'
 import { Input } from '@/components/core/ui/input'
-import { Separator } from '@/components/core/ui/separator'
 
 import {
   updateClientAction,
@@ -95,115 +101,116 @@ export function ClientEditForm({ client }: ClientEditFormProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <a href="/clients">
-            <IconArrowLeft className="size-4" />
+            <IconArrowLeft data-icon="inline-start" />
+            <span className="sr-only">Volver a clientes</span>
           </a>
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Editar Cliente</h1>
-          <p className="text-sm text-muted-foreground">
-            Modificá los datos de <span className="font-medium">{client.name}</span>.
-          </p>
-        </div>
+        <h1 className="text-lg font-semibold">Editar cliente</h1>
       </div>
 
-      <Separator />
+      <Card>
+        <CardHeader>
+          <CardTitle>{client.name}</CardTitle>
+          <CardDescription>Modificá los datos del cliente.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={handleSubmit} className="flex flex-col gap-6">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="name">
+                  Nombre <span className="text-destructive">*</span>
+                </FieldLabel>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="Nombre del cliente"
+                  required
+                  disabled={isPending}
+                  value={core.name}
+                  onChange={e => setCore(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </Field>
 
-      <form action={handleSubmit} className="flex flex-col gap-6">
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="name">
-              Nombre <span className="text-destructive">*</span>
-            </FieldLabel>
-            <Input
-              id="name"
-              name="name"
-              placeholder="Nombre del cliente"
-              required
+              <Field>
+                <FieldLabel htmlFor="company">Empresa</FieldLabel>
+                <Input
+                  id="company"
+                  name="company"
+                  placeholder="Nombre de la empresa (opcional)"
+                  disabled={isPending}
+                  value={core.company}
+                  onChange={e => setCore(prev => ({ ...prev, company: e.target.value }))}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="email">
+                  Email <span className="text-destructive">*</span>
+                </FieldLabel>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="cliente@email.com"
+                  required
+                  disabled={isPending}
+                  value={core.email}
+                  onChange={e => setCore(prev => ({ ...prev, email: e.target.value }))}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="phone">Teléfono</FieldLabel>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="+54 11 1234-5678"
+                  disabled={isPending}
+                  value={core.phone}
+                  onChange={e => setCore(prev => ({ ...prev, phone: e.target.value }))}
+                />
+              </Field>
+            </FieldGroup>
+
+            <ClientAfipSection
+              values={afip}
+              onChange={setAfip}
+              onAfipAutofill={result => {
+                const next = applyAfipAutofill(core, afip, result)
+                setCore(next.core)
+                setAfip(next.afip)
+              }}
               disabled={isPending}
-              value={core.name}
-              onChange={e => setCore(prev => ({ ...prev, name: e.target.value }))}
             />
-          </Field>
 
-          <Field>
-            <FieldLabel htmlFor="company">Empresa</FieldLabel>
-            <Input
-              id="company"
-              name="company"
-              placeholder="Nombre de la empresa (opcional)"
-              disabled={isPending}
-              value={core.company}
-              onChange={e => setCore(prev => ({ ...prev, company: e.target.value }))}
-            />
-          </Field>
+            {formError && (
+              <p className="text-sm text-destructive" role="alert">
+                {formError}
+              </p>
+            )}
 
-          <Field>
-            <FieldLabel htmlFor="email">
-              Email <span className="text-destructive">*</span>
-            </FieldLabel>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="cliente@email.com"
-              required
-              disabled={isPending}
-              value={core.email}
-              onChange={e => setCore(prev => ({ ...prev, email: e.target.value }))}
-            />
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="phone">Teléfono</FieldLabel>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              placeholder="+54 11 1234-5678"
-              disabled={isPending}
-              value={core.phone}
-              onChange={e => setCore(prev => ({ ...prev, phone: e.target.value }))}
-            />
-          </Field>
-        </FieldGroup>
-
-        <ClientAfipSection
-          values={afip}
-          onChange={setAfip}
-          onAfipAutofill={result => {
-            const next = applyAfipAutofill(core, afip, result)
-            setCore(next.core)
-            setAfip(next.afip)
-          }}
-          disabled={isPending}
-        />
-
-        {formError && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            {formError}
-          </div>
-        )}
-
-        <div className="flex items-center justify-end gap-3">
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => router.push('/clients')}
-            disabled={isPending}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isPending}>
-            <IconDeviceFloppy className="size-4" />
-            {isPending ? 'Guardando...' : 'Guardar Cambios'}
-          </Button>
-        </div>
-      </form>
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => router.push('/clients')}
+                disabled={isPending}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                <IconDeviceFloppy data-icon="inline-start" />
+                {isPending ? 'Guardando…' : 'Guardar'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
