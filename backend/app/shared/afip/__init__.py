@@ -9,6 +9,7 @@ See `README.md` in this directory for the design rationale and
 """
 from app.shared.afip.config import AfipSettings, afip_settings
 from app.shared.afip.enums import (
+    AfipTaxId,
     CancellationFlag,
     Concept,
     CurrencyId,
@@ -17,6 +18,7 @@ from app.shared.afip.enums import (
     IvaCondition,
     ReceiptLetter,
     ReceiptType,
+    TaxStatus,
     TransferType,
 )
 from app.shared.afip.exceptions import (
@@ -58,6 +60,7 @@ __all__ = [
     "AfipService",
     "AfipServiceError",
     "AfipSettings",
+    "AfipTaxId",
     "AfipValidationError",
     "AssociatedReceipt",
     "CancellationFlag",
@@ -77,6 +80,7 @@ __all__ = [
     "MonotributoData",
     "ReceiptLetter",
     "ReceiptType",
+    "TaxStatus",
     "TaxpayerActivity",
     "TaxpayerCategory",
     "TaxpayerInfo",

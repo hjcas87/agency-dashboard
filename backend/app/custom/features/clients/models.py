@@ -1,24 +1,46 @@
 """
 SQLAlchemy models for the Client feature.
+
+Uses SQLAlchemy 2.x `Mapped[...]` / `mapped_column(...)` declarations
+so attribute access yields plain types instead of `Column[T]`.
 """
-from sqlalchemy import Column, Integer, String, DateTime
+from datetime import datetime
+
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from app.database import Base
+from app.shared.afip.enums import IvaCondition
 
 
 class Client(Base):
-    """Client model representing a business contact."""
+    """Client model representing a business contact.
+
+    AFIP-related fields (`cuit`, `iva_condition`) are optional. Forks
+    that do not invoice with ARCA can leave them NULL forever; the rest
+    of the app does not depend on them. The IvaCondition enum reused
+    here comes from `shared/afip/enums` — single source of truth across
+    invoicing and client data.
+    """
 
     __tablename__ = "clients"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    company = Column(String(255), nullable=True)
-    email = Column(String(255), nullable=False, index=True)
-    phone = Column(String(20), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    company: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # AFIP — both optional. CUIT is 11 digits without separators; the
+    # schema/service layer normalizes user input before persisting here.
+    cuit: Mapped[str | None] = mapped_column(String(11), nullable=True, index=True)
+    iva_condition: Mapped[IvaCondition | None] = mapped_column(String(2), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
