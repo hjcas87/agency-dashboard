@@ -71,7 +71,7 @@ class SoapClient:
     def __enter__(self) -> SoapClient:
         return self
 
-    def __exit__(self, *exc: object) -> None:
+    def __exit__(self, *_exc: object) -> None:
         self.close()
 
     def close(self) -> None:
@@ -80,9 +80,11 @@ class SoapClient:
     def post(self, url: str, body: str, headers: dict[str, str]) -> str:
         """POST `body` to `url` and return the response body as text.
 
-        Retries on 5xx up to `max_retries` times with exponential backoff.
-        Raises `AfipNetworkError` on transport failures, non-2xx HTTP, or
-        a SOAP Fault embedded in a 200 response."""
+        Retries on transport-level failures and on 5xx responses **without**
+        a SOAP Fault. AFIP commonly returns semantic errors as HTTP 500 +
+        SOAP Fault — those are not retryable (the answer won't change),
+        and surface immediately as `AfipNetworkError` with the fault
+        code/message in the error text."""
         last_error: str | None = None
         for attempt in range(self._max_retries):
             try:
@@ -94,6 +96,14 @@ class SoapClient:
                 last_error = ERR_NETWORK_CONNECTION.format(error=str(exc))
                 logger.warning("AFIP transport error (attempt %s): %s", attempt + 1, exc)
             else:
+                if response.status_code == 200:
+                    _raise_if_soap_fault(response.text)
+                    return response.text
+
+                # Non-200: SOAP Fault inside the body short-circuits the
+                # retry loop (semantic error — retrying won't change it).
+                _raise_if_soap_fault(response.text)
+
                 if 500 <= response.status_code < 600:
                     last_error = ERR_HTTP_NON_OK.format(
                         status=response.status_code, body=response.text[:500]
@@ -101,17 +111,14 @@ class SoapClient:
                     logger.warning(
                         "AFIP returned %s (attempt %s)", response.status_code, attempt + 1
                     )
-                elif response.status_code != 200:
+                else:
                     raise AfipNetworkError(
                         ERR_HTTP_NON_OK.format(
                             status=response.status_code, body=response.text[:500]
                         )
                     )
-                else:
-                    _raise_if_soap_fault(response.text)
-                    return response.text
 
-            # Exponential backoff before next attempt.
+            # Exponential backoff before the next attempt.
             time.sleep(self._backoff * (2**attempt))
 
         raise AfipNetworkError(last_error or "AFIP request failed for unknown reason")
