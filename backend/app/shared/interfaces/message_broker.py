@@ -2,7 +2,8 @@
 Interface para message brokers (Kafka, RabbitMQ, etc.)
 """
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Callable
+from collections.abc import Callable
+from typing import Any, Optional
 
 
 class IMessageBroker(ABC):
@@ -12,17 +13,17 @@ class IMessageBroker(ABC):
     async def publish(
         self,
         topic: str,
-        message: Dict[str, Any],
+        message: dict[str, Any],
         key: Optional[str] = None,
     ) -> bool:
         """
         Publica un mensaje en un topic.
-        
+
         Args:
             topic: Nombre del topic
             message: Mensaje a publicar
             key: Clave opcional para particionamiento
-            
+
         Returns:
             True si se publicó exitosamente
         """
@@ -33,11 +34,11 @@ class IMessageBroker(ABC):
         self,
         topic: str,
         group_id: str,
-        callback: Callable[[Dict[str, Any]], Any],
+        callback: Callable[[dict[str, Any]], Any],
     ) -> None:
         """
         Consume mensajes de un topic.
-        
+
         Args:
             topic: Nombre del topic
             group_id: ID del grupo de consumidores
@@ -49,4 +50,3 @@ class IMessageBroker(ABC):
     def health_check(self) -> bool:
         """Verifica la salud del broker."""
         pass
-

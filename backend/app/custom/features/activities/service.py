@@ -5,10 +5,11 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.features.users.models import User
 from app.custom.features.activities.constants import (
-    ActivityOrigin,
     ERR_MEETING_READONLY,
     ERR_NOT_FOUND,
+    ActivityOrigin,
 )
 from app.custom.features.activities.repository import ActivityRepository
 from app.custom.features.activities.schemas import (
@@ -18,8 +19,6 @@ from app.custom.features.activities.schemas import (
     ReorderRequest,
     UserMini,
 )
-from app.core.features.users.models import User
-
 
 _MEETING_EDITABLE_FIELDS = frozenset({"done_at", "sort_order", "assignee_id"})
 

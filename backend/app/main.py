@@ -7,11 +7,6 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import settings
-from app.database import engine, Base
-from app.core.router import api_router
-from app.core.logging_config import setup_logging, get_logger
-
 # Side-effect import: loading `app.models` is what registers every
 # SQLAlchemy mapped class with `Base.metadata`. The lifespan handler
 # below calls `Base.metadata.create_all()` in DEVELOPMENT, and that
@@ -20,6 +15,10 @@ from app.core.logging_config import setup_logging, get_logger
 # suppressed because the import is intentional side effect, no name
 # is referenced from `app.models` in this file.
 import app.models  # noqa: F401
+from app.config import settings
+from app.core.logging_config import get_logger, setup_logging
+from app.core.router import api_router
+from app.database import Base, engine
 
 # Setup logging with Rich
 setup_logging()
@@ -43,7 +42,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     logger.info(f"[bold blue]Creating FastAPI app:[/bold blue] {settings.PROJECT_NAME}")
-    
+
     # Tags metadata para organizar la documentación de Swagger
     tags_metadata = [
         {
@@ -65,7 +64,7 @@ def create_app() -> FastAPI:
         # Custom feature tags — add here as features are created:
         # {"name": "Custom: <Feature>", "description": "Descripción del feature (custom)."},
     ]
-    
+
     app = FastAPI(
         title="Core API",
         description="Boilerplate API with modular architecture",
@@ -89,8 +88,9 @@ def create_app() -> FastAPI:
     uploads_dir = Path(__file__).parent.parent / "uploads"
     uploads_dir.mkdir(parents=True, exist_ok=True)
 
+    from fastapi import HTTPException as _HTTPException
+    from fastapi import Request
     from fastapi.responses import FileResponse
-    from fastapi import HTTPException as _HTTPException, Request
 
     async def _serve_upload(request: Request):
         """Serve uploaded files (logos, etc.)."""
@@ -119,4 +119,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-

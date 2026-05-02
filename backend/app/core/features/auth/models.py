@@ -2,24 +2,28 @@
 Modelos para el feature de Auth.
 Extiende el modelo User de core con campos de autenticación.
 """
-from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Integer
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from datetime import datetime
 
 from app.database import Base
-from app.core.features.users.models import User
 
 
 class UserPassword(Base):
     """Modelo para almacenar contraseñas de usuarios."""
+
     __tablename__ = "user_passwords"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
+    )
     hashed_password = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     user = relationship("User", backref="password_info")
 
@@ -29,6 +33,7 @@ class UserPassword(Base):
 
 class PasswordResetToken(Base):
     """Modelo para tokens de reseteo de contraseña."""
+
     __tablename__ = "password_reset_tokens"
 
     id = Column(Integer, primary_key=True)
@@ -42,4 +47,3 @@ class PasswordResetToken(Base):
 
     def __repr__(self):
         return f"<PasswordResetToken(user_id={self.user_id}, expires_at={self.expires_at})>"
-

@@ -47,12 +47,14 @@ RESPONSES = {
 }
 
 # ── Logo upload configuration ──────────────────────────────────
-ALLOWED_LOGO_MIME_TYPES = frozenset({
-    "image/png",
-    "image/jpeg",
-    "image/svg+xml",
-    "image/webp",
-})
+ALLOWED_LOGO_MIME_TYPES = frozenset(
+    {
+        "image/png",
+        "image/jpeg",
+        "image/svg+xml",
+        "image/webp",
+    }
+)
 
 ALLOWED_LOGO_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".svg", ".webp"})
 

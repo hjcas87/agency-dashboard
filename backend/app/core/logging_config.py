@@ -19,7 +19,7 @@ console = Console()
 def setup_logging() -> None:
     """
     Configure logging with Rich for beautiful terminal output.
-    
+
     This sets up:
     - Rich handler with colored output
     - Proper log levels based on environment
@@ -59,17 +59,19 @@ def setup_logging() -> None:
 
     # Get root logger and log startup message
     logger = logging.getLogger(__name__)
-    logger.info(f"[bold green]✓[/bold green] Logging configured for [bold]{settings.ENVIRONMENT}[/bold] environment")
+    logger.info(
+        f"[bold green]✓[/bold green] Logging configured for [bold]{settings.ENVIRONMENT}[/bold] environment"
+    )
     logger.debug(f"Log level set to: {logging.getLevelName(log_level)}")
 
 
 def get_logger(name: str) -> logging.Logger:
     """
     Get a logger instance with the given name.
-    
+
     Args:
         name: Logger name (typically __name__)
-        
+
     Returns:
         Logger instance
     """

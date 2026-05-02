@@ -42,4 +42,3 @@ class IEmailService(ABC):
             True si se envió exitosamente, False en caso contrario
         """
         pass
-

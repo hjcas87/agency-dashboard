@@ -6,13 +6,9 @@ from typing import Any
 
 import httpx
 
-from app.shared.interfaces.external_service import IExternalService
 from app.config import settings
-from app.shared.constants import (
-    N8N_STATUS,
-    HEADER_CONTENT_TYPE,
-    CONTENT_TYPE_JSON,
-)
+from app.shared.constants import CONTENT_TYPE_JSON, HEADER_CONTENT_TYPE, N8N_STATUS
+from app.shared.interfaces.external_service import IExternalService
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +20,13 @@ class N8NService(IExternalService):
         """Inicializa el servicio N8N."""
         # N8N_BASE_URL es la base (ej: http://n8n:5678)
         # Construimos la URL base para webhooks
-        self.base_url = settings.N8N_BASE_URL.rstrip('/')
+        self.base_url = settings.N8N_BASE_URL.rstrip("/")
         self.timeout = 30.0
         self.api_key = settings.N8N_API_KEY
         self.api_key_header = settings.N8N_API_KEY_HEADER
 
     async def call(
-        self,   
+        self,
         endpoint: str,
         method: str = "POST",
         payload: dict[str, Any] | None = None,
@@ -38,7 +34,7 @@ class N8NService(IExternalService):
     ) -> dict[str, Any]:
         """
         Realiza una llamada a N8N.
-        
+
         Args:
             endpoint: Endpoint de N8N (ej: /workflow-id)
             method: Método HTTP
@@ -46,8 +42,8 @@ class N8NService(IExternalService):
             headers: Headers HTTP adicionales
         """
         # Construir URL evitando doble barra
-        base = self.base_url.rstrip('/')
-        endpoint_clean = endpoint.lstrip('/')
+        base = self.base_url.rstrip("/")
+        endpoint_clean = endpoint.lstrip("/")
         url = f"{base}/{endpoint_clean}" if endpoint_clean else base
         default_headers = {
             HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON,
@@ -102,7 +98,7 @@ class N8NService(IExternalService):
     ) -> dict[str, Any]:
         """
         Dispara un workflow de N8N vía webhook.
-        
+
         Args:
             webhook_path: Path del webhook (ej: "my-webhook" o "webhook-test/348b0e40-cbbc-4146-97ad-e21d7b145ea9")
                          Este es el path configurado en el nodo Webhook de N8N, puede incluir
@@ -111,7 +107,7 @@ class N8NService(IExternalService):
             payload: Datos para el workflow
         """
         # Remover barra inicial si existe
-        webhook_path = webhook_path.lstrip('/')
+        webhook_path = webhook_path.lstrip("/")
         # Construir endpoint: el webhook_path ya incluye el path completo después del dominio
         # Ejemplo: si webhook_path es "webhook-test/348b0e40-...", la URL será
         # http://n8n:5678/webhook-test/348b0e40-...
@@ -123,10 +119,7 @@ class N8NService(IExternalService):
         try:
             import asyncio
 
-            response = asyncio.run(
-                self.call(endpoint="/healthz", method="GET")
-            )
+            response = asyncio.run(self.call(endpoint="/healthz", method="GET"))
             return response.get("status") == N8N_STATUS["SUCCESS"]
         except Exception:
             return False
-

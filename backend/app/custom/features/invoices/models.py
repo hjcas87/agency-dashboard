@@ -91,9 +91,7 @@ class Invoice(Base):
     #   authorised and stored as its own Invoice row. The original
     #   Factura keeps its CAE in ARCA — the cancellation is conceptual,
     #   tracked through `cancelled_by_invoice_id` below.
-    cancelled_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Back-pointer pair for AFIP cancellation. When a NC is issued to
     # cancel a Factura, the NC row's `cancels_invoice_id` points at the

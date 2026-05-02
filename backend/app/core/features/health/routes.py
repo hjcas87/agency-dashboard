@@ -3,9 +3,9 @@ Routes para el feature de health check.
 """
 from fastapi import APIRouter, Depends
 
-from app.shared.services.n8n_service import N8NService
-from app.core.features.health.service import HealthFeatureService
 from app.core.features.health.schemas import HealthResponse
+from app.core.features.health.service import HealthFeatureService
+from app.shared.services.n8n_service import N8NService
 
 router = APIRouter(prefix="/health", tags=["Core: Health"])
 
@@ -26,4 +26,3 @@ async def health_check(
     """
     result = service.check_health()
     return HealthResponse(**result)
-

@@ -1,13 +1,14 @@
 """
 Service layer para health checks.
 """
-from typing import Dict, Any
+from typing import Any
+
 from sqlalchemy import text
 
-from app.shared.services.n8n_service import N8NService
-from app.database import engine
 from app.config import settings
+from app.database import engine
 from app.shared.constants import HEALTH_STATUS
+from app.shared.services.n8n_service import N8NService
 
 
 class HealthFeatureService:
@@ -19,19 +20,19 @@ class HealthFeatureService:
     ):
         """
         Inicializa el service.
-        
+
         Args:
             n8n_service: Instancia del servicio N8N
         """
         self.n8n_service = n8n_service
 
-    def check_health(self, module: str = "core") -> Dict[str, Any]:
+    def check_health(self, module: str = "core") -> dict[str, Any]:
         """
         Realiza un health check completo.
-        
+
         Args:
             module: Nombre del módulo
-            
+
         Returns:
             Estado de salud del sistema
         """
@@ -62,13 +63,13 @@ class HealthFeatureService:
         """Verifica la conexión a RabbitMQ."""
         try:
             import pika
+
             connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
                     host=settings.RABBITMQ_HOST,
                     port=settings.RABBITMQ_PORT,
                     credentials=pika.PlainCredentials(
-                        settings.RABBITMQ_USER,
-                        settings.RABBITMQ_PASSWORD
+                        settings.RABBITMQ_USER, settings.RABBITMQ_PASSWORD
                     ),
                     connection_attempts=1,
                     socket_timeout=2,
@@ -82,4 +83,3 @@ class HealthFeatureService:
     def _check_n8n(self) -> bool:
         """Verifica la conexión a N8N."""
         return self.n8n_service.health_check()
-

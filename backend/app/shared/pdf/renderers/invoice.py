@@ -179,11 +179,7 @@ class InvoicePdfRenderer(PdfRenderer):
         _, totals_h = totals.wrap(content_w, 9999 * mm)
         _, footer_h = footer.wrap(content_w, 9999 * mm)
 
-        bottom_mm = (
-            self.PAGE_BOTTOM_PAD_MM
-            + (totals_h + footer_h) / mm
-            + self.BOTTOM_GAP_MM
-        )
+        bottom_mm = self.PAGE_BOTTOM_PAD_MM + (totals_h + footer_h) / mm + self.BOTTOM_GAP_MM
         self.page_margins_mm = (
             self.page_margins_mm[0],
             self.page_margins_mm[1],
@@ -200,9 +196,7 @@ class InvoicePdfRenderer(PdfRenderer):
         ]
         return story
 
-    def make_page_callback(
-        self, data: dict, template: PdfTemplate
-    ) -> Callable:
+    def make_page_callback(self, data: dict, template: PdfTemplate) -> Callable:
         """Draw totals + QR/ARCA/CAE pinned to the bottom of every page."""
         styles = self._build_styles(template)
         totals = self._build_totals(data, styles)

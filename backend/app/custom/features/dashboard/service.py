@@ -22,11 +22,7 @@ from decimal import Decimal
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.custom.features.dashboard.schemas import (
-    ChartPoint,
-    DashboardSummary,
-    KpiValue,
-)
+from app.custom.features.dashboard.schemas import ChartPoint, DashboardSummary, KpiValue
 from app.custom.features.invoices.models import Invoice
 from app.custom.features.proposals.models import Proposal, ProposalStatus
 from app.custom.features.proposals.service import ProposalService
@@ -74,9 +70,7 @@ class DashboardService:
 
         return DashboardSummary(
             revenue_month=_kpi(revenue_curr, revenue_prev),
-            pending_to_bill=KpiValue(
-                current=pending_curr, previous=pending_prev, delta_pct=None
-            ),
+            pending_to_bill=KpiValue(current=pending_curr, previous=pending_prev, delta_pct=None),
             avg_ticket_month=_kpi(avg_curr, avg_prev),
             active_clients_90d=_kpi(Decimal(active_curr), Decimal(active_prev)),
             chart=chart,
@@ -141,11 +135,7 @@ class DashboardService:
         Mirrors `InvoiceRepository.invoiced_amount_for_proposal` per
         proposal — the per-proposal logic lives there and is the
         canonical "invoiced amount" definition."""
-        proposals = (
-            self.db.query(Proposal)
-            .filter(Proposal.status == ProposalStatus.ACCEPTED)
-            .all()
-        )
+        proposals = self.db.query(Proposal).filter(Proposal.status == ProposalStatus.ACCEPTED).all()
         total = Decimal("0")
         for p in proposals:
             totals = ProposalService.calculate_totals(p, list(p.tasks))

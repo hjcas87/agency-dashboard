@@ -44,9 +44,7 @@ class ActivityRepository:
 
         if week_current:
             start, end = _week_bounds()
-            q = q.filter(
-                and_(Activity.due_date >= start.date(), Activity.due_date < end.date())
-            )
+            q = q.filter(and_(Activity.due_date >= start.date(), Activity.due_date < end.date()))
 
         if origin is not None:
             q = q.filter(Activity.origin == origin)

@@ -1,23 +1,18 @@
 """
 Dependencies para autenticación.
 """
-from datetime import datetime, timedelta
 from typing import Annotated
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.config import settings
 from app.core.features.users.models import User
 from app.core.features.users.repository import UserRepository
-from app.config import settings
-from app.shared.constants import (
-    AUTH_ERRORS,
-    AUTH_SCHEME,
-    AUTHENTICATE_HEADER,
-    JWT_CLAIM_SUB,
-)
+from app.database import get_db
+from app.shared.constants import AUTH_ERRORS, AUTH_SCHEME, AUTHENTICATE_HEADER, JWT_CLAIM_SUB
 
 security = HTTPBearer()
 
@@ -42,11 +37,7 @@ def get_current_user(
     token = credentials.credentials
 
     try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get(JWT_CLAIM_SUB)
         if user_id is None:
             raise HTTPException(
@@ -80,15 +71,13 @@ def get_current_user(
     return user
 
 
-def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)]
-) -> User:
+def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]) -> User:
     """
     Dependency para obtener usuario activo.
-    
+
     Args:
         current_user: Usuario actual
-        
+
     Returns:
         Usuario activo
     """
@@ -102,19 +91,18 @@ def get_optional_user(
 ) -> User | None:
     """
     Dependency opcional para obtener usuario si está autenticado.
-    
+
     Args:
         credentials: Credenciales HTTP Bearer (opcional)
         db: Sesión de base de datos
-        
+
     Returns:
         Usuario si está autenticado, None si no
     """
     if credentials is None:
         return None
-    
+
     try:
         return get_current_user(credentials, db)
     except HTTPException:
         return None
-

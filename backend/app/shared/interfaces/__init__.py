@@ -6,4 +6,3 @@ from app.shared.interfaces.external_service import IExternalService
 from app.shared.interfaces.message_broker import IMessageBroker
 
 __all__ = ["IEmailService", "IMessageBroker", "IExternalService"]
-

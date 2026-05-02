@@ -1,19 +1,15 @@
 """
 Routes para el feature de Users.
 """
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.database import get_db
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.orm import Session
+
 from app.core.features.users.repository import UserRepository
+from app.core.features.users.schemas import UserCreate, UserListResponse, UserResponse, UserUpdate
 from app.core.features.users.service import UserService
-from app.core.features.users.schemas import (
-    UserCreate,
-    UserUpdate,
-    UserResponse,
-    UserListResponse,
-)
+from app.database import get_db
 
 router = APIRouter(prefix="/users", tags=["Core: Users"])
 
@@ -71,7 +67,7 @@ async def get_users(
         active_only=active_only,
         search=search,
     )
-    
+
     return UserListResponse(
         items=users,
         total=total,
@@ -103,4 +99,3 @@ async def delete_user(
     """
     service.delete_user(user_id)
     return None
-
