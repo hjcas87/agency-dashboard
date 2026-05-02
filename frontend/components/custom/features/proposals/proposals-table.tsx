@@ -37,7 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/core/ui/alert-dialog'
-import { Badge } from '@/components/core/ui/badge'
 import { Button } from '@/components/core/ui/button'
 import {
   DropdownMenu,
@@ -63,18 +62,12 @@ import {
 } from '@/components/core/ui/table'
 import { PROPOSAL_MESSAGES } from '@/lib/messages'
 import { EmailSendDialog } from '@/components/custom/features/email/email-send-dialog'
+import { ProposalStatusCell } from '@/components/custom/features/proposals/proposal-status-cell'
 
 export type Proposal = ProposalRecord
 
 interface ProposalsTableProps {
   data: Proposal[]
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  sent: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-  accepted: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-  rejected: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
 }
 
 function getColumns(
@@ -101,14 +94,8 @@ function getColumns(
       accessorKey: 'status',
       header: 'Estado',
       cell: ({ row }) => {
-        const status = row.getValue('status') as string
-        const label =
-          PROPOSAL_MESSAGES.labels[status as keyof typeof PROPOSAL_MESSAGES.labels] ?? status
-        return (
-          <Badge variant="secondary" className={STATUS_COLORS[status]}>
-            {label}
-          </Badge>
-        )
+        const proposal = row.original
+        return <ProposalStatusCell proposalId={proposal.id} status={proposal.status} />
       },
     },
     {
