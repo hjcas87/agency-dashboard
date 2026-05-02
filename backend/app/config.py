@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     SMTP_FROM_EMAIL: str | None = None
     SMTP_USE_TLS: bool = True
+    SMTP_TIMEOUT_SECONDS: int = 30
 
     # API Email Configuration (SendGrid, Mailgun, etc.)
     EMAIL_API_URL: str | None = None
@@ -77,4 +78,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
