@@ -17,17 +17,17 @@ import {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
-      {/* Logo header */}
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="data-[slot=sidebar-menu-button]:p-1.5!">
-              <a href="/" className="flex items-center gap-2">
-                <span className="text-base font-semibold">Mendri</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      {/* Logo header — hidden when collapsed to icon strip */}
+      <SidebarHeader className="flex items-center justify-center py-4 group-data-[collapsible=icon]:hidden">
+        <a href="/">
+          <div
+            className="size-[70px] rounded-full ring-1 ring-sidebar-border flex items-center justify-center p-2"
+            style={{ backgroundColor: 'oklch(0.15 0.02 260)' }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/mendri-brand.png" alt="Mendri" className="size-full object-contain" />
+          </div>
+        </a>
       </SidebarHeader>
 
       <SidebarContent>
