@@ -1,13 +1,15 @@
-import data from './data.json'
-
 import { ChartAreaInteractive } from '@/components/core/features/dashboard/chart-area-interactive'
-import { DataTable } from '@/components/core/features/dashboard/data-table'
 import { SectionCards } from '@/components/core/features/dashboard/section-cards'
+import { WeekActivitiesWidget } from '@/components/custom/features/activities/week-activities-widget'
 
 import { getDashboardSummary } from '@/app/actions/custom/dashboard'
+import { listActivities } from '@/app/actions/custom/activities'
 
 export default async function DashboardPage() {
-  const summary = await getDashboardSummary()
+  const [summary, weekActivities] = await Promise.all([
+    getDashboardSummary(),
+    listActivities({ week: 'current', show_done: false }),
+  ])
 
   return (
     <div className="flex flex-1 flex-col">
@@ -17,7 +19,9 @@ export default async function DashboardPage() {
           <div className="px-4 lg:px-6">
             <ChartAreaInteractive data={summary.chart} />
           </div>
-          <DataTable data={data} />
+          <div className="px-4 lg:px-6">
+            <WeekActivitiesWidget activities={weekActivities} />
+          </div>
         </div>
       </div>
     </div>

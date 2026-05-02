@@ -233,6 +233,42 @@ export const PROPOSAL_MESSAGES = {
   },
 } as const
 
+// ── Activity messages (user-facing, Spanish) ──────────────────
+export const ACTIVITY_MESSAGES = {
+  createSuccess: { title: "Actividad creada", description: "La actividad fue creada correctamente." },
+  createError: { title: "Error al crear", description: "No se pudo crear la actividad. Intentalo de nuevo." },
+  updateSuccess: { title: "Actividad actualizada", description: "La actividad fue actualizada correctamente." },
+  updateError: { title: "Error al actualizar", description: "No se pudo actualizar la actividad. Intentalo de nuevo." },
+  deleteSuccess: { title: "Actividad eliminada", description: "La actividad fue eliminada correctamente." },
+  deleteError: { title: "Error al eliminar", description: "No se pudo eliminar la actividad. Intentalo de nuevo." },
+  deleteConfirm: {
+    title: "Eliminar actividad",
+    description: "¿Estás seguro de que deseas eliminar esta actividad?",
+    cancelLabel: "Cancelar",
+    confirmLabel: "Eliminar",
+  },
+  notFound: "No hay actividades registradas",
+  notFoundDescription: "Creá tu primera actividad para empezar.",
+  labels: {
+    title: "Título",
+    description: "Descripción",
+    dueDate: "Fecha objetivo",
+    assignee: "Asignado a",
+    origin: {
+      manual: "Manual",
+      meeting: "Reunión",
+    },
+  },
+  dialog: {
+    createTitle: "Nueva actividad",
+    editTitle: "Editar actividad",
+    saveButton: "Guardar",
+    createButton: "Crear",
+    cancelButton: "Cancelar",
+    saving: "Guardando...",
+  },
+} as const
+
 // ── PDF template messages (user-facing, Spanish) ──────────────
 export const PDF_TEMPLATE_MESSAGES = {
   loadError: {

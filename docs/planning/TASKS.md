@@ -298,7 +298,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   2. `make frontend-api-types`.
 - **Done**: types incluyen `Activity`, `ActivityCreate`, etc.
 
-### [ ] T-002-13: Server actions `activities.ts`
+### [x] T-002-13: Server actions `activities.ts`
 
 - **Depende de**: T-002-12
 - **Doc**: 002, sección "Componentes"
@@ -309,7 +309,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. Error handling: try/catch con throw para que el componente lo capture.
 - **Done**: funciones tipadas y exportadas.
 
-### [ ] T-002-14: Componente `AssigneeSelector`
+### [x] T-002-14: Componente `AssigneeSelector`
 
 - **Depende de**: T-002-13 (y T-002-0)
 - **Doc**: 002, HU-A-2
@@ -320,7 +320,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. Muestra: avatar (si hay) + nombre. Opción "Sin asignar".
 - **Done**: selector funcional, integrable en otros forms.
 
-### [ ] T-002-15: Componente `ActivityFormDialog`
+### [x] T-002-15: Componente `ActivityFormDialog`
 
 - **Depende de**: T-002-14
 - **Doc**: 002, HU-A-2 y HU-A-3
@@ -333,7 +333,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   5. Toast en éxito y error.
 - **Done**: crear y editar funcionan end-to-end.
 
-### [ ] T-002-16: Componente `ActivitiesTable` (página)
+### [x] T-002-16: Componente `ActivitiesTable` (página)
 
 - **Depende de**: T-002-15
 - **Doc**: 002, HU-A-1
@@ -346,7 +346,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   5. Acciones por fila: Editar (abre dialog), Eliminar (AlertDialog).
 - **Done**: tabla funcional con todos los filtros y acciones.
 
-### [ ] T-002-17: Página `/actividades`
+### [x] T-002-17: Página `/actividades`
 
 - **Depende de**: T-002-16
 - **Doc**: 002, sección "UI / pantallas"
@@ -357,7 +357,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. Agregar entrada en el sidebar de navegación (verificar dónde se declara el sidebar — `frontend/components/custom/...` o similar).
 - **Done**: navegando a `/actividades` se ve la tabla, se pueden hacer todas las operaciones.
 
-### [ ] T-002-18: Componente `WeekActivitiesWidget`
+### [x] T-002-18: Componente `WeekActivitiesWidget`
 
 - **Depende de**: T-002-16
 - **Doc**: 002, HU-A-4
@@ -370,7 +370,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   5. Drag-and-drop persiste sort_order vía server action.
 - **Done**: visualmente idéntico al DataTable actual del dashboard pero con datos reales.
 
-### [ ] T-002-19: Wire widget en dashboard
+### [x] T-002-19: Wire widget en dashboard
 
 - **Depende de**: T-002-18
 - **Doc**: 002, sección "Componentes"
@@ -382,7 +382,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   4. Server-side fetch de activities de la semana actual.
 - **Done**: dashboard muestra las activities reales, el resto del dashboard sigue pixel-igual.
 
-### [ ] T-002-20: Lint + build frontend + tests backend
+### [x] T-002-20: Lint + build frontend + tests backend
 
 - **Depende de**: T-002-19
 - **Pasos**:
