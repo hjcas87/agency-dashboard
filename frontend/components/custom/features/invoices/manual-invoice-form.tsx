@@ -35,6 +35,7 @@ import {
   issueInvoiceManualAction,
   type InvoiceKind,
 } from '@/app/actions/custom/invoices'
+import { ClientCombobox } from '@/components/custom/features/invoices/client-combobox'
 
 const CONCEPT_OPTIONS: { value: '1' | '2' | '3'; label: string }[] = [
   { value: '1', label: 'Productos' },
@@ -201,27 +202,18 @@ export function ManualInvoiceForm({ clients }: ManualInvoiceFormProps) {
                 <FieldLabel htmlFor="client">
                   Cliente <span className="text-destructive">*</span>
                 </FieldLabel>
-                <Select value={clientId} onValueChange={setClientId} disabled={isPending}>
-                  <SelectTrigger id="client">
-                    <SelectValue placeholder="Elegí un cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.length === 0 ? (
-                      <SelectItem value="__none__" disabled>
-                        No hay clientes cargados
-                      </SelectItem>
-                    ) : (
-                      clients.map(c => (
-                        <SelectItem key={c.id} value={c.id.toString()}>
-                          {c.name}
-                          {c.company ? ` — ${c.company}` : ''}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <ClientCombobox
+                  id="client"
+                  clients={clients}
+                  value={clientId}
+                  onValueChange={setClientId}
+                  disabled={isPending}
+                  placeholder={
+                    clients.length === 0 ? 'No hay clientes cargados' : 'Elegí un cliente'
+                  }
+                />
                 <FieldDescription>
-                  Si no tiene CUIT cargado se factura como Consumidor Final.
+                  Buscá tipeando nombre, empresa, email o CUIT.
                 </FieldDescription>
               </Field>
 

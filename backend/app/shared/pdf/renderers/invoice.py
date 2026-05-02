@@ -241,6 +241,10 @@ class InvoicePdfRenderer(PdfRenderer):
                 fontName="Helvetica-Bold",
                 alignment=TA_LEFT,
                 leading=11,
+                # CJK wrap so a freakishly long unbroken company name
+                # ("AcmeAcmeAcmeAcme...") still wraps inside the cell
+                # instead of overflowing into the next column.
+                wordWrap="CJK",
             ),
             "Label": ParagraphStyle(
                 "Label",
@@ -264,6 +268,7 @@ class InvoicePdfRenderer(PdfRenderer):
                 fontSize=7.5,
                 alignment=TA_LEFT,
                 leading=10,
+                wordWrap="CJK",
             ),
             "BigLetter": ParagraphStyle(
                 "BigLetter",

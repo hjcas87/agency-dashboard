@@ -38,11 +38,20 @@ export function InvoiceEmailDialog({ invoice, open, onOpenChange }: InvoiceEmail
   // in the deps, so user typing does not trigger a reset loop.
   useEffect(() => {
     if (!open || !invoice) return
-    const receiptLabel = invoice.receipt_number ? `N°${invoice.receipt_number}` : ''
-    setSubject(`Factura ${receiptLabel}`.trim())
+    const isInternal = invoice.is_internal
+    const docLabel = isInternal ? 'presupuesto' : 'factura'
+    const docNumber = isInternal
+      ? invoice.internal_number
+        ? `N°${String(invoice.internal_number).padStart(8, '0')}`
+        : ''
+      : invoice.receipt_number
+        ? `N°${invoice.receipt_number}`
+        : ''
+    const titleCase = isInternal ? 'Presupuesto' : 'Factura'
+    setSubject(`${titleCase} ${docNumber}`.trim())
     setBody(
       `Hola${invoice.client_name ? ` ${invoice.client_name}` : ''},\n\n` +
-        `Te adjunto la factura ${receiptLabel}.\n\nSaludos.`
+        `Te adjunto el ${docLabel} ${docNumber}.\n\nSaludos.`
     )
   }, [open, invoice])
 
@@ -92,13 +101,18 @@ export function InvoiceEmailDialog({ invoice, open, onOpenChange }: InvoiceEmail
     })
   }
 
+  const isInternal = invoice?.is_internal ?? false
+  const docNoun = isInternal ? 'presupuesto' : 'factura'
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Enviar factura por email</DialogTitle>
+          <DialogTitle>Enviar {docNoun} por email</DialogTitle>
           <DialogDescription>
-            La factura se envía con el PDF adjunto al destinatario.
+            {isInternal
+              ? 'El presupuesto se envía con el PDF adjunto al destinatario. Recordá que es un comprobante interno sin validez fiscal.'
+              : 'La factura se envía con el PDF adjunto al destinatario.'}
           </DialogDescription>
         </DialogHeader>
 

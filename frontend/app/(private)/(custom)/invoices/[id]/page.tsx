@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { IconAlertTriangle, IconArrowLeft, IconCheck } from '@tabler/icons-react'
+import { IconAlertTriangle, IconArrowLeft, IconCheck, IconInfoCircle } from '@tabler/icons-react'
 
 import { Badge } from '@/components/core/ui/badge'
 import { Button } from '@/components/core/ui/button'
@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/core/ui/table'
 
-import { getInvoice } from '@/app/actions/custom/invoices'
+import { getInvoice, type InvoiceRecord } from '@/app/actions/custom/invoices'
 
 const RECEIPT_TYPE_LABELS: Record<number, string> = {
   1: 'Factura A',
@@ -39,6 +39,35 @@ function formatReceiptNumber(pos: number | null, num: number | null): string {
   return `${String(pos).padStart(4, '0')}-${String(num).padStart(8, '0')}`
 }
 
+function headerLabel(invoice: InvoiceRecord): string {
+  if (invoice.is_internal) {
+    const num = invoice.internal_number
+      ? String(invoice.internal_number).padStart(8, '0')
+      : '—'
+    return `Presupuesto interno N°X-${num}`
+  }
+  const type =
+    RECEIPT_TYPE_LABELS[invoice.receipt_type] ?? `Tipo ${invoice.receipt_type}`
+  return `${type} N°${formatReceiptNumber(invoice.point_of_sale, invoice.receipt_number)}`
+}
+
+function statusBadge(invoice: InvoiceRecord): {
+  label: string
+  variant: 'default' | 'outline' | 'destructive' | 'secondary'
+  Icon: typeof IconCheck
+} {
+  if (invoice.is_internal) {
+    return { label: 'Comprobante interno', variant: 'secondary', Icon: IconInfoCircle }
+  }
+  if (!invoice.afip_success) {
+    return { label: 'Rechazada', variant: 'destructive', Icon: IconAlertTriangle }
+  }
+  if (invoice.afip_observations.length > 0) {
+    return { label: 'Aprobada con observaciones', variant: 'outline', Icon: IconCheck }
+  }
+  return { label: 'Aprobada', variant: 'default', Icon: IconCheck }
+}
+
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const invoiceId = parseInt(id, 10)
@@ -48,16 +77,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   if (!invoice) notFound()
 
   const total = parseFloat(invoice.total_amount_ars)
-  const status = invoice.afip_success
-    ? invoice.afip_observations.length > 0
-      ? 'Aprobada con observaciones'
-      : 'Aprobada'
-    : 'Rechazada'
-  const statusVariant = invoice.afip_success
-    ? invoice.afip_observations.length > 0
-      ? ('outline' as const)
-      : ('default' as const)
-    : ('destructive' as const)
+  const { label: statusLabel, variant: statusVariant, Icon: StatusIcon } = statusBadge(invoice)
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -68,21 +88,22 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <span className="sr-only">Volver a facturación</span>
           </a>
         </Button>
-        <h1 className="text-lg font-semibold">
-          {RECEIPT_TYPE_LABELS[invoice.receipt_type] ?? `Tipo ${invoice.receipt_type}`} N°
-          {formatReceiptNumber(invoice.point_of_sale, invoice.receipt_number)}
-        </h1>
+        <h1 className="text-lg font-semibold">{headerLabel(invoice)}</h1>
         <Badge variant={statusVariant} className="ml-auto gap-1">
-          {invoice.afip_success ? <IconCheck /> : <IconAlertTriangle />}
-          {status}
+          <StatusIcon className="size-3" />
+          {statusLabel}
         </Badge>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Datos de la factura</CardTitle>
+          <CardTitle>
+            {invoice.is_internal ? 'Datos del comprobante' : 'Datos de la factura'}
+          </CardTitle>
           <CardDescription>
-            Resumen de lo que se mandó a AFIP. El CAE queda autorizado y registrado en el comprobante.
+            {invoice.is_internal
+              ? 'Comprobante interno sin validez fiscal — no fue autorizado por AFIP.'
+              : 'Resumen de lo que se mandó a AFIP. El CAE queda autorizado y registrado en el comprobante.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -102,14 +123,26 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           {invoice.service_date_to && (
             <Field label="Servicio hasta" value={invoice.service_date_to} />
           )}
-          <Field
-            label="DocTipo / DocNro"
-            value={`${invoice.document_type} / ${invoice.document_number}`}
-          />
-          <Field
-            label="CAE"
-            value={invoice.cae ? `${invoice.cae} (vto ${invoice.cae_expiration ?? '—'})` : '—'}
-          />
+          {!invoice.is_internal && (
+            <>
+              <Field
+                label="DocTipo / DocNro"
+                value={`${invoice.document_type} / ${invoice.document_number}`}
+              />
+              <Field
+                label="CAE"
+                value={
+                  invoice.cae ? `${invoice.cae} (vto ${invoice.cae_expiration ?? '—'})` : '—'
+                }
+              />
+            </>
+          )}
+          {invoice.is_internal && invoice.internal_number !== null && (
+            <Field
+              label="N° interno"
+              value={`X-${String(invoice.internal_number).padStart(8, '0')}`}
+            />
+          )}
           {invoice.commercial_reference && (
             <Field label="Referencia comercial" value={invoice.commercial_reference} />
           )}
