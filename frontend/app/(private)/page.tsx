@@ -4,14 +4,18 @@ import { ChartAreaInteractive } from '@/components/core/features/dashboard/chart
 import { DataTable } from '@/components/core/features/dashboard/data-table'
 import { SectionCards } from '@/components/core/features/dashboard/section-cards'
 
-export default function DashboardPage() {
+import { getDashboardSummary } from '@/app/actions/custom/dashboard'
+
+export default async function DashboardPage() {
+  const summary = await getDashboardSummary()
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-          <SectionCards />
+          <SectionCards summary={summary} />
           <div className="px-4 lg:px-6">
-            <ChartAreaInteractive />
+            <ChartAreaInteractive data={summary.chart} />
           </div>
           <DataTable data={data} />
         </div>
