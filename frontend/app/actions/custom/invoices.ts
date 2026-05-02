@@ -31,6 +31,7 @@ export interface InvoiceRecord {
   commercial_reference: string | null
   is_internal: boolean
   internal_number: number | null
+  cancelled_at: string | null
   afip_invoice_log_id: number | null
   cae: string | null
   cae_expiration: string | null
@@ -180,6 +181,31 @@ export async function issueInvoiceManualAction(input: IssueManualInput): Promise
     const created = (await res.json()) as InvoiceRecord
     revalidatePath('/invoices')
     return { success: true, data: created }
+  } catch {
+    return { success: false, error: 'Error de conexión con el servidor' }
+  }
+}
+
+export async function cancelInvoiceAction(
+  id: number,
+  options: { restore?: boolean } = {}
+): Promise<IssueOutcome> {
+  const path = options.restore ? 'restore' : 'cancel'
+  try {
+    const res = await fetch(`${API_URL}/api/v1/invoices/${id}/${path}`, {
+      method: 'POST',
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      const fallback = options.restore
+        ? 'Error al restaurar el comprobante'
+        : 'Error al anular el comprobante'
+      return { success: false, error: extractErrorMessage(data, fallback) }
+    }
+    const updated = (await res.json()) as InvoiceRecord
+    revalidatePath('/invoices')
+    revalidatePath(`/invoices/${id}`)
+    return { success: true, data: updated }
   } catch {
     return { success: false, error: 'Error de conexión con el servidor' }
   }

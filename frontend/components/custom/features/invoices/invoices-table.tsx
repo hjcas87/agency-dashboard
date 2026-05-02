@@ -1,12 +1,16 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
+  IconBan,
   IconCheck,
   IconDotsVertical,
   IconFileText,
   IconInfoCircle,
   IconMail,
+  IconRotate,
   IconSearch,
   IconX,
 } from '@tabler/icons-react'
@@ -23,6 +27,16 @@ import {
   type VisibilityState,
 } from '@tanstack/react-table'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/core/ui/alert-dialog'
 import { Badge } from '@/components/core/ui/badge'
 import { Button } from '@/components/core/ui/button'
 import {
@@ -52,7 +66,7 @@ import {
 
 import { InvoiceEmailDialog } from '@/components/custom/features/invoices/invoice-email-dialog'
 
-import type { InvoiceRecord } from '@/app/actions/custom/invoices'
+import { cancelInvoiceAction, type InvoiceRecord } from '@/app/actions/custom/invoices'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -88,6 +102,7 @@ function typeLabel(invoice: InvoiceRecord): string {
 }
 
 function statusFor(invoice: InvoiceRecord): { label: string; variant: 'default' | 'outline' | 'destructive' | 'secondary' } {
+  if (invoice.cancelled_at) return { label: 'Anulado', variant: 'destructive' }
   if (invoice.is_internal) return { label: 'Interno', variant: 'secondary' }
   if (!invoice.afip_success) return { label: 'Rechazada', variant: 'destructive' }
   if (invoice.afip_observations.length > 0) {
@@ -100,7 +115,11 @@ interface InvoicesTableProps {
   invoices: InvoiceRecord[]
 }
 
-function getColumns(onSendEmail: (invoice: InvoiceRecord) => void): ColumnDef<InvoiceRecord>[] {
+function getColumns(
+  onSendEmail: (invoice: InvoiceRecord) => void,
+  onCancel: (invoice: InvoiceRecord) => void,
+  onRestore: (invoice: InvoiceRecord) => void
+): ColumnDef<InvoiceRecord>[] {
   return [
     {
       accessorKey: 'receipt_number',
@@ -207,6 +226,7 @@ function getColumns(onSendEmail: (invoice: InvoiceRecord) => void): ColumnDef<In
       cell: ({ row }) => {
         const invoice = row.original
         const pdfUrl = `${API_BASE}/api/v1/pdf/invoices/${invoice.id}`
+        const isCancelled = Boolean(invoice.cancelled_at)
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -244,6 +264,28 @@ function getColumns(onSendEmail: (invoice: InvoiceRecord) => void): ColumnDef<In
                 <IconMail className="size-4" />
                 Enviar por email
               </DropdownMenuItem>
+              {invoice.is_internal && (
+                <>
+                  <DropdownMenuSeparator />
+                  {isCancelled ? (
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onSelect={() => onRestore(invoice)}
+                    >
+                      <IconRotate className="size-4" />
+                      Restaurar
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      className="cursor-pointer text-destructive focus:text-destructive"
+                      onSelect={() => onCancel(invoice)}
+                    >
+                      <IconBan className="size-4" />
+                      Anular
+                    </DropdownMenuItem>
+                  )}
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -253,12 +295,47 @@ function getColumns(onSendEmail: (invoice: InvoiceRecord) => void): ColumnDef<In
 }
 
 export function InvoicesTable({ invoices }: InvoicesTableProps) {
+  const router = useRouter()
+  const [, startTransition] = useTransition()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [emailTarget, setEmailTarget] = useState<InvoiceRecord | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<InvoiceRecord | null>(null)
 
-  const columns = useMemo(() => getColumns(setEmailTarget), [])
+  function handleRestore(invoice: InvoiceRecord) {
+    startTransition(async () => {
+      const result = await cancelInvoiceAction(invoice.id, { restore: true })
+      if (result.success) {
+        toast.success('Comprobante restaurado.')
+        router.refresh()
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
+  async function confirmCancel() {
+    if (!cancelTarget) return
+    const target = cancelTarget
+    const result = await cancelInvoiceAction(target.id)
+    if (result.success) {
+      const num = target.internal_number
+        ? `X-${String(target.internal_number).padStart(8, '0')}`
+        : `#${target.id}`
+      toast.success(`Comprobante ${num} anulado.`)
+      router.refresh()
+    } else {
+      toast.error(result.error)
+    }
+    setCancelTarget(null)
+  }
+
+  const columns = useMemo(
+    () => getColumns(setEmailTarget, setCancelTarget, handleRestore),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
 
   const table = useReactTable({
     data: invoices,
@@ -398,7 +475,14 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map(row => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className={
+                    row.original.cancelled_at
+                      ? 'text-muted-foreground line-through'
+                      : undefined
+                  }
+                >
                   {row.getVisibleCells().map(cell => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -452,6 +536,38 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
           if (!open) setEmailTarget(null)
         }}
       />
+
+      <AlertDialog
+        open={cancelTarget !== null}
+        onOpenChange={open => {
+          if (!open) setCancelTarget(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anular comprobante</AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelTarget?.internal_number
+                ? `Vas a anular el comprobante interno X-${String(cancelTarget.internal_number).padStart(8, '0')}.`
+                : 'Vas a anular este comprobante.'}{' '}
+              La fila queda visible pero tachada y marcada como anulada. La acción es
+              reversible — podés restaurarla desde el mismo menú.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={e => {
+                e.preventDefault()
+                void confirmCancel()
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Anular
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

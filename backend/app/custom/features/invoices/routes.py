@@ -76,3 +76,22 @@ def issue_invoice_manual(
 ) -> InvoiceResponse:
     """Issue Factura C against AFIP from a free-form line list."""
     return service.issue_manual(payload, afip)
+
+
+@router.post("/{invoice_id}/cancel", response_model=InvoiceResponse)
+def cancel_invoice(
+    invoice_id: int,
+    service: InvoiceService = Depends(get_invoice_service),
+) -> InvoiceResponse:
+    """Soft-cancel an internal X comprobante. AFIP receipts return 400
+    — those need a Nota de Crédito (separate flow, not yet wired up)."""
+    return service.cancel_invoice(invoice_id)
+
+
+@router.post("/{invoice_id}/restore", response_model=InvoiceResponse)
+def restore_invoice(
+    invoice_id: int,
+    service: InvoiceService = Depends(get_invoice_service),
+) -> InvoiceResponse:
+    """Reverse a soft-cancellation on an internal X comprobante."""
+    return service.restore_invoice(invoice_id)

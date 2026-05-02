@@ -56,6 +56,9 @@ function statusBadge(invoice: InvoiceRecord): {
   variant: 'default' | 'outline' | 'destructive' | 'secondary'
   Icon: typeof IconCheck
 } {
+  if (invoice.cancelled_at) {
+    return { label: 'Anulado', variant: 'destructive', Icon: IconAlertTriangle }
+  }
   if (invoice.is_internal) {
     return { label: 'Comprobante interno', variant: 'secondary', Icon: IconInfoCircle }
   }

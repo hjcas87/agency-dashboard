@@ -84,6 +84,15 @@ class Invoice(Base):
 
     commercial_reference: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Internal-only soft cancellation. AFIP receipts are NEVER cancelled
+    # this way — they require a Nota de Crédito issued through ARCA,
+    # tracked as a separate Invoice row. For internal X comprobantes
+    # `cancelled_at` flips to "now()" and the row stays visible (struck
+    # through in the UI) so the operator keeps the audit trail.
+    cancelled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

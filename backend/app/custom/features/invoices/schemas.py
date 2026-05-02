@@ -129,6 +129,8 @@ class InvoiceResponse(BaseModel):
     is_internal: bool = False
     internal_number: int | None = None
 
+    cancelled_at: str | None = None
+
     # Pulled from afip_invoice_log via the FK.
     afip_invoice_log_id: int | None = None
     cae: str | None = None

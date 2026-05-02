@@ -13,7 +13,7 @@ The choice is driven by `IssueFromProposalRequest.kind` /
 only matters when `kind == AFIP`.
 """
 import logging
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -86,6 +86,59 @@ class InvoiceService:
         invoice = self.repository.get(invoice_id)
         if invoice is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERR_NOT_FOUND)
+        return self._to_response(invoice)
+
+    def cancel_invoice(self, invoice_id: int) -> InvoiceResponse:
+        """Mark an invoice as cancelled.
+
+        For internal X comprobantes this is a soft toggle: the row stays
+        visible (struck through in the UI) and `cancelled_at` is set to
+        now() so the audit trail is preserved.
+
+        For AFIP-issued comprobantes this raises 400 — anulación on
+        AFIP requires emitting a Nota de Crédito linked back via
+        CbtesAsoc, and that flow is not implemented yet. Re-issuing a
+        cancellation row on AFIP without the NC would silently desync
+        the local state from ARCA's authorisation, which is worse than
+        not supporting it.
+        """
+        invoice = self.repository.get(invoice_id)
+        if invoice is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERR_NOT_FOUND)
+        if not invoice.is_internal:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "La anulación de comprobantes AFIP requiere emitir una "
+                    "Nota de Crédito — flujo aún no disponible. Por ahora "
+                    "solo se pueden anular comprobantes internos (X)."
+                ),
+            )
+        if invoice.cancelled_at is not None:
+            return self._to_response(invoice)
+        invoice.cancelled_at = datetime.now(tz=UTC)
+        self.db.add(invoice)
+        self.db.commit()
+        self.db.refresh(invoice)
+        return self._to_response(invoice)
+
+    def restore_invoice(self, invoice_id: int) -> InvoiceResponse:
+        """Undo a soft cancellation on an internal X comprobante.
+        Symmetric inverse of `cancel_invoice` — same restrictions."""
+        invoice = self.repository.get(invoice_id)
+        if invoice is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERR_NOT_FOUND)
+        if not invoice.is_internal:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Solo se pueden restaurar comprobantes internos (X).",
+            )
+        if invoice.cancelled_at is None:
+            return self._to_response(invoice)
+        invoice.cancelled_at = None
+        self.db.add(invoice)
+        self.db.commit()
+        self.db.refresh(invoice)
         return self._to_response(invoice)
 
     def list_billable_proposals(self) -> list[BillableProposalResponse]:
@@ -543,6 +596,9 @@ class InvoiceService:
             afip_errors=list(log.errors or []) if log else [],
             receipt_number=log.receipt_number if log else None,
             point_of_sale=log.point_of_sale if log else None,
+            cancelled_at=(
+                invoice.cancelled_at.isoformat() if invoice.cancelled_at else None
+            ),
             created_at=invoice.created_at.isoformat() if invoice.created_at else "",
             updated_at=invoice.updated_at.isoformat() if invoice.updated_at else "",
         )
