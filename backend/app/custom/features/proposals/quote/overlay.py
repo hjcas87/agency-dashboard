@@ -60,9 +60,14 @@ FONT_REGULAR_PATH = FONTS_DIR / "OpenSans-Regular.ttf"
 FONT_SIZE_PT = 12
 LINE_LEADING_PT = 14
 
-# Vertical gap inserted between consecutive task blocks on the
-# quote_base page, on top of the natural line break leading.
-TASK_GAP_CM = 0.5
+# Vertical gap between the bold task title and its (regular-weight)
+# description — small and intentional, just enough to detach the
+# heading visually without breaking the block.
+TITLE_TO_DESC_GAP_CM = 0.15
+
+# Vertical gap between consecutive task blocks on the quote_base page.
+# Generous on purpose so each task reads as its own item.
+TASK_GAP_CM = 1.0
 
 
 def _ensure_fonts_registered() -> None:
@@ -243,18 +248,28 @@ class QuoteOverlayBuilder:
 
     @staticmethod
     def _build_task_flowables(tasks: list[QuoteTask]) -> list[Any]:
-        """Build the flowable list for the task loop: one Paragraph
-        per task plus a Spacer between consecutive tasks."""
-        bold_style = _build_text_style(FONT_BOLD)
-        gap = cm_to_pt(TASK_GAP_CM)
+        """Build the flowable list for the task loop.
+
+        Title and description are emitted as separate paragraphs so the
+        paginator can split a long task across pages if it really has
+        to — keeping them together via KeepTogether interacts poorly
+        with frame.add() outside a full Platypus document. The visible
+        gaps (title→desc, task→task) keep the list readable even in
+        that edge case.
+        """
+        title_style = _build_text_style(FONT_BOLD)
+        desc_style = _build_text_style(FONT_REGULAR)
+        title_to_desc = cm_to_pt(TITLE_TO_DESC_GAP_CM)
+        task_gap = cm_to_pt(TASK_GAP_CM)
+
         flowables: list[Any] = []
         for i, task in enumerate(tasks, start=1):
-            html = f"{i} - {escape(task.name).upper()}"
+            flowables.append(Paragraph(f"{i} - {escape(task.name).upper()}", title_style))
             if task.description:
-                html += "<br/>" + escape(task.description)
-            flowables.append(Paragraph(html, bold_style))
+                flowables.append(Spacer(1, title_to_desc))
+                flowables.append(Paragraph(escape(task.description), desc_style))
             if i < len(tasks):
-                flowables.append(Spacer(1, gap))
+                flowables.append(Spacer(1, task_gap))
         return flowables
 
     # ── Deliverables page ────────────────────────────────────
