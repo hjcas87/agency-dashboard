@@ -18,7 +18,7 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import func
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.custom.features.clients.models import Client
@@ -45,14 +45,7 @@ from app.custom.features.invoices.schemas import (
 from app.custom.features.proposals.models import ProposalStatus
 from app.custom.features.proposals.repository import ProposalRepository
 from app.custom.features.proposals.service import ProposalService
-from app.shared.afip import (
-    AfipService,
-    Concept,
-    DocType,
-    InvoiceRequest,
-    IvaCondition,
-    ReceiptType,
-)
+from app.shared.afip import AfipService, Concept, DocType, InvoiceRequest, IvaCondition, ReceiptType
 from app.shared.afip.enums import is_class_c, is_fce
 from app.shared.afip.models import AfipInvoiceLog
 from app.shared.afip.schemas import AssociatedReceipt, InvoiceResult
@@ -107,9 +100,7 @@ class InvoiceService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERR_NOT_FOUND)
         return self._to_response(invoice)
 
-    def cancel_invoice(
-        self, invoice_id: int, afip: AfipService | None = None
-    ) -> InvoiceResponse:
+    def cancel_invoice(self, invoice_id: int, afip: AfipService | None = None) -> InvoiceResponse:
         """Anular un comprobante.
 
         Internal X — soft toggle: `cancelled_at = now()`, row stays
@@ -147,9 +138,7 @@ class InvoiceService:
             )
         return self._cancel_via_credit_note(invoice, afip)
 
-    def _cancel_via_credit_note(
-        self, invoice: Invoice, afip: AfipService
-    ) -> InvoiceResponse:
+    def _cancel_via_credit_note(self, invoice: Invoice, afip: AfipService) -> InvoiceResponse:
         """Emit a NC against AFIP that anuls `invoice`, persist it as a
         new Invoice row, and back-link both. Same sub-total as the
         original — partial credit notes are out of scope for now."""
@@ -405,11 +394,13 @@ class InvoiceService:
         else:
             percent = (amount / proposal_total * Decimal("100")).quantize(Decimal("0.01"))
             verb = (
-                "Adelanto" if already_invoiced == 0
-                else "Saldo" if amount + already_invoiced >= proposal_total
+                "Adelanto"
+                if already_invoiced == 0
+                else "Saldo"
+                if amount + already_invoiced >= proposal_total
                 else "Pago parcial"
             )
-            label = f'{verb} presupuesto «{proposal.name}» ({percent:.2f}%)'
+            label = f"{verb} presupuesto «{proposal.name}» ({percent:.2f}%)"
         return [InvoiceLineItem(name=label, amount=amount)]
 
     def issue_manual(self, request: IssueManualRequest, afip: AfipService) -> InvoiceResponse:
@@ -496,17 +487,17 @@ class InvoiceService:
         commercial_reference: str | None,
     ) -> InvoiceResponse:
         """Persist a local-only "Comprobante interno X". No AFIP call,
-        no CAE, no QR. The number is allocated as `MAX(internal_number)
-        + 1` — global sequence across the whole table."""
-        next_internal = (
-            self.db.query(func.coalesce(func.max(Invoice.internal_number), 0)).scalar() or 0
-        )
+        no CAE, no QR. The number is allocated via a PostgreSQL sequence
+        so concurrent requests never collide."""
+        internal_number = self.db.execute(
+            text("SELECT nextval('invoices_internal_number_seq')")
+        ).scalar()
         invoice = Invoice(
             proposal_id=proposal_id,
             client_id=client_id,
             afip_invoice_log_id=None,
             is_internal=True,
-            internal_number=next_internal + 1,
+            internal_number=internal_number,
             receipt_type=0,  # not an AFIP receipt — sentinel for "internal"
             concept=concept,
             issue_date=issue_date,
@@ -724,9 +715,7 @@ class InvoiceService:
         return self._to_response(invoice)
 
     @staticmethod
-    def _raise_afip_error(
-        result: InvoiceResult, primary: InvoiceResult | None = None
-    ) -> None:
+    def _raise_afip_error(result: InvoiceResult, primary: InvoiceResult | None = None) -> None:
         """Translate an AFIP rejection into an HTTP 502. When `primary`
         is set, both attempts' messages are joined so the operator can
         see why the CUIT path failed and why the Consumidor-Final path
@@ -806,9 +795,7 @@ class InvoiceService:
             afip_errors=list(log.errors or []) if log else [],
             receipt_number=log.receipt_number if log else None,
             point_of_sale=log.point_of_sale if log else None,
-            cancelled_at=(
-                invoice.cancelled_at.isoformat() if invoice.cancelled_at else None
-            ),
+            cancelled_at=(invoice.cancelled_at.isoformat() if invoice.cancelled_at else None),
             cancels_invoice_id=invoice.cancels_invoice_id,
             cancelled_by_invoice_id=invoice.cancelled_by_invoice_id,
             created_at=invoice.created_at.isoformat() if invoice.created_at else "",
