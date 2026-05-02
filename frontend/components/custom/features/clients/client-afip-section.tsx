@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { toast } from 'sonner'
-import { IconChevronRight, IconLoader2, IconSearch } from '@tabler/icons-react'
+import { IconLoader2, IconSearch } from '@tabler/icons-react'
 
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/core/ui/collapsible'
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/core/ui/field'
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from '@/components/core/ui/field'
 import {
   InputGroup,
   InputGroupAddon,
@@ -44,8 +46,6 @@ export const IVA_CONDITION_LABELS: Record<IvaCondition, string> = {
 const IVA_CONDITION_ORDER: IvaCondition[] = ['RI', 'MT', 'EX', 'NA', 'CF', 'NC']
 
 // Sentinel value the Select uses to represent "no IVA condition picked".
-// Select can't hold an empty string as a value, but a real condition
-// code never collides with this sentinel.
 const IVA_UNSET = '__unset__'
 
 export interface ClientAfipFields {
@@ -73,21 +73,9 @@ export function ClientAfipSection({
   disabled = false,
 }: ClientAfipSectionProps) {
   const [isLooking, startLookup] = useTransition()
-  const [open, setOpen] = useState(values.cuit.length > 0 || values.ivaCondition !== null)
 
   const normalizedCuit = values.cuit.replace(/[-\s]/g, '')
   const canLookup = /^\d{11}$/.test(normalizedCuit)
-
-  function handleCuitChange(raw: string) {
-    onChange({ ...values, cuit: raw })
-  }
-
-  function handleIvaConditionChange(value: string) {
-    onChange({
-      ...values,
-      ivaCondition: value === IVA_UNSET ? null : (value as IvaCondition),
-    })
-  }
 
   function handleLookup() {
     startLookup(async () => {
@@ -107,72 +95,66 @@ export function ClientAfipSection({
   }
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger
-        className="group flex w-full items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-        type="button"
-      >
-        <IconChevronRight
-          className="transition-transform group-data-[state=open]:rotate-90"
-          data-icon="inline-start"
-        />
-        Datos AFIP (opcional)
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <FieldGroup className="pt-3">
-          <Field>
-            <FieldLabel htmlFor="cuit">CUIT</FieldLabel>
-            <InputGroup>
-              <InputGroupInput
-                id="cuit"
-                name="cuit"
-                value={values.cuit}
-                onChange={e => handleCuitChange(e.target.value)}
-                placeholder="20-12345678-9"
-                maxLength={13}
-                disabled={disabled || isLooking}
-              />
-              <InputGroupAddon align="inline-end">
-                <InputGroupButton
-                  type="button"
-                  size="xs"
-                  onClick={handleLookup}
-                  disabled={disabled || isLooking || !canLookup}
-                >
-                  {isLooking ? <IconLoader2 className="animate-spin" /> : <IconSearch />}
-                  Buscar en AFIP
-                </InputGroupButton>
-              </InputGroupAddon>
-            </InputGroup>
-            <FieldDescription>
-              La búsqueda autocompleta razón social y condición IVA si AFIP los devuelve.
-            </FieldDescription>
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="iva_condition">Condición frente al IVA</FieldLabel>
-            <Select
-              value={values.ivaCondition ?? IVA_UNSET}
-              onValueChange={handleIvaConditionChange}
+    <FieldSet>
+      <FieldLegend>Datos AFIP</FieldLegend>
+      <FieldDescription>
+        Opcional. Completá el CUIT y usá &quot;Buscar en AFIP&quot; para autocompletar razón social
+        y condición IVA.
+      </FieldDescription>
+      <FieldGroup className="grid gap-4 md:grid-cols-2">
+        <Field>
+          <FieldLabel htmlFor="cuit">CUIT</FieldLabel>
+          <InputGroup>
+            <InputGroupInput
+              id="cuit"
+              name="cuit"
+              value={values.cuit}
+              onChange={e => onChange({ ...values, cuit: e.target.value })}
+              placeholder="20-12345678-9"
+              maxLength={13}
               disabled={disabled || isLooking}
-            >
-              <SelectTrigger id="iva_condition">
-                <SelectValue placeholder="Sin especificar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={IVA_UNSET}>Sin especificar</SelectItem>
-                {IVA_CONDITION_ORDER.map(code => (
-                  <SelectItem key={code} value={code}>
-                    {IVA_CONDITION_LABELS[code]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {/* Hidden field keeps the value in FormData on submit. */}
-            <input type="hidden" name="iva_condition" value={values.ivaCondition ?? ''} readOnly />
-          </Field>
-        </FieldGroup>
-      </CollapsibleContent>
-    </Collapsible>
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                type="button"
+                size="xs"
+                onClick={handleLookup}
+                disabled={disabled || isLooking || !canLookup}
+              >
+                {isLooking ? <IconLoader2 className="animate-spin" /> : <IconSearch />}
+                Buscar en AFIP
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="iva_condition">Condición frente al IVA</FieldLabel>
+          <Select
+            value={values.ivaCondition ?? IVA_UNSET}
+            onValueChange={value =>
+              onChange({
+                ...values,
+                ivaCondition: value === IVA_UNSET ? null : (value as IvaCondition),
+              })
+            }
+            disabled={disabled || isLooking}
+          >
+            <SelectTrigger id="iva_condition">
+              <SelectValue placeholder="Sin especificar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={IVA_UNSET}>Sin especificar</SelectItem>
+              {IVA_CONDITION_ORDER.map(code => (
+                <SelectItem key={code} value={code}>
+                  {IVA_CONDITION_LABELS[code]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input type="hidden" name="iva_condition" value={values.ivaCondition ?? ''} readOnly />
+        </Field>
+      </FieldGroup>
+    </FieldSet>
   )
 }

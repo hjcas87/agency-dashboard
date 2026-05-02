@@ -80,7 +80,7 @@ export function ClientForm() {
   }
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <a href="/clients">
@@ -100,7 +100,7 @@ export function ClientForm() {
         </CardHeader>
         <CardContent>
           <form action={handleSubmit} className="flex flex-col gap-6">
-            <FieldGroup>
+            <FieldGroup className="grid gap-4 md:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="name">
                   Nombre <span className="text-destructive">*</span>
