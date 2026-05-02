@@ -3,13 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import {
-  IconDotsVertical,
-  IconEdit,
-  IconPlus,
-  IconSearch,
-  IconTrash,
-} from '@tabler/icons-react'
+import { IconDotsVertical, IconEdit, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
 import {
   flexRender,
   getCoreRowModel,
@@ -65,9 +59,7 @@ function getColumns(onDelete: (client: Client) => void): ColumnDef<Client>[] {
     {
       accessorKey: 'name',
       header: 'Nombre',
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('name')}</div>
-      ),
+      cell: ({ row }) => <div className="font-medium">{row.getValue('name')}</div>,
     },
     {
       accessorKey: 'company',
@@ -81,9 +73,7 @@ function getColumns(onDelete: (client: Client) => void): ColumnDef<Client>[] {
     {
       accessorKey: 'email',
       header: 'Email',
-      cell: ({ row }) => (
-        <div className="text-muted-foreground">{row.getValue('email')}</div>
-      ),
+      cell: ({ row }) => <div className="text-muted-foreground">{row.getValue('email')}</div>,
     },
     {
       accessorKey: 'phone',
@@ -108,7 +98,10 @@ function getColumns(onDelete: (client: Client) => void): ColumnDef<Client>[] {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-36">
               <DropdownMenuItem asChild>
-                <a href={`/clients/${client.id}/edit`} className="flex items-center gap-2 cursor-pointer">
+                <a
+                  href={`/clients/${client.id}/edit`}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
                   <IconEdit className="size-4" />
                   Editar
                 </a>
@@ -136,9 +129,13 @@ export function ClientsTable({ data, onDelete }: ClientsTableProps) {
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const columns = useMemo(() => getColumns((client: Client) => {
-    setDeleteTarget(client)
-  }), [])
+  const columns = useMemo(
+    () =>
+      getColumns((client: Client) => {
+        setDeleteTarget(client)
+      }),
+    []
+  )
 
   const table = useReactTable({
     data,
