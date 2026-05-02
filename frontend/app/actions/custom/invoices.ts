@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { serverFetch } from '@/lib/shared/server-fetch'
 
 export interface InvoiceLineItem {
   name: string
@@ -88,7 +88,7 @@ function extractErrorMessage(data: unknown, fallback: string): string {
 
 export async function getInvoices(): Promise<InvoiceRecord[]> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/invoices/`, { cache: 'no-store' })
+    const res = await serverFetch(`/api/v1/invoices/`, { cache: 'no-store' })
     if (!res.ok) return []
     return (await res.json()) as InvoiceRecord[]
   } catch {
@@ -98,7 +98,7 @@ export async function getInvoices(): Promise<InvoiceRecord[]> {
 
 export async function getInvoice(id: number): Promise<InvoiceRecord | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/invoices/${id}`, { cache: 'no-store' })
+    const res = await serverFetch(`/api/v1/invoices/${id}`, { cache: 'no-store' })
     if (!res.ok) return null
     return (await res.json()) as InvoiceRecord
   } catch {
@@ -108,7 +108,7 @@ export async function getInvoice(id: number): Promise<InvoiceRecord | null> {
 
 export async function getBillableProposals(): Promise<BillableProposal[]> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/invoices/billable-proposals`, {
+    const res = await serverFetch(`/api/v1/invoices/billable-proposals`, {
       cache: 'no-store',
     })
     if (!res.ok) return []
@@ -148,7 +148,7 @@ export async function issueInvoiceFromProposalAction(
   input: IssueFromProposalInput
 ): Promise<IssueOutcome> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/invoices/from-proposal`, {
+    const res = await serverFetch(`/api/v1/invoices/from-proposal`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -179,7 +179,7 @@ export interface IssueManualInput {
 
 export async function issueInvoiceManualAction(input: IssueManualInput): Promise<IssueOutcome> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/invoices/manual`, {
+    const res = await serverFetch(`/api/v1/invoices/manual`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
@@ -202,7 +202,7 @@ export async function cancelInvoiceAction(
 ): Promise<IssueOutcome> {
   const path = options.restore ? 'restore' : 'cancel'
   try {
-    const res = await fetch(`${API_URL}/api/v1/invoices/${id}/${path}`, {
+    const res = await serverFetch(`/api/v1/invoices/${id}/${path}`, {
       method: 'POST',
     })
     if (!res.ok) {

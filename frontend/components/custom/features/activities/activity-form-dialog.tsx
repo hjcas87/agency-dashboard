@@ -24,7 +24,7 @@ interface ActivityFormDialogProps {
   onOpenChange: (open: boolean) => void
   users: UserOption[]
   activity?: ActivityRecord
-  onSuccess?: () => void
+  onSuccess?: (activity: ActivityRecord) => void
 }
 
 export function ActivityFormDialog({
@@ -65,20 +65,21 @@ export function ActivityFormDialog({
         assignee_id: assigneeId,
       }
 
+      let saved: ActivityRecord
       if (isEdit && activity) {
-        await updateActivity(activity.id, data)
+        saved = await updateActivity(activity.id, data)
         toast.success(ACTIVITY_MESSAGES.updateSuccess.title, {
           description: ACTIVITY_MESSAGES.updateSuccess.description,
         })
       } else {
-        await createActivity(data)
+        saved = await createActivity(data)
         toast.success(ACTIVITY_MESSAGES.createSuccess.title, {
           description: ACTIVITY_MESSAGES.createSuccess.description,
         })
       }
 
       onOpenChange(false)
-      onSuccess?.()
+      onSuccess?.(saved)
     } catch {
       const msg = isEdit ? ACTIVITY_MESSAGES.updateError : ACTIVITY_MESSAGES.createError
       toast.error(msg.title, { description: msg.description })

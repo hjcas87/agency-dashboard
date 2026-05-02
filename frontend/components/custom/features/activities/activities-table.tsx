@@ -1,29 +1,9 @@
 'use client'
 
 import {
-  closestCenter,
-  DndContext,
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type UniqueIdentifier,
-} from '@dnd-kit/core'
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import {
   IconCircleCheckFilled,
   IconDotsVertical,
   IconEdit,
-  IconGripVertical,
   IconLoader,
   IconPlus,
   IconSearch,
@@ -37,13 +17,12 @@ import {
   useReactTable,
   type ColumnDef,
   type ColumnFiltersState,
-  type Row,
 } from '@tanstack/react-table'
 import * as React from 'react'
 import { toast } from 'sonner'
 
 import type { ActivityRecord, UserOption } from '@/app/actions/custom/activities'
-import { deleteActivity, reorderActivities, updateActivity } from '@/app/actions/custom/activities'
+import { deleteActivity, updateActivity } from '@/app/actions/custom/activities'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,44 +60,6 @@ import {
 import { ActivityFormDialog } from '@/components/custom/features/activities/activity-form-dialog'
 import { AssigneeSelector } from '@/components/custom/features/activities/assignee-selector'
 import { ACTIVITY_MESSAGES } from '@/lib/messages'
-import { useRouter } from 'next/navigation'
-
-function DragHandle({ id }: { id: number }) {
-  const { attributes, listeners } = useSortable({ id })
-  return (
-    <Button
-      {...attributes}
-      {...listeners}
-      variant="ghost"
-      size="icon"
-      className="size-7 text-muted-foreground hover:bg-transparent"
-    >
-      <IconGripVertical className="size-3 text-muted-foreground" />
-      <span className="sr-only">Reordenar</span>
-    </Button>
-  )
-}
-
-function DraggableRow({ row }: { row: Row<ActivityRecord> }) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.id,
-  })
-  return (
-    <TableRow
-      data-state={row.getIsSelected() && 'selected'}
-      data-dragging={isDragging}
-      ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-    >
-      {row.getVisibleCells().map(cell => (
-        <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
-  )
-}
 
 interface ActivitiesTableProps {
   initialData: ActivityRecord[]
@@ -126,7 +67,6 @@ interface ActivitiesTableProps {
 }
 
 export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
-  const router = useRouter()
   const [data, setData] = React.useState(initialData)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [showDone, setShowDone] = React.useState(false)
@@ -135,13 +75,6 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
   const [deleteTarget, setDeleteTarget] = React.useState<ActivityRecord | null>(null)
   const [editTarget, setEditTarget] = React.useState<ActivityRecord | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
-  const sortableId = React.useId()
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, {}),
-    useSensor(TouchSensor, {}),
-    useSensor(KeyboardSensor, {})
-  )
 
   const filteredData = React.useMemo(() => {
     return data.filter(a => {
@@ -154,11 +87,6 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
 
   const columns: ColumnDef<ActivityRecord>[] = React.useMemo(
     () => [
-      {
-        id: 'drag',
-        header: () => null,
-        cell: ({ row }) => <DragHandle id={row.original.id} />,
-      },
       {
         id: 'done',
         header: () => null,
@@ -184,7 +112,7 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
         accessorKey: 'title',
         header: 'Título',
         cell: ({ row }) => (
-          <span className={row.original.done_at ? 'line-through text-muted-foreground' : ''}>
+          <span className={`font-medium${row.original.done_at ? ' line-through text-muted-foreground' : ''}`}>
             {row.original.title}
           </span>
         ),
@@ -204,8 +132,8 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
         cell: ({ row }) => {
           if (!row.original.due_date) return <span className="text-muted-foreground">—</span>
           return (
-            <span className="text-sm">
-              {new Date(row.original.due_date).toLocaleDateString('es-AR')}
+            <span className="text-sm text-muted-foreground">
+              {new Date(row.original.due_date + 'T00:00:00').toLocaleDateString('es-AR')}
             </span>
           )
         },
@@ -214,7 +142,9 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
         id: 'assignee_name',
         header: 'Asignado',
         cell: ({ row }) => (
-          <span className="text-sm">{row.original.assignee?.name ?? '—'}</span>
+          <span className="text-sm text-muted-foreground">
+            {row.original.assignee?.name ?? '—'}
+          </span>
         ),
       },
       {
@@ -234,11 +164,7 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground data-[state=open]:bg-muted"
-              >
+              <Button variant="ghost" className="size-8 p-0" size="icon">
                 <IconDotsVertical className="size-4" />
                 <span className="sr-only">Abrir menú</span>
               </Button>
@@ -278,11 +204,6 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
     getRowId: row => String(row.id),
   })
 
-  const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => filteredData.map(a => a.id),
-    [filteredData]
-  )
-
   async function handleToggleDone(activity: ActivityRecord) {
     const newDoneAt = activity.done_at ? null : new Date().toISOString()
     try {
@@ -316,32 +237,25 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
     }
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!active || !over || active.id === over.id) return
-    const oldIndex = dataIds.indexOf(active.id)
-    const newIndex = dataIds.indexOf(over.id)
-    const newOrder = arrayMove(filteredData, oldIndex, newIndex)
+  function handleSaved(activity: ActivityRecord) {
     setData(prev => {
-      const updatedMap = new Map(newOrder.map((a, i) => [a.id, i]))
-      return prev.map(a =>
-        updatedMap.has(a.id) ? { ...a, sort_order: updatedMap.get(a.id)! } : a
-      )
+      const exists = prev.some(a => a.id === activity.id)
+      if (exists) return prev.map(a => (a.id === activity.id ? activity : a))
+      return [activity, ...prev]
     })
-    void reorderActivities(newOrder.map(a => a.id))
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2 justify-between">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <IconSearch className="absolute left-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <div className="flex items-center gap-2">
+            <IconSearch className="size-4 text-muted-foreground" />
             <Input
               placeholder="Buscar actividad..."
               value={(table.getColumn('title')?.getFilterValue() as string) ?? ''}
               onChange={e => table.getColumn('title')?.setFilterValue(e.target.value)}
-              className="h-8 pl-7 w-52"
+              className="h-8 w-52"
             />
           </div>
           <AssigneeSelector
@@ -349,12 +263,15 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
             value={assigneeFilter}
             onChange={setAssigneeFilter}
           />
-          <Select value={originFilter || '__all__'} onValueChange={v => setOriginFilter(v === '__all__' ? '' : v)}>
+          <Select
+            value={originFilter || '__all__'}
+            onValueChange={v => setOriginFilter(v === '__all__' ? '' : v)}
+          >
             <SelectTrigger className="h-8 w-36">
               <SelectValue placeholder="Origen" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Todos</SelectItem>
+              <SelectItem value="__all__">Todos los orígenes</SelectItem>
               <SelectItem value="manual">{ACTIVITY_MESSAGES.labels.origin.manual}</SelectItem>
               <SelectItem value="meeting">{ACTIVITY_MESSAGES.labels.origin.meeting}</SelectItem>
             </SelectContent>
@@ -375,50 +292,72 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
       </div>
 
       <div className="overflow-hidden rounded-lg border">
-        <DndContext
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis]}
-          onDragEnd={handleDragEnd}
-          sensors={sensors}
-          id={sortableId}
-        >
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-muted">
-              {table.getHeaderGroups().map(hg => (
-                <TableRow key={hg.id}>
-                  {hg.headers.map(h => (
-                    <TableHead key={h.id}>
-                      {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
-                    </TableHead>
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map(hg => (
+              <TableRow key={hg.id}>
+                {hg.headers.map(h => (
+                  <TableHead key={h.id}>
+                    {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map(row => (
+                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                  {row.getVisibleCells().map(cell => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
                   ))}
                 </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody className="**:data-[slot=table-cell]:first:w-8">
-              {table.getRowModel().rows.length ? (
-                <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
-                  {table.getRowModel().rows.map(row => (
-                    <DraggableRow key={row.id} row={row} />
-                  ))}
-                </SortableContext>
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    <span className="text-muted-foreground">{ACTIVITY_MESSAGES.notFound}</span>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </DndContext>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <span className="text-muted-foreground">{ACTIVITY_MESSAGES.notFound}</span>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
+
+      {table.getRowModel().rows.length > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            {table.getFilteredRowModel().rows.length} actividad(es)
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ActivityFormDialog
         open={!!editTarget}
         onOpenChange={open => !open && setEditTarget(null)}
         users={users}
         activity={editTarget && editTarget.id ? editTarget : undefined}
-        onSuccess={() => router.refresh()}
+        onSuccess={handleSaved}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
@@ -434,7 +373,10 @@ export function ActivitiesTable({ initialData, users }: ActivitiesTableProps) {
               {ACTIVITY_MESSAGES.deleteConfirm.cancelLabel}
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={e => { e.preventDefault(); void handleDelete() }}
+              onClick={e => {
+                e.preventDefault()
+                void handleDelete()
+              }}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

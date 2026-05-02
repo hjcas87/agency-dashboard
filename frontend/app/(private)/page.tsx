@@ -8,7 +8,7 @@ import { listActivities } from '@/app/actions/custom/activities'
 export default async function DashboardPage() {
   const [summary, weekActivities] = await Promise.all([
     getDashboardSummary(),
-    listActivities({ week: 'current', show_done: false }),
+    listActivities({ show_done: false }),
   ])
 
   return (

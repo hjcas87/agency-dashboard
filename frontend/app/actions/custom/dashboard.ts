@@ -1,6 +1,6 @@
 'use server'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { serverFetch } from '@/lib/shared/server-fetch'
 
 export interface KpiValue {
   current: string // Decimal serialized as string
@@ -33,7 +33,7 @@ const EMPTY_SUMMARY: DashboardSummary = {
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/dashboard/summary`, {
+    const res = await serverFetch(`/api/v1/dashboard/summary`, {
       cache: 'no-store',
     })
     if (!res.ok) return EMPTY_SUMMARY

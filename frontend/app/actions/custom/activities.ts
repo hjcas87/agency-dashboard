@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { serverFetch } from '@/lib/shared/server-fetch'
 
 export interface ActivityRecord {
   id: number
@@ -53,7 +53,7 @@ export interface UserOption {
 }
 
 export async function getUsers(): Promise<UserOption[]> {
-  const res = await fetch(`${API_URL}/api/v1/users`, { cache: 'no-store' })
+  const res = await serverFetch('/api/v1/users', { cache: 'no-store' })
   if (!res.ok) throw new Error('Error al obtener usuarios')
   const data = await res.json()
   return data.items ?? data
@@ -66,20 +66,17 @@ export async function listActivities(filters: ActivityFilters = {}): Promise<Act
   if (filters.week) params.set('week', filters.week)
   if (filters.origin) params.set('origin', filters.origin)
 
-  const res = await fetch(`${API_URL}/api/v1/activities?${params}`, { cache: 'no-store' })
+  const res = await serverFetch(`/api/v1/activities?${params}`, { cache: 'no-store' })
   if (!res.ok) throw new Error('Error al listar actividades')
   return res.json()
 }
 
 export async function createActivity(data: ActivityCreateData): Promise<ActivityRecord> {
-  const res = await fetch(`${API_URL}/api/v1/activities`, {
+  const res = await serverFetch('/api/v1/activities', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
   if (!res.ok) throw new Error('Error al crear actividad')
-  revalidatePath('/actividades')
-  revalidatePath('/')
   return res.json()
 }
 
@@ -87,28 +84,24 @@ export async function updateActivity(
   id: number,
   data: ActivityUpdateData
 ): Promise<ActivityRecord> {
-  const res = await fetch(`${API_URL}/api/v1/activities/${id}`, {
+  const res = await serverFetch(`/api/v1/activities/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
   if (!res.ok) throw new Error('Error al actualizar actividad')
-  revalidatePath('/actividades')
-  revalidatePath('/')
   return res.json()
 }
 
 export async function deleteActivity(id: number): Promise<void> {
-  const res = await fetch(`${API_URL}/api/v1/activities/${id}`, { method: 'DELETE' })
+  const res = await serverFetch(`/api/v1/activities/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error('Error al eliminar actividad')
   revalidatePath('/actividades')
   revalidatePath('/')
 }
 
 export async function reorderActivities(ids: number[]): Promise<void> {
-  const res = await fetch(`${API_URL}/api/v1/activities/reorder`, {
+  const res = await serverFetch('/api/v1/activities/reorder', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids }),
   })
   if (!res.ok) throw new Error('Error al reordenar actividades')

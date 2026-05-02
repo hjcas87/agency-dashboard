@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { serverFetch } from '@/lib/shared/server-fetch'
 
 export interface ProposalTask {
   name: string
@@ -33,7 +33,7 @@ export interface ProposalRecord {
 
 export async function getProposals(): Promise<ProposalRecord[]> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/`, {
+    const res = await serverFetch(`/api/v1/proposals/`, {
       cache: 'no-store',
     })
     if (!res.ok) return []
@@ -44,7 +44,7 @@ export async function getProposals(): Promise<ProposalRecord[]> {
 }
 
 export async function getProposal(id: number): Promise<ProposalRecord & { tasks: ProposalTask[] }> {
-  const res = await fetch(`${API_URL}/api/v1/proposals/${id}`, {
+  const res = await serverFetch(`/api/v1/proposals/${id}`, {
     cache: 'no-store',
   })
   if (!res.ok) {
@@ -64,7 +64,7 @@ export interface ProposalCreateData {
 
 export async function createProposalAction(data: ProposalCreateData) {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/`, {
+    const res = await serverFetch(`/api/v1/proposals/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -84,7 +84,7 @@ export async function createProposalAction(data: ProposalCreateData) {
 
 export async function updateProposalAction(id: number, data: ProposalCreateData) {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/${id}`, {
+    const res = await serverFetch(`/api/v1/proposals/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -104,7 +104,7 @@ export async function updateProposalAction(id: number, data: ProposalCreateData)
 
 export async function updateProposalStatusAction(id: number, status: string) {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/${id}/status`, {
+    const res = await serverFetch(`/api/v1/proposals/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -124,7 +124,7 @@ export async function updateProposalStatusAction(id: number, status: string) {
 
 export async function deleteProposalAction(id: number): Promise<string | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/${id}`, {
+    const res = await serverFetch(`/api/v1/proposals/${id}`, {
       method: 'DELETE',
     })
 
@@ -141,7 +141,7 @@ export async function deleteProposalAction(id: number): Promise<string | null> {
 
 export async function getClientsForSelect(): Promise<{ id: number; name: string }[]> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/`, {
+    const res = await serverFetch(`/api/v1/clients/`, {
       cache: 'no-store',
     })
     if (!res.ok) return []

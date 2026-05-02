@@ -49,24 +49,11 @@ import {
 } from '@/components/core/ui/table'
 import { ACTIVITY_MESSAGES } from '@/lib/messages'
 
-function DragHandle({ id }: { id: number }) {
-  const { attributes, listeners } = useSortable({ id })
-  return (
-    <Button
-      {...attributes}
-      {...listeners}
-      variant="ghost"
-      size="icon"
-      className="size-7 text-muted-foreground hover:bg-transparent"
-    >
-      <IconGripVertical className="size-3 text-muted-foreground" />
-      <span className="sr-only">Reordenar</span>
-    </Button>
-  )
-}
-
+// DraggableRow registers the sortable ONCE and places the drag handle
+// inline — this avoids the double-useSortable bug where a separate
+// DragHandle component would register the same id a second time.
 function DraggableRow({ row, onClick }: { row: Row<ActivityRecord>; onClick: () => void }) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({
+  const { transform, transition, setNodeRef, isDragging, attributes, listeners } = useSortable({
     id: row.original.id,
   })
   return (
@@ -77,6 +64,19 @@ function DraggableRow({ row, onClick }: { row: Row<ActivityRecord>; onClick: () 
       style={{ transform: CSS.Transform.toString(transform), transition }}
       onClick={onClick}
     >
+      {/* Drag handle cell — stops click propagation so row navigation doesn't fire */}
+      <TableCell className="w-8" onClick={e => e.stopPropagation()}>
+        <Button
+          {...attributes}
+          {...listeners}
+          variant="ghost"
+          size="icon"
+          className="size-7 cursor-grab text-muted-foreground hover:bg-transparent"
+        >
+          <IconGripVertical className="size-3 text-muted-foreground" />
+          <span className="sr-only">Reordenar</span>
+        </Button>
+      </TableCell>
       {row.getVisibleCells().map(cell => (
         <TableCell
           key={cell.id}
@@ -113,17 +113,9 @@ export function WeekActivitiesWidget({ activities, currentUserId }: WeekActiviti
     return data.filter(a => a.assignee_id === currentUserId)
   }, [data, onlyMine, currentUserId])
 
+  // No drag column here — the handle is rendered directly in DraggableRow.
   const columns: ColumnDef<ActivityRecord>[] = React.useMemo(
     () => [
-      {
-        id: 'drag',
-        header: () => null,
-        cell: ({ row }) => (
-          <span data-no-navigate>
-            <DragHandle id={row.original.id} />
-          </span>
-        ),
-      },
       {
         id: 'done',
         header: () => null,
@@ -220,7 +212,7 @@ export function WeekActivitiesWidget({ activities, currentUserId }: WeekActiviti
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between px-1">
-        <span className="text-sm font-medium text-muted-foreground">Esta semana</span>
+        <span className="text-sm font-medium text-muted-foreground">Pendientes</span>
         <Button
           variant={onlyMine ? 'default' : 'outline'}
           size="sm"
@@ -242,6 +234,8 @@ export function WeekActivitiesWidget({ activities, currentUserId }: WeekActiviti
             <TableHeader className="sticky top-0 z-10 bg-muted">
               {table.getHeaderGroups().map(hg => (
                 <TableRow key={hg.id}>
+                  {/* Empty header for the drag handle column */}
+                  <TableHead className="w-8" />
                   {hg.headers.map(h => (
                     <TableHead key={h.id}>
                       {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
@@ -250,7 +244,7 @@ export function WeekActivitiesWidget({ activities, currentUserId }: WeekActiviti
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody className="**:data-[slot=table-cell]:first:w-8">
+            <TableBody>
               {table.getRowModel().rows.length ? (
                 <SortableContext items={dataIds} strategy={verticalListSortingStrategy}>
                   {table.getRowModel().rows.map(row => (
@@ -263,7 +257,7 @@ export function WeekActivitiesWidget({ activities, currentUserId }: WeekActiviti
                 </SortableContext>
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <TableCell colSpan={columns.length + 1} className="h-24 text-center">
                     <span className="text-muted-foreground">{ACTIVITY_MESSAGES.notFound}</span>
                   </TableCell>
                 </TableRow>

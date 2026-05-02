@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { serverFetch } from '@/lib/shared/server-fetch'
 
 // IvaCondition mirrors backend/app/shared/afip/enums.py::IvaCondition.
 // Kept as a string-union so the form can accept the raw codes the API
@@ -47,7 +47,7 @@ export type CuitLookupOutcome =
 
 export async function getClients(): Promise<ClientRecord[]> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/`, {
+    const res = await serverFetch(`/api/v1/clients/`, {
       cache: 'no-store',
     })
     if (!res.ok) return []
@@ -58,7 +58,7 @@ export async function getClients(): Promise<ClientRecord[]> {
 }
 
 export async function getClient(id: number): Promise<ClientRecord> {
-  const res = await fetch(`${API_URL}/api/v1/clients/${id}`, {
+  const res = await serverFetch(`/api/v1/clients/${id}`, {
     cache: 'no-store',
   })
   if (!res.ok) {
@@ -143,7 +143,7 @@ export async function createClientAction(formData: FormData) {
   }
 
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/`, {
+    const res = await serverFetch(`/api/v1/clients/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(buildClientBody(formData)),
@@ -175,7 +175,7 @@ export async function updateClientAction(id: number, formData: FormData) {
   }
 
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/${id}`, {
+    const res = await serverFetch(`/api/v1/clients/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(buildClientBody(formData)),
@@ -205,7 +205,7 @@ export async function lookupCuitInAfipAction(cuit: string): Promise<CuitLookupOu
     return { success: false, error: 'El CUIT debe tener 11 dígitos.', status: 400 }
   }
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/lookup-cuit/${normalized}`, {
+    const res = await serverFetch(`/api/v1/clients/lookup-cuit/${normalized}`, {
       cache: 'no-store',
     })
     if (!res.ok) {
@@ -225,7 +225,7 @@ export async function lookupCuitInAfipAction(cuit: string): Promise<CuitLookupOu
 
 export async function deleteClientAction(id: number): Promise<string | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/${id}`, {
+    const res = await serverFetch(`/api/v1/clients/${id}`, {
       method: 'DELETE',
     })
 
