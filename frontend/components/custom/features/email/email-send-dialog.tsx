@@ -1,8 +1,8 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
-import { IconMail, IconX, IconLoader2 } from "@tabler/icons-react";
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { IconMail, IconX, IconLoader2 } from '@tabler/icons-react'
 
 import {
   Dialog,
@@ -11,107 +11,113 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/core/ui/dialog";
-import { Button } from "@/components/core/ui/button";
-import { Label } from "@/components/core/ui/label";
-import { Input } from "@/components/core/ui/input";
-import { Textarea } from "@/components/core/ui/textarea";
-import { Checkbox } from "@/components/core/ui/checkbox";
-import { Separator } from "@/components/core/ui/separator";
+} from '@/components/core/ui/dialog'
+import { Button } from '@/components/core/ui/button'
+import { Label } from '@/components/core/ui/label'
+import { Input } from '@/components/core/ui/input'
+import { Textarea } from '@/components/core/ui/textarea'
+import { Checkbox } from '@/components/core/ui/checkbox'
+import { Separator } from '@/components/core/ui/separator'
 
-import { EmailSendRequest } from "@/lib/shared/email/types";
+import { EmailSendRequest } from '@/lib/shared/email/types'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 interface EmailSendDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  recipient?: string;
-  subject?: string;
-  proposalId?: number;
-  clientId?: number | null;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  recipient?: string
+  subject?: string
+  proposalId?: number
+  clientId?: number | null
 }
 
 export function EmailSendDialog({
   open,
   onOpenChange,
-  recipient: initialRecipient = "",
-  subject = "",
+  recipient: initialRecipient = '',
+  subject = '',
   proposalId,
   clientId,
 }: EmailSendDialogProps) {
-  const [to, setTo] = useState(initialRecipient);
-  const [emailSubject, setEmailSubject] = useState(subject);
-  const [body, setBody] = useState("");
-  const [attachPdf, setAttachPdf] = useState(!!proposalId);
-  const [sending, setSending] = useState(false);
-  const [loadingClient, setLoadingClient] = useState(false);
+  const [to, setTo] = useState(initialRecipient)
+  const [emailSubject, setEmailSubject] = useState(subject)
+  const [body, setBody] = useState('')
+  const [attachPdf, setAttachPdf] = useState(!!proposalId)
+  const [sending, setSending] = useState(false)
+  const [loadingClient, setLoadingClient] = useState(false)
 
-  const loadClientEmail = useCallback(async () => {
-    if (!clientId || to) return;
-    setLoadingClient(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/clients/${clientId}`);
-      if (res.ok) {
-        const client = await res.json();
-        if (client.email) {
-          setTo(client.email);
-        }
-      }
-    } catch {
-      // Silently fail — user can type manually
-    } finally {
-      setLoadingClient(false);
-    }
-  }, [clientId, to]);
-
+  // Reset the form to the props when the dialog opens. Runs only on
+  // open / props change — never on each keystroke (avoids the bug where
+  // `to` was overwritten on every character because loadClientEmail was
+  // re-created when `to` changed and re-triggered the init effect).
   useEffect(() => {
-    if (open) {
-      setTo(initialRecipient);
-      setEmailSubject(subject);
-      setAttachPdf(!!proposalId);
-      if (clientId && !initialRecipient) {
-        void loadClientEmail();
+    if (!open) return
+    setTo(initialRecipient)
+    setEmailSubject(subject)
+    setAttachPdf(!!proposalId)
+  }, [open, initialRecipient, subject, proposalId])
+
+  // Load the client's email when the dialog opens with a clientId but
+  // no initialRecipient. Independent from user typing — `to` is not in
+  // the deps, so editing the input does not retrigger this effect.
+  useEffect(() => {
+    if (!open || !clientId || initialRecipient) return
+    let cancelled = false
+    setLoadingClient(true)
+    ;(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/clients/${clientId}`)
+        if (cancelled || !res.ok) return
+        const client = await res.json()
+        if (client.email) setTo(client.email)
+      } catch {
+        // Silently fail — user can type manually.
+      } finally {
+        if (!cancelled) setLoadingClient(false)
       }
+    })()
+    return () => {
+      cancelled = true
     }
-  }, [open, initialRecipient, subject, proposalId, clientId, loadClientEmail]);
+  }, [open, clientId, initialRecipient])
 
   async function handleSend() {
     if (!to || !emailSubject || !body) {
-      toast.error("Por favor completa todos los campos obligatorios");
-      return;
+      toast.error('Por favor completa todos los campos obligatorios')
+      return
     }
 
-    setSending(true);
+    setSending(true)
     try {
       const request: EmailSendRequest = {
         to,
         subject: emailSubject,
         body,
         attach_proposal_pdf: attachPdf && proposalId ? proposalId : undefined,
-      };
+      }
 
       const endpoint = proposalId
         ? `/api/v1/email/proposals/${proposalId}/send`
-        : "/api/v1/email/send";
+        : '/api/v1/email/send'
 
       const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
-      });
+      })
 
       if (res.ok) {
-        toast.success("Email enviado exitosamente");
-        onOpenChange(false);
+        toast.success('Email enviado exitosamente')
+        onOpenChange(false)
       } else {
-        const error = await res.json().catch(() => ({ detail: "Error al enviar el email" }));
-        toast.error(error.detail || "Error al enviar el email");
+        const error = await res.json().catch(() => ({ detail: 'Error al enviar el email' }))
+        toast.error(error.detail || 'Error al enviar el email')
       }
     } catch (error) {
-      toast.error("Error al enviar el email");
+      toast.error('Error al enviar el email')
     } finally {
-      setSending(false);
+      setSending(false)
     }
   }
 
@@ -120,9 +126,7 @@ export function EmailSendDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Enviar Email</DialogTitle>
-          <DialogDescription>
-            Envía un email con el PDF adjunto al cliente
-          </DialogDescription>
+          <DialogDescription>Envía un email con el PDF adjunto al cliente</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -131,7 +135,7 @@ export function EmailSendDialog({
             <Input
               type="email"
               value={to}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={e => setTo(e.target.value)}
               placeholder="cliente@ejemplo.com"
             />
           </div>
@@ -140,7 +144,7 @@ export function EmailSendDialog({
             <Label>Asunto</Label>
             <Input
               value={emailSubject}
-              onChange={(e) => setEmailSubject(e.target.value)}
+              onChange={e => setEmailSubject(e.target.value)}
               placeholder="Asunto del email"
             />
           </div>
@@ -149,7 +153,7 @@ export function EmailSendDialog({
             <Label>Cuerpo del Email</Label>
             <Textarea
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={e => setBody(e.target.value)}
               placeholder="Estimado cliente..."
               rows={8}
             />
@@ -162,7 +166,7 @@ export function EmailSendDialog({
                 <Checkbox
                   id="attach-pdf"
                   checked={attachPdf}
-                  onCheckedChange={(checked) => setAttachPdf(!!checked)}
+                  onCheckedChange={checked => setAttachPdf(!!checked)}
                 />
                 <Label htmlFor="attach-pdf" className="text-sm">
                   Adjuntar PDF del presupuesto
@@ -193,5 +197,5 @@ export function EmailSendDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
