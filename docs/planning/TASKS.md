@@ -274,7 +274,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   4. Verificar en DB: `\d activities` muestra la estructura.
 - **Done**: tabla creada en DB.
 
-### [ ] T-002-11: Tests backend mínimos
+### [x] T-002-11: Tests backend mínimos
 
 - **Depende de**: T-002-10
 - **Doc**: 002, "Criterios de done"
@@ -288,7 +288,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   6. Test: reorder cambia sort_order correctamente.
 - **Done**: `make test` pasa, cobertura >80%.
 
-### [ ] T-002-12: Regenerar API types frontend
+### [x] T-002-12: Regenerar API types frontend
 
 - **Depende de**: T-002-11
 - **Doc**: CLAUDE.md, sección "Frontend API types"

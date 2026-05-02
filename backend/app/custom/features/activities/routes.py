@@ -12,7 +12,7 @@ from app.custom.features.activities.schemas import (
 from app.custom.features.activities.service import ActivityService
 from app.database import get_db
 
-router = APIRouter(prefix="/api/v1/activities", tags=["Activities"])
+router = APIRouter(prefix="/activities", tags=["Activities"])
 
 
 @router.get("", response_model=list[ActivityResponse])
