@@ -12,9 +12,14 @@ from sqlalchemy.orm import Session
 
 from app.custom.features.clients.models import Client
 from app.custom.features.clients.repository import ClientRepository
+from app.custom.features.invoices.issuer import ISSUER
+from app.custom.features.invoices.repository import InvoiceRepository
 from app.custom.features.proposals.models import Proposal
 from app.custom.features.proposals.repository import ProposalRepository
 from app.database import get_db
+from app.shared.afip.enums import DocType
+from app.shared.afip.models import AfipInvoiceLog
+from app.shared.afip.qr import build_qr_url, render_qr_png
 from app.shared.pdf.generator import PdfGenerator
 from app.shared.pdf.messages import (
     ALLOWED_LOGO_MIME_TYPES,
@@ -80,7 +85,9 @@ async def generate_proposal_pdf(
             "company": client.company,
             "email": client.email,
             "phone": client.phone,
-        } if client else None,
+        }
+        if client
+        else None,
         "tasks": [
             {
                 "name": task.name,
@@ -126,6 +133,124 @@ def _calculate_totals(proposal: Proposal) -> dict[str, str]:
         "Total ARS": f"$ {total_ars:,.2f}",
         "Total USD": f"US$ {total_usd:,.2f}",
     }
+
+
+@router.get("/invoices/{invoice_id}")
+async def generate_invoice_pdf(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Generate and stream the printed Factura PDF for an issued invoice.
+
+    The renderer in `shared/pdf/renderers/invoice.py` is agnostic — this
+    handler is the place that knows about *this* project's issuer
+    identity (loaded from `custom/features/invoices/issuer.py`) and
+    pulls AFIP audit data from `afip_invoice_log` to assemble the QR
+    + CAE block.
+    """
+    invoice_repo = InvoiceRepository(db)
+    client_repo = ClientRepository(db)
+
+    invoice = invoice_repo.get(invoice_id)
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Factura no encontrada")
+
+    log = db.query(AfipInvoiceLog).filter(AfipInvoiceLog.id == invoice.afip_invoice_log_id).first()
+    client = client_repo.get(invoice.client_id) if invoice.client_id else None
+
+    qr_url = ""
+    qr_png: bytes | None = None
+    if log and log.cae and log.receipt_number is not None and log.point_of_sale is not None:
+        qr_url = build_qr_url(
+            issue_date=invoice.issue_date,
+            issuer_cuit=ISSUER.cuit,
+            point_of_sale=log.point_of_sale,
+            receipt_type=invoice.receipt_type,
+            receipt_number=log.receipt_number,
+            total_amount=invoice.total_amount_ars,
+            currency_id="PES",
+            currency_quote=Decimal("1"),
+            receiver_doc_type=invoice.document_type,
+            receiver_doc_number=invoice.document_number,
+            cae=log.cae,
+        )
+        qr_png = render_qr_png(qr_url)
+
+    customer_doc_label = "CUIT" if invoice.document_type == int(DocType.CUIT) else "Doc."
+    customer_doc_number = str(invoice.document_number) if invoice.document_number else "0"
+    customer_legal_name = ""
+    customer_address = ""
+    customer_iva = ""
+    if client:
+        customer_legal_name = client.company or client.name or ""
+        customer_iva = client.iva_condition or ""
+
+    invoice_data = {
+        "issuer": {
+            "legal_name": ISSUER.legal_name,
+            "address": ISSUER.address,
+            "iva_condition_label": ISSUER.iva_condition_label,
+            "cuit": ISSUER.cuit,
+            "gross_income": ISSUER.gross_income,
+            "activity_start_date": ISSUER.activity_start_date,
+            "logo_path": str(ISSUER.logo_path) if ISSUER.logo_path else None,
+        },
+        "customer": {
+            "legal_name": customer_legal_name,
+            "doc_label": customer_doc_label,
+            "doc_number": customer_doc_number,
+            "iva_condition_label": customer_iva,
+            "address": customer_address,
+        },
+        "invoice": {
+            "receipt_type": invoice.receipt_type,
+            "point_of_sale": log.point_of_sale if log else 0,
+            "receipt_number": log.receipt_number if log else 0,
+            "issue_date": invoice.issue_date,
+            "period_from": invoice.service_date_from or invoice.issue_date,
+            "period_to": invoice.service_date_to or invoice.issue_date,
+            "due_date": invoice.issue_date,
+            "condition_of_sale": "Otra",
+        },
+        "items": [
+            {
+                "code": str(idx + 1).zfill(4),
+                "name": item.get("name", ""),
+                "quantity": Decimal("1"),
+                "unit": "unidades",
+                "unit_price": item.get("amount", "0"),
+                "discount_pct": Decimal("0"),
+                "discount_amount": Decimal("0"),
+                "subtotal": item.get("amount", "0"),
+            }
+            for idx, item in enumerate(invoice.line_items or [])
+        ],
+        "totals": {
+            "subtotal": invoice.total_amount_ars,
+            "other_taxes": Decimal("0"),
+            "total": invoice.total_amount_ars,
+        },
+        "afip": {
+            "cae": log.cae if log else "",
+            "cae_expiration": log.cae_expiration if log else None,
+            "qr_png_bytes": qr_png,
+            "qr_url": qr_url,
+            "page_label": "1/1",
+        },
+    }
+
+    try:
+        generator = PdfGenerator(db)
+        pdf_bytes = generator.generate_invoice(invoice_data)
+        filename = f"factura_{invoice_id}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"inline; filename={filename}"},
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Failed to render invoice PDF id=%s: %s", invoice_id, exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/templates", response_model=PdfTemplateResponse)

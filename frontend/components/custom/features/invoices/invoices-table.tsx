@@ -1,6 +1,7 @@
 'use client'
 
-import { IconCheck, IconX } from '@tabler/icons-react'
+import { useState } from 'react'
+import { IconCheck, IconFileText, IconMail, IconX } from '@tabler/icons-react'
 
 import { Badge } from '@/components/core/ui/badge'
 import { Button } from '@/components/core/ui/button'
@@ -14,7 +15,11 @@ import {
   TableRow,
 } from '@/components/core/ui/table'
 
+import { InvoiceEmailDialog } from '@/components/custom/features/invoices/invoice-email-dialog'
+
 import type { InvoiceRecord } from '@/app/actions/custom/invoices'
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 interface InvoicesTableProps {
   invoices: InvoiceRecord[]
@@ -44,6 +49,8 @@ function formatReceiptNumber(invoice: InvoiceRecord): string {
 }
 
 export function InvoicesTable({ invoices }: InvoicesTableProps) {
+  const [emailTarget, setEmailTarget] = useState<InvoiceRecord | null>(null)
+
   if (invoices.length === 0) {
     return (
       <Empty>
@@ -58,63 +65,94 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Número</TableHead>
-          <TableHead>Tipo</TableHead>
-          <TableHead>Cliente</TableHead>
-          <TableHead>Fecha</TableHead>
-          <TableHead className="text-right">Total ARS</TableHead>
-          <TableHead>CAE</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead className="w-24" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {invoices.map(invoice => {
-          const total = parseFloat(invoice.total_amount_ars)
-          const status = invoice.afip_success
-            ? invoice.afip_observations.length > 0
-              ? 'Con observaciones'
-              : 'Aprobada'
-            : 'Rechazada'
-          const statusVariant = invoice.afip_success
-            ? invoice.afip_observations.length > 0
-              ? ('outline' as const)
-              : ('default' as const)
-            : ('destructive' as const)
-          return (
-            <TableRow key={invoice.id}>
-              <TableCell className="font-mono text-sm">{formatReceiptNumber(invoice)}</TableCell>
-              <TableCell>
-                {RECEIPT_TYPE_LABELS[invoice.receipt_type] ?? `Tipo ${invoice.receipt_type}`}
-              </TableCell>
-              <TableCell>
-                {invoice.client_name ?? <span className="text-muted-foreground">—</span>}
-              </TableCell>
-              <TableCell>{invoice.issue_date}</TableCell>
-              <TableCell className="text-right">
-                {total.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
-              </TableCell>
-              <TableCell className="font-mono text-xs">
-                {invoice.cae ? invoice.cae : <span className="text-muted-foreground">—</span>}
-              </TableCell>
-              <TableCell>
-                <Badge variant={statusVariant} className="gap-1">
-                  {invoice.afip_success ? <IconCheck /> : <IconX />}
-                  {status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Button asChild variant="ghost" size="sm">
-                  <a href={`/invoices/${invoice.id}`}>Ver</a>
-                </Button>
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Número</TableHead>
+            <TableHead>Tipo</TableHead>
+            <TableHead>Cliente</TableHead>
+            <TableHead>Fecha</TableHead>
+            <TableHead className="text-right">Total ARS</TableHead>
+            <TableHead>CAE</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead className="w-24" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {invoices.map(invoice => {
+            const total = parseFloat(invoice.total_amount_ars)
+            const status = invoice.afip_success
+              ? invoice.afip_observations.length > 0
+                ? 'Con observaciones'
+                : 'Aprobada'
+              : 'Rechazada'
+            const statusVariant = invoice.afip_success
+              ? invoice.afip_observations.length > 0
+                ? ('outline' as const)
+                : ('default' as const)
+              : ('destructive' as const)
+            return (
+              <TableRow key={invoice.id}>
+                <TableCell className="font-mono text-sm">{formatReceiptNumber(invoice)}</TableCell>
+                <TableCell>
+                  {RECEIPT_TYPE_LABELS[invoice.receipt_type] ?? `Tipo ${invoice.receipt_type}`}
+                </TableCell>
+                <TableCell>
+                  {invoice.client_name ?? <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell>{invoice.issue_date}</TableCell>
+                <TableCell className="text-right">
+                  {total.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
+                </TableCell>
+                <TableCell className="font-mono text-xs">
+                  {invoice.cae ? invoice.cae : <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={statusVariant} className="gap-1">
+                    {invoice.afip_success ? <IconCheck /> : <IconX />}
+                    {status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button asChild variant="ghost" size="icon">
+                      <a
+                        href={`${API_BASE}/api/v1/pdf/invoices/${invoice.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Ver PDF"
+                      >
+                        <IconFileText data-icon="inline-start" />
+                        <span className="sr-only">Ver PDF</span>
+                      </a>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEmailTarget(invoice)}
+                      title="Enviar por email"
+                    >
+                      <IconMail data-icon="inline-start" />
+                      <span className="sr-only">Enviar por email</span>
+                    </Button>
+                    <Button asChild variant="ghost" size="sm">
+                      <a href={`/invoices/${invoice.id}`}>Detalle</a>
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+      <InvoiceEmailDialog
+        invoice={emailTarget}
+        open={emailTarget !== null}
+        onOpenChange={open => {
+          if (!open) setEmailTarget(null)
+        }}
+      />
+    </>
   )
 }

@@ -76,7 +76,9 @@ async def send_email(
                 "company": client.company,
                 "email": client.email,
                 "phone": client.phone,
-            } if client else None,
+            }
+            if client
+            else None,
             "tasks": [
                 {
                     "name": task.name,
@@ -98,11 +100,13 @@ async def send_email(
             logger.info(LOG_MESSAGES["pdf_attachment_generating"].format(id=proposal.id))
             generator = PdfGenerator(db)
             pdf_bytes = generator.generate_proposal(proposal_data)
-            attachments.append(Attachment(
-                filename=f"presupuesto_{proposal.id}.pdf",
-                content=pdf_bytes,
-                mime_type="application/pdf",
-            ))
+            attachments.append(
+                Attachment(
+                    filename=f"presupuesto_{proposal.id}.pdf",
+                    content=pdf_bytes,
+                    mime_type="application/pdf",
+                )
+            )
             logger.info(LOG_MESSAGES["pdf_attachment_generated"].format(id=proposal.id))
         except Exception as e:
             logger.error(LOG_MESSAGES["pdf_attachment_error"].format(error=str(e)))
@@ -140,6 +144,48 @@ async def send_proposal_email(
     """
     request.attach_proposal_pdf = proposal_id
     return await send_email(request, db)
+
+
+@router.post("/invoices/{invoice_id}/send")
+async def send_invoice_email(
+    invoice_id: int,
+    request: EmailSendRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Send an invoice by email with the printed Factura PDF attached."""
+    from app.custom.features.invoices.repository import InvoiceRepository
+    from app.custom.features.pdf.routes import generate_invoice_pdf
+
+    invoice_repo = InvoiceRepository(db)
+    invoice = invoice_repo.get(invoice_id)
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Factura no encontrada")
+
+    # Re-use the PDF endpoint logic to build the attachment.
+    pdf_response = await generate_invoice_pdf(invoice_id, db)
+    pdf_bytes = pdf_response.body if hasattr(pdf_response, "body") else b""
+    attachments = [
+        Attachment(
+            filename=f"factura_{invoice_id}.pdf",
+            content=bytes(pdf_bytes),
+            mime_type="application/pdf",
+        )
+    ]
+
+    email_service = get_email_service()
+    logger.info(LOG_MESSAGES["email_sending"].format(to=request.to))
+    success = await email_service.send_email(
+        to=request.to,
+        subject=request.subject,
+        body=request.body,
+        html_body=request.html_body,
+        attachments=attachments,
+        cc=request.cc,
+    )
+    if not success:
+        raise HTTPException(status_code=500, detail=ERRORS["send_failed"])
+    logger.info(LOG_MESSAGES["email_sent"].format(to=request.to))
+    return {"message": RESPONSES["email_sent"]}
 
 
 @router.get("/templates", response_model=list[EmailTemplateResponse])
