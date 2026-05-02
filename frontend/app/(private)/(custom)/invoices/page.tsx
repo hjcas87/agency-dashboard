@@ -33,16 +33,20 @@ export default async function InvoicesPage() {
           <TabsTrigger value="emitted">Emitidas ({invoices.length})</TabsTrigger>
           <TabsTrigger value="billable">Presupuestos facturables ({billable.length})</TabsTrigger>
         </TabsList>
+        {/* `pt-6` overrides the CardContent default `pt-0` — that default
+            assumes a CardHeader is providing the top padding, but here the
+            tabs sit above and the card is headerless, so the toolbar would
+            otherwise kiss the top border. */}
         <TabsContent value="emitted">
           <Card>
-            <CardContent>
+            <CardContent className="pt-6">
               <InvoicesTable invoices={invoices} />
             </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="billable">
           <Card>
-            <CardContent>
+            <CardContent className="pt-6">
               <BillableProposalsTable proposals={billable} />
             </CardContent>
           </Card>

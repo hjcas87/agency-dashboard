@@ -84,7 +84,10 @@ export function ClientCombobox({
           <IconChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent
+        className="w-(--radix-popover-trigger-width) min-w-(--radix-popover-trigger-width) p-0"
+        align="start"
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Buscar por nombre, empresa, email o CUIT..."
