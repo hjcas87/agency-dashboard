@@ -10,11 +10,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.custom.features.clients.models import Client
 from app.custom.features.clients.repository import ClientRepository
 from app.custom.features.invoices.issuer import ISSUER
 from app.custom.features.invoices.repository import InvoiceRepository
-from app.custom.features.proposals.models import Proposal
+from app.custom.features.proposals.quote.overlay import QuoteOverlayBuilder
 from app.custom.features.proposals.repository import ProposalRepository
 from app.database import get_db
 from app.shared.afip.enums import iva_condition_label
@@ -53,86 +52,50 @@ async def generate_proposal_pdf(
     db: Session = Depends(get_db),
 ) -> Response:
     """
-    Generate and stream a proposal PDF.
+    Stream the proposal PDF.
 
-    Args:
-        proposal_id: ID of the proposal
-
-    Returns:
-        PDF file streamed with Content-Disposition: inline
+    During the layout-validation phase this returns the 5-page quote
+    booklet with the debug zones painted in red. Real text rendering
+    will plug into the same `QuoteOverlayBuilder` behind this URL, so
+    the frontend can keep pointing at the same endpoint.
     """
     proposal_repo = ProposalRepository(db)
-    client_repo = ClientRepository(db)
-
     proposal = proposal_repo.get_with_tasks(proposal_id)
     if not proposal:
         raise HTTPException(status_code=404, detail=ERRORS["proposal_not_found"])
 
-    client: Client | None = None
-    if proposal.client_id:
-        client = client_repo.get(proposal.client_id)
+    logger.info(LOG_MESSAGES["proposal_generating"].format(id=proposal_id))
+    pdf_bytes = QuoteOverlayBuilder().build_debug()
+    logger.info(LOG_MESSAGES["proposal_generated"].format(id=proposal_id))
 
-    # Build data dict for PDF generator
-    proposal_dict = {
-        "proposal": {
-            "id": proposal.id,
-            "name": proposal.name,
-            "status": str(proposal.status),
-            "created_at": proposal.created_at.isoformat(),
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=presupuesto_{proposal_id}.pdf",
         },
-        "client": {
-            "name": client.name,
-            "company": client.company,
-            "email": client.email,
-            "phone": client.phone,
-        }
-        if client
-        else None,
-        "tasks": [
-            {
-                "name": task.name,
-                "description": task.description,
-                "hours": float(task.hours),
-            }
-            for task in proposal.tasks
-        ],
-        "totals": _calculate_totals(proposal),
-    }
-
-    try:
-        logger.info(LOG_MESSAGES["proposal_generating"].format(id=proposal_id))
-        generator = PdfGenerator(db)
-        pdf_bytes = generator.generate_proposal(proposal_dict)
-        logger.info(LOG_MESSAGES["proposal_generated"].format(id=proposal_id))
-
-        return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f"inline; filename=presupuesto_{proposal_id}.pdf",
-            },
-        )
-    except Exception as e:
-        logger.exception(LOG_MESSAGES["generation_error"].format(id=proposal_id, error=str(e)))
-        error_detail = ERRORS["generation_failed"].format(error=str(e))
-        raise HTTPException(status_code=500, detail=error_detail) from e
+    )
 
 
-def _calculate_totals(proposal: Proposal) -> dict[str, str]:
-    """Calculate totals for PDF display."""
-    total_hours = sum((t.hours for t in proposal.tasks), Decimal("0"))
-    subtotal_ars = total_hours * proposal.hourly_rate_ars
-    adjustment_amount_ars = subtotal_ars * (proposal.adjustment_percentage / Decimal("100"))
-    total_ars = subtotal_ars + adjustment_amount_ars
-    total_usd = total_ars / proposal.exchange_rate if proposal.exchange_rate else Decimal("0")
+@router.get("/proposals/quote-overlay/preview")
+async def preview_quote_overlay() -> Response:
+    """
+    Stream a debug build of the 5-page quote booklet with every
+    layout zone painted in red, without requiring a real proposal.
 
-    return {
-        "Total Horas": f"{float(total_hours):.2f} hs",
-        "Subtotal ARS": f"$ {subtotal_ars:,.2f}",
-        f"Ajuste ({float(proposal.adjustment_percentage):.1f}%)": f"$ {adjustment_amount_ars:,.2f}",
-        "Total ARS": f"$ {total_ars:,.2f}",
-        "Total USD": f"US$ {total_usd:,.2f}",
-    }
+    Useful while iterating on layout coordinates: the operator can
+    refresh this URL and see the zones move around without going
+    through the proposals UI.
+    """
+    builder = QuoteOverlayBuilder()
+    pdf_bytes = builder.build_debug()
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": "inline; filename=quote_overlay_preview.pdf",
+        },
+    )
 
 
 @router.get("/invoices/{invoice_id}")

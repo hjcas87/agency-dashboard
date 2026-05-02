@@ -40,6 +40,7 @@ dependencies = [
     "aiosmtplib>=5.1.0",
     "reportlab>=4.4.10",
     "qrcode[pil]>=8.2",
+    "pypdf>=6.10.2",
 ]
 
 [build-system]
