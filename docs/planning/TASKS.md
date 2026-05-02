@@ -149,7 +149,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
 **Doc**: `docs/planning/002-actividades.md`
 **Orden**: después de 003. Es la más grande.
 
-### [ ] T-002-0: Verificar / crear endpoint `GET /api/v1/users`
+### [x] T-002-0: Verificar / crear endpoint `GET /api/v1/users`
 
 - **Depende de**: nada
 - **Doc**: 002, sección "Riesgos / preguntas abiertas"
@@ -160,7 +160,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. Si NO existe: crear endpoint en `users` core que devuelva `list[UserListResponse]` con esos campos. **Ojo**: este es un cambio en `core/`, requiere ir por branch `dev` (ver CLAUDE.md "Git workflow"). Si el agente no puede hacer core changes, parar y avisar.
 - **Done**: endpoint disponible y devuelve los campos requeridos.
 
-### [ ] T-002-1: Crear estructura backend de feature `activities`
+### [x] T-002-1: Crear estructura backend de feature `activities`
 
 - **Depende de**: nada
 - **Doc**: 002, sección "Componentes"
@@ -170,7 +170,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   2. Crear archivos vacíos: `__init__.py`, `models.py`, `schemas.py`, `service.py`, `repository.py`, `routes.py`, `constants.py`.
 - **Done**: estructura existe.
 
-### [ ] T-002-2: Constantes de `activities`
+### [x] T-002-2: Constantes de `activities`
 
 - **Depende de**: T-002-1
 - **Doc**: 002, sección "Datos / migrations"
@@ -180,7 +180,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   2. Definir mensajes de error/éxito (mensajes de la feature, no inline).
 - **Done**: enum importable.
 
-### [ ] T-002-3: Modelo `Activity`
+### [x] T-002-3: Modelo `Activity`
 
 - **Depende de**: T-002-2
 - **Doc**: 002, sección "Datos / migrations"
@@ -192,7 +192,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   4. Constraint único compuesto: `UniqueConstraint('origin', 'external_id', name='uq_activity_origin_external')` (PostgreSQL ignora rows con `NULL` en columnas del UNIQUE por default — verificar; si no, usar índice parcial).
 - **Done**: modelo compila.
 
-### [ ] T-002-4: Registrar modelo en `app/models.py`
+### [x] T-002-4: Registrar modelo en `app/models.py`
 
 - **Depende de**: T-002-3
 - **Doc**: CLAUDE.md sección "Backend layout"
@@ -202,7 +202,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   2. Agregar a `__all__`.
 - **Done**: import explícito y `__all__` actualizados.
 
-### [ ] T-002-5: Schemas Pydantic de `activities`
+### [x] T-002-5: Schemas Pydantic de `activities`
 
 - **Depende de**: T-002-3
 - **Doc**: 002, sección "API"
@@ -215,7 +215,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   5. `SyncResponse` (para doc 004 después): `synced`, `created`, `updated`, `removed`, `last_sync_at`.
 - **Done**: schemas importables.
 
-### [ ] T-002-6: Repository de `activities`
+### [x] T-002-6: Repository de `activities`
 
 - **Depende de**: T-002-5
 - **Doc**: 002, sección "API"
@@ -226,7 +226,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. Filtros en `list()`: `assignee_id`, `show_done`, `week=current` (lunes-domingo de la semana actual), `origin`.
 - **Done**: métodos importables y testeable manualmente vía REPL.
 
-### [ ] T-002-7: Service de `activities`
+### [x] T-002-7: Service de `activities`
 
 - **Depende de**: T-002-6
 - **Doc**: 002, secciones "API" y "Riesgos"
@@ -240,7 +240,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   6. Validación: las activities con `origin=meeting` solo permiten editar `done_at`, `sort_order`, `assignee_id`. Si vienen otros campos en update, ignorarlos o rechazar (decidir: rechazar con 400 más claro).
 - **Done**: service compila y maneja todos los casos.
 
-### [ ] T-002-8: Routes de `activities`
+### [x] T-002-8: Routes de `activities`
 
 - **Depende de**: T-002-7
 - **Doc**: 002, sección "API"
@@ -252,7 +252,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   4. Mensajes de error desde `constants.py`.
 - **Done**: rutas declaradas.
 
-### [ ] T-002-9: Registrar router en `custom/features/__init__.py`
+### [x] T-002-9: Registrar router en `custom/features/__init__.py`
 
 - **Depende de**: T-002-8
 - **Doc**: CLAUDE.md, sección "Backend layout"
@@ -262,7 +262,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   2. Agregar a la lista `routers`.
 - **Done**: router registrado.
 
-### [ ] T-002-10: Migration `activities`
+### [x] T-002-10: Migration `activities`
 
 - **Depende de**: T-002-9
 - **Doc**: 002, sección "Datos / migrations"

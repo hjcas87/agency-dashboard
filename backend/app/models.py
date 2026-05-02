@@ -15,6 +15,7 @@ comments — each `# noqa` reads like surrender, `__all__` reads like
 intent."""
 
 from app.core.features.users.models import User
+from app.custom.features.activities.models import Activity
 from app.custom.features.clients.models import Client, ClientEmail
 from app.custom.features.invoices.models import Invoice
 from app.custom.features.proposals.models import Proposal, ProposalTask
@@ -23,6 +24,7 @@ from app.shared.email.models import EmailTemplate
 from app.shared.pdf.models import PdfTemplate
 
 __all__ = [
+    "Activity",
     "AfipInvoiceLog",
     "AfipToken",
     "Client",
