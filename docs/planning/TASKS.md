@@ -494,7 +494,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
 **Doc**: `docs/planning/005-calidad-batch.md`
 **Orden**: cierre de la temporada.
 
-### [ ] T-005-1: Toggle "Incluir anuladas" en filtros de facturas
+### [x] T-005-1: Toggle "Incluir anuladas" en filtros de facturas
 
 - **Depende de**: nada
 - **Doc**: 005, sección "005-A"
@@ -506,7 +506,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   4. Cuando true: muestra todo (estado actual).
 - **Done**: toggle funciona, anuladas se ocultan por defecto, aparecen al activar.
 
-### [ ] T-005-2: Migration `UNIQUE(client_id, email)` en `client_emails`
+### [x] T-005-2: Migration `UNIQUE(client_id, email)` en `client_emails`
 
 - **Depende de**: nada
 - **Doc**: 005, sección "005-B"
@@ -517,7 +517,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. En el service de clients, capturar `IntegrityError` al insertar email y devolver mensaje "Ese email ya está cargado para este cliente" en lugar del error genérico.
 - **Done**: migration aplicada, intentar duplicar email da mensaje claro.
 
-### [ ] T-005-3: Sequence Postgres para numeración X
+### [x] T-005-3: Sequence Postgres para numeración X
 
 - **Depende de**: nada
 - **Doc**: 005, sección "005-C"
@@ -528,7 +528,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   3. Test: dos calls concurrentes (o consecutivas en test) no devuelven el mismo número.
 - **Done**: nuevo X usa sequence, números siguen correlativos.
 
-### [ ] T-005-4: Lint pre-existente en `app/main.py`
+### [x] T-005-4: Lint pre-existente en `app/main.py`
 
 - **Depende de**: nada
 - **Doc**: 005, sección "005-D"
@@ -540,7 +540,7 @@ Lista ordenada de tareas atómicas para ejecutar las features 003, 002, 004 y 00
   4. `make lint` debe pasar.
 - **Done**: `make lint` pasa.
 
-### [ ] T-005-5: Verificación final
+### [x] T-005-5: Verificación final
 
 - **Depende de**: T-005-1, T-005-2, T-005-3, T-005-4
 - **Pasos**:
