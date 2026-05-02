@@ -57,6 +57,7 @@ dev = [
     "isort==5.13.2",
     "mypy==1.7.1",
     "ruff==0.1.8",
+    "fonttools>=4.62.1",
 ]
 
 [tool.pytest.ini_options]

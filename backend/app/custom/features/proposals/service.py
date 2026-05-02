@@ -14,7 +14,12 @@ from app.custom.features.proposals.messages import (
     ERR_TRANSITION_FORBIDDEN,
     STATUS_LABELS,
 )
-from app.custom.features.proposals.models import Proposal, ProposalStatus, ProposalTask
+from app.custom.features.proposals.models import (
+    Proposal,
+    ProposalCurrency,
+    ProposalStatus,
+    ProposalTask,
+)
 from app.custom.features.proposals.repository import ProposalRepository, ProposalTaskRepository
 from app.custom.features.proposals.schemas import (
     ProposalCreate,
@@ -111,9 +116,14 @@ class ProposalService:
             status=proposal.status.value
             if isinstance(proposal.status, ProposalStatus)
             else proposal.status,
+            currency=proposal.currency.value
+            if isinstance(proposal.currency, ProposalCurrency)
+            else proposal.currency,
             hourly_rate_ars=proposal.hourly_rate_ars,
             exchange_rate=proposal.exchange_rate,
             adjustment_percentage=proposal.adjustment_percentage,
+            estimated_days=proposal.estimated_days,
+            deliverables_summary=proposal.deliverables_summary,
             total_hours=totals["total_hours"],
             subtotal_ars=totals["subtotal_ars"],
             adjustment_amount_ars=totals["adjustment_amount_ars"],
@@ -158,9 +168,12 @@ class ProposalService:
         proposal = Proposal(
             name=data.name,
             client_id=data.client_id,
+            currency=ProposalCurrency(data.currency),
             hourly_rate_ars=data.hourly_rate_ars,
             exchange_rate=data.exchange_rate,
             adjustment_percentage=data.adjustment_percentage,
+            estimated_days=data.estimated_days,
+            deliverables_summary=data.deliverables_summary,
             status=ProposalStatus.DRAFT,
         )
         self.db.add(proposal)
@@ -195,6 +208,8 @@ class ProposalService:
 
         update_data = data.model_dump(exclude_unset=True)
         tasks_data = update_data.pop("tasks", None)
+        if "currency" in update_data:
+            update_data["currency"] = ProposalCurrency(update_data["currency"])
 
         for field, value in update_data.items():
             setattr(proposal, field, value)

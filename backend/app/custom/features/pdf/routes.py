@@ -13,8 +13,10 @@ from sqlalchemy.orm import Session
 from app.custom.features.clients.repository import ClientRepository
 from app.custom.features.invoices.issuer import ISSUER
 from app.custom.features.invoices.repository import InvoiceRepository
-from app.custom.features.proposals.quote.overlay import QuoteOverlayBuilder
+from app.custom.features.proposals.models import ProposalCurrency
+from app.custom.features.proposals.quote.overlay import QuoteData, QuoteOverlayBuilder, QuoteTask
 from app.custom.features.proposals.repository import ProposalRepository
+from app.custom.features.proposals.service import ProposalService
 from app.database import get_db
 from app.shared.afip.enums import iva_condition_label
 from app.shared.afip.models import AfipInvoiceLog
@@ -51,21 +53,30 @@ async def generate_proposal_pdf(
     proposal_id: int,
     db: Session = Depends(get_db),
 ) -> Response:
-    """
-    Stream the proposal PDF.
-
-    During the layout-validation phase this returns the 5-page quote
-    booklet with the debug zones painted in red. Real text rendering
-    will plug into the same `QuoteOverlayBuilder` behind this URL, so
-    the frontend can keep pointing at the same endpoint.
-    """
+    """Stream the 5-page client-facing quote PDF for a proposal."""
     proposal_repo = ProposalRepository(db)
     proposal = proposal_repo.get_with_tasks(proposal_id)
     if not proposal:
         raise HTTPException(status_code=404, detail=ERRORS["proposal_not_found"])
 
+    totals = ProposalService.calculate_totals(proposal, proposal.tasks)
+    currency = (
+        proposal.currency.value
+        if isinstance(proposal.currency, ProposalCurrency)
+        else str(proposal.currency)
+    )
+    total_amount = totals["total_usd"] if currency == "USD" else totals["total_ars"]
+
+    quote_data = QuoteData(
+        tasks=[QuoteTask(name=t.name, description=t.description) for t in proposal.tasks],
+        deliverables_summary=proposal.deliverables_summary,
+        estimated_days=proposal.estimated_days,
+        total_amount=total_amount,
+        currency=currency,
+    )
+
     logger.info(LOG_MESSAGES["proposal_generating"].format(id=proposal_id))
-    pdf_bytes = QuoteOverlayBuilder().build_debug()
+    pdf_bytes = QuoteOverlayBuilder().build(quote_data)
     logger.info(LOG_MESSAGES["proposal_generated"].format(id=proposal_id))
 
     return Response(
@@ -73,27 +84,6 @@ async def generate_proposal_pdf(
         media_type="application/pdf",
         headers={
             "Content-Disposition": f"inline; filename=presupuesto_{proposal_id}.pdf",
-        },
-    )
-
-
-@router.get("/proposals/quote-overlay/preview")
-async def preview_quote_overlay() -> Response:
-    """
-    Stream a debug build of the 5-page quote booklet with every
-    layout zone painted in red, without requiring a real proposal.
-
-    Useful while iterating on layout coordinates: the operator can
-    refresh this URL and see the zones move around without going
-    through the proposals UI.
-    """
-    builder = QuoteOverlayBuilder()
-    pdf_bytes = builder.build_debug()
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": "inline; filename=quote_overlay_preview.pdf",
         },
     )
 

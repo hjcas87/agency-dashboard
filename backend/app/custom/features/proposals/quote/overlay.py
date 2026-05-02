@@ -1,110 +1,151 @@
 """
 Quote PDF overlay engine.
 
-Generates the 5-page client-facing quote booklet by drawing a
-ReportLab-generated transparent layer on top of each base PDF asset
-and merging the result with `pypdf`.
+Renders the dynamic content layer (task list, deliverables summary,
+total amount, estimated days) on top of 5 designer-built base PDF
+assets and merges everything into a single 5-page client booklet.
 
-Right now only `build_debug()` is wired up — it paints every layout
-zone in red so the operator can visually validate the coordinate
-system before any text rendering is added.
+Text style is fixed by the design source: Open Sans Bold, 12 pt, white.
+Layout zones live in `layout.py` and every drawing is scoped to those
+zones — nothing is drawn outside them.
 """
+from dataclasses import dataclass
+from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 from pypdf import PageObject, PdfReader, PdfWriter
-from reportlab.lib.colors import Color
+from reportlab.lib.colors import white
+from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas as rl_canvas
+from reportlab.platypus import Frame, Paragraph
 
 from app.core.logging_config import get_logger
 from app.custom.features.proposals.quote.layout import (
     A4_HEIGHT_CM,
+    A4_WIDTH_CM,
+    ASSET_DELIVERABLES,
     ASSET_ORDER,
-    ZONES_BY_ASSET,
+    ASSET_QUOTE_BASE,
+    DELIVERABLES_CONTAINER,
+    DELIVERABLES_DAYS_FIELD,
+    DELIVERABLES_TOTAL_FIELD,
+    DELIVERABLES_TOTAL_RIGHT_MARGIN_CM,
+    QUOTE_BASE_CONTAINER,
     LayoutZone,
 )
 
 logger = get_logger(__name__)
 
 ASSETS_DIR = Path(__file__).parent / "assets"
+FONTS_DIR = ASSETS_DIR / "fonts"
 
-# ── Debug palette ───────────────────────────────────────────────
-# Container fill is intentionally lighter than field fill so the
-# operator can immediately tell apart the "useful area" from a
-# concrete one-liner field.
-_CONTAINER_FILL = Color(1, 0, 0, alpha=0.15)
-_CONTAINER_BORDER = Color(0.85, 0, 0, alpha=1.0)
-_INNER_BORDER = Color(0.5, 0, 0, alpha=0.9)
-_FIELD_FILL = Color(1, 0, 0, alpha=0.40)
-_FIELD_BORDER = Color(0.85, 0, 0, alpha=1.0)
-
-_BORDER_WIDTH_PT = 0.8
-_INNER_DASH = (3, 2)
+# ── Typography (mirrors the design source) ──────────────────────
+FONT_NAME = "OpenSans-Bold"
+FONT_PATH = FONTS_DIR / "OpenSans-Bold.ttf"
+FONT_SIZE_PT = 12
+LINE_LEADING_PT = 14
 
 
+def _ensure_font_registered() -> None:
+    """Idempotently register Open Sans Bold with ReportLab."""
+    if FONT_NAME not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont(FONT_NAME, str(FONT_PATH)))
+
+
+# ── Coordinate helpers ──────────────────────────────────────────
 def cm_to_pt(value_cm: float) -> float:
     """Convert centimeters to PDF points (1 cm == 28.3464 pt)."""
     return value_cm * cm
 
 
 def top_to_y_pt(top_cm: float, height_cm: float) -> float:
-    """
-    Convert a top-down vertical coordinate (cm from the page's top
-    edge) into ReportLab's bottom-up y-axis (points).
-
-    Args:
-        top_cm: Distance from the page's top edge to the box's top.
-        height_cm: Height of the box.
-
-    Returns:
-        y-coordinate in points of the box's lower-left corner.
-    """
+    """Convert a top-down vertical coord (cm from page top) to
+    ReportLab's bottom-up y-axis (points)."""
     return cm_to_pt(A4_HEIGHT_CM - top_cm - height_cm)
 
 
+# ── Public data shape ───────────────────────────────────────────
+@dataclass(frozen=True)
+class QuoteTask:
+    """A single task as rendered on the quote_base page."""
+
+    name: str
+    description: str | None
+
+
+@dataclass(frozen=True)
+class QuoteData:
+    """Everything the overlay needs to render a quote.
+
+    Decoupled from SQLAlchemy models on purpose so the builder is
+    testable and independent of the persistence layer.
+    """
+
+    tasks: list[QuoteTask]
+    deliverables_summary: str | None
+    estimated_days: str | None
+    total_amount: Decimal
+    currency: str
+
+
+# ── Currency formatting (es-AR) ─────────────────────────────────
+def _format_amount_ar(amount: Decimal) -> str:
+    """Format a decimal as `1.234.567,89` (AR thousands/decimal)."""
+    fmt = f"{amount:,.2f}"
+    return fmt.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def format_total_text(amount: Decimal, currency: str) -> str:
+    """Build the right-aligned total caption."""
+    body = _format_amount_ar(amount)
+    if currency == "USD":
+        return f"TOTAL: US$ {body}"
+    return f"TOTAL: $ {body} ARS"
+
+
+def _build_text_style() -> ParagraphStyle:
+    return ParagraphStyle(
+        "QuoteText",
+        fontName=FONT_NAME,
+        fontSize=FONT_SIZE_PT,
+        leading=LINE_LEADING_PT,
+        textColor=white,
+        alignment=TA_LEFT,
+        spaceAfter=0,
+    )
+
+
 class QuoteOverlayBuilder:
-    """
-    Assembles the client-facing quote PDF on top of the 5 base assets.
+    """Assembles the 5-page client-facing quote PDF."""
 
-    The class is intentionally split between transport (reading
-    assets, merging pages, emitting bytes) and content (currently
-    only the debug painter, but `_paint_zone` is the seam where the
-    real text-rendering layer will plug in next).
-    """
-
-    def build_debug(self) -> bytes:
-        """
-        Build the 5-page booklet with every registered layout zone
-        painted in red.
-
-        Pages without registered zones (cover, terms, final) are
-        emitted untouched so the operator validates layout in the
-        same flow that real users will see.
-
-        Returns:
-            PDF file as bytes.
-        """
-        logger.info("quote.overlay.debug.start", extra={"pages": len(ASSET_ORDER)})
+    def build(self, data: QuoteData) -> bytes:
+        """Render the booklet with dynamic content drawn on top of
+        each base asset. Returns the merged PDF as raw bytes."""
+        _ensure_font_registered()
+        logger.info("quote.overlay.build.start", extra={"pages": len(ASSET_ORDER)})
         writer = PdfWriter()
 
         for asset_name in ASSET_ORDER:
             base_page = self._read_first_page(asset_name)
-            zones = ZONES_BY_ASSET.get(asset_name, ())
-            if zones:
-                overlay_page = self._build_debug_page(zones)
+            overlay_page = self._build_overlay_for_asset(asset_name, data)
+            if overlay_page is not None:
                 base_page.merge_page(overlay_page)
             writer.add_page(base_page)
 
         return self._writer_to_bytes(writer)
 
-    # ── Internal: I/O ──────────────────────────────────────────
+    # ── I/O ───────────────────────────────────────────────────
     @staticmethod
     def _read_first_page(asset_name: str) -> PageObject:
         path = ASSETS_DIR / asset_name
-        reader = PdfReader(str(path))
-        return reader.pages[0]
+        return PdfReader(str(path)).pages[0]
 
     @staticmethod
     def _writer_to_bytes(writer: PdfWriter) -> bytes:
@@ -112,44 +153,101 @@ class QuoteOverlayBuilder:
         writer.write(buffer)
         return buffer.getvalue()
 
-    # ── Internal: drawing ─────────────────────────────────────
-    def _build_debug_page(self, zones: tuple[LayoutZone, ...]) -> PageObject:
+    # ── Per-asset overlay dispatcher ─────────────────────────
+    def _build_overlay_for_asset(self, asset_name: str, data: QuoteData) -> PageObject | None:
+        if asset_name == ASSET_QUOTE_BASE:
+            return self._render_overlay(lambda c: self._draw_task_loop(c, data.tasks))
+        if asset_name == ASSET_DELIVERABLES:
+            return self._render_overlay(lambda c: self._draw_deliverables(c, data))
+        return None
+
+    @staticmethod
+    def _render_overlay(draw_callback) -> PageObject:
         buffer = BytesIO()
-        c = canvas.Canvas(buffer, pagesize=A4)
-        for zone in zones:
-            self._paint_zone(c, zone)
+        c = rl_canvas.Canvas(buffer, pagesize=A4)
+        draw_callback(c)
         c.showPage()
         c.save()
         buffer.seek(0)
         return PdfReader(buffer).pages[0]
 
+    # ── Drawing: quote_base task loop ────────────────────────
     @staticmethod
-    def _paint_zone(c: canvas.Canvas, zone: LayoutZone) -> None:
+    def _draw_task_loop(c: rl_canvas.Canvas, tasks: list[QuoteTask]) -> None:
+        if not tasks:
+            return
+        html = QuoteOverlayBuilder._tasks_to_html(tasks)
+        QuoteOverlayBuilder._draw_paragraph_in_zone(
+            c, QUOTE_BASE_CONTAINER, html, _build_text_style()
+        )
+
+    @staticmethod
+    def _tasks_to_html(tasks: list[QuoteTask]) -> str:
+        lines: list[str] = []
+        for i, task in enumerate(tasks, start=1):
+            lines.append(f"{i} - {escape(task.name).upper()}")
+            if task.description:
+                lines.append(escape(task.description))
+            lines.append("")
+        while lines and not lines[-1]:
+            lines.pop()
+        return "<br/>".join(lines)
+
+    # ── Drawing: deliverables page ───────────────────────────
+    @staticmethod
+    def _draw_deliverables(c: rl_canvas.Canvas, data: QuoteData) -> None:
+        if data.deliverables_summary:
+            html = escape(data.deliverables_summary).replace("\n", "<br/>")
+            QuoteOverlayBuilder._draw_paragraph_in_zone(
+                c, DELIVERABLES_CONTAINER, html, _build_text_style()
+            )
+
+        QuoteOverlayBuilder._draw_total(c, data.total_amount, data.currency)
+
+        if data.estimated_days:
+            QuoteOverlayBuilder._draw_days(c, data.estimated_days)
+
+    @staticmethod
+    def _draw_total(c: rl_canvas.Canvas, amount: Decimal, currency: str) -> None:
+        text = format_total_text(amount, currency)
+        right_x = cm_to_pt(A4_WIDTH_CM - DELIVERABLES_TOTAL_RIGHT_MARGIN_CM)
+        zone = DELIVERABLES_TOTAL_FIELD
+        # Bias the baseline up by 20% of the rect height so the glyph
+        # tops align with the visual centre of the line — descenders
+        # land in the bottom 20%.
+        y = top_to_y_pt(zone.top_cm, zone.height_cm) + cm_to_pt(zone.height_cm) * 0.2
+        c.setFont(FONT_NAME, FONT_SIZE_PT)
+        c.setFillColor(white)
+        c.drawRightString(right_x, y, text)
+
+    @staticmethod
+    def _draw_days(c: rl_canvas.Canvas, days: str) -> None:
+        zone = DELIVERABLES_DAYS_FIELD
         x = cm_to_pt(zone.left_cm)
-        y = top_to_y_pt(zone.top_cm, zone.height_cm)
-        w = cm_to_pt(zone.width_cm)
-        h = cm_to_pt(zone.height_cm)
+        y = top_to_y_pt(zone.top_cm, zone.height_cm) + cm_to_pt(zone.height_cm) * 0.2
+        c.setFont(FONT_NAME, FONT_SIZE_PT)
+        c.setFillColor(white)
+        c.drawString(x, y, days)
 
-        is_container = zone.inner_padding_cm > 0
-        c.setFillColor(_CONTAINER_FILL if is_container else _FIELD_FILL)
-        c.setStrokeColor(_CONTAINER_BORDER if is_container else _FIELD_BORDER)
-        c.setLineWidth(_BORDER_WIDTH_PT)
-        c.rect(x, y, w, h, stroke=1, fill=1)
-
-        if is_container:
-            QuoteOverlayBuilder._paint_inner_border(c, zone)
-
+    # ── Shared paragraph layout ──────────────────────────────
     @staticmethod
-    def _paint_inner_border(c: canvas.Canvas, zone: LayoutZone) -> None:
+    def _draw_paragraph_in_zone(
+        c: rl_canvas.Canvas, zone: LayoutZone, html: str, style: ParagraphStyle
+    ) -> None:
         pad = cm_to_pt(zone.inner_padding_cm)
         x = cm_to_pt(zone.left_cm) + pad
         y = top_to_y_pt(zone.top_cm, zone.height_cm) + pad
         w = cm_to_pt(zone.width_cm) - 2 * pad
         h = cm_to_pt(zone.height_cm) - 2 * pad
-
-        c.saveState()
-        c.setStrokeColor(_INNER_BORDER)
-        c.setDash(*_INNER_DASH)
-        c.setLineWidth(_BORDER_WIDTH_PT)
-        c.rect(x, y, w, h, stroke=1, fill=0)
-        c.restoreState()
+        frame = Frame(
+            x,
+            y,
+            w,
+            h,
+            leftPadding=0,
+            rightPadding=0,
+            topPadding=0,
+            bottomPadding=0,
+            showBoundary=0,
+        )
+        frame.add(Paragraph(html, style), c)

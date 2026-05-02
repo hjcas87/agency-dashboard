@@ -49,9 +49,12 @@ class ProposalCreate(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=255)
     client_id: int | None = None
+    currency: str = Field(default="ARS", pattern="^(ARS|USD)$")
     hourly_rate_ars: Decimal = Field(..., gt=0)
     exchange_rate: Decimal = Field(..., gt=0)
     adjustment_percentage: Decimal = Field(default=0, ge=-100, le=100)
+    estimated_days: str | None = Field(default=None, max_length=64)
+    deliverables_summary: str | None = None
     tasks: list[ProposalTaskCreate] = Field(..., min_length=1)
 
 
@@ -60,9 +63,12 @@ class ProposalUpdate(BaseModel):
 
     name: str | None = Field(None, min_length=1, max_length=255)
     client_id: int | None = None
+    currency: str | None = Field(default=None, pattern="^(ARS|USD)$")
     hourly_rate_ars: Decimal | None = Field(None, gt=0)
     exchange_rate: Decimal | None = Field(None, gt=0)
     adjustment_percentage: Decimal | None = Field(None, ge=-100, le=100)
+    estimated_days: str | None = Field(default=None, max_length=64)
+    deliverables_summary: str | None = None
     tasks: list[ProposalTaskCreate] | None = None
 
 
@@ -80,9 +86,12 @@ class ProposalResponse(BaseModel):
     client_id: int | None
     client_name: str | None = None
     status: str
+    currency: str
     hourly_rate_ars: Decimal
     exchange_rate: Decimal
     adjustment_percentage: Decimal
+    estimated_days: str | None = None
+    deliverables_summary: str | None = None
     total_hours: Decimal
     subtotal_ars: Decimal
     adjustment_amount_ars: Decimal
