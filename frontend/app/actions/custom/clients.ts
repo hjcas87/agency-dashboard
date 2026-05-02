@@ -75,6 +75,36 @@ function buildClientBody(formData: FormData): Record<string, unknown> {
   return body
 }
 
+/**
+ * Extract a human-readable message from a FastAPI / Pydantic error
+ * response. FastAPI returns 422 with `detail` as either a string or an
+ * array of `{ type, loc, msg, input, ctx, url }` objects. Rendering that
+ * array as a React child crashes the toast — we flatten it here.
+ */
+function extractErrorMessage(data: unknown, fallback: string): string {
+  if (!data || typeof data !== 'object' || !('detail' in data)) return fallback
+  const detail = (data as { detail: unknown }).detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    const parts = detail
+      .map(entry => {
+        if (entry && typeof entry === 'object' && 'msg' in entry) {
+          const msg = String((entry as { msg: unknown }).msg)
+          const loc = (entry as { loc?: unknown }).loc
+          const field =
+            Array.isArray(loc) && loc.length > 0
+              ? loc.filter(part => part !== 'body').join('.')
+              : ''
+          return field ? `${field}: ${msg}` : msg
+        }
+        return null
+      })
+      .filter((s): s is string => Boolean(s))
+    if (parts.length > 0) return parts.join(' • ')
+  }
+  return fallback
+}
+
 export async function createClientAction(formData: FormData) {
   const name = formData.get('name') as string
   const email = formData.get('email') as string
@@ -94,7 +124,7 @@ export async function createClientAction(formData: FormData) {
       const data = await res.json().catch(() => ({}))
       return {
         success: false as const,
-        error: (data.detail as string) || 'Error al crear el cliente',
+        error: extractErrorMessage(data, 'Error al crear el cliente'),
         data: null,
       }
     }
@@ -126,7 +156,7 @@ export async function updateClientAction(id: number, formData: FormData) {
       const data = await res.json().catch(() => ({}))
       return {
         success: false as const,
-        error: (data.detail as string) || 'Error al actualizar el cliente',
+        error: extractErrorMessage(data, 'Error al actualizar el cliente'),
         data: null,
       }
     }
@@ -153,7 +183,7 @@ export async function lookupCuitInAfipAction(cuit: string): Promise<CuitLookupOu
       const data = await res.json().catch(() => ({}))
       return {
         success: false,
-        error: (data.detail as string) || 'No se pudo consultar el padrón',
+        error: extractErrorMessage(data, 'No se pudo consultar el padrón'),
         status: res.status,
       }
     }

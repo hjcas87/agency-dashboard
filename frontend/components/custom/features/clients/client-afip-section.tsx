@@ -74,18 +74,26 @@ export function ClientAfipSection({
 }: ClientAfipSectionProps) {
   const [isLooking, startLookup] = useTransition()
 
-  const normalizedCuit = values.cuit.replace(/[-\s]/g, '')
-  const canLookup = /^\d{11}$/.test(normalizedCuit)
+  function handleCuitChange(raw: string) {
+    // CUITs are 11 digits — no separators, regardless of how the
+    // operator pastes them. Strip non-digits and clamp to 11.
+    const digitsOnly = raw.replace(/\D/g, '').slice(0, 11)
+    onChange({ ...values, cuit: digitsOnly })
+  }
 
   function handleLookup() {
+    if (!/^\d{11}$/.test(values.cuit)) {
+      toast.error('El CUIT debe tener 11 dígitos para buscar en AFIP.')
+      return
+    }
     startLookup(async () => {
-      const result = await lookupCuitInAfipAction(normalizedCuit)
+      const result = await lookupCuitInAfipAction(values.cuit)
       if (!result.success) {
         toast.error(result.error)
         return
       }
       onChange({
-        cuit: normalizedCuit,
+        cuit: values.cuit,
         ivaCondition: values.ivaCondition ?? result.data.iva_condition,
       })
       onAfipAutofill?.(result.data)
@@ -109,9 +117,10 @@ export function ClientAfipSection({
               id="cuit"
               name="cuit"
               value={values.cuit}
-              onChange={e => onChange({ ...values, cuit: e.target.value })}
-              placeholder="20-12345678-9"
-              maxLength={13}
+              onChange={e => handleCuitChange(e.target.value)}
+              placeholder="20123456789"
+              inputMode="numeric"
+              maxLength={11}
               disabled={disabled || isLooking}
             />
             <InputGroupAddon align="inline-end">
@@ -119,7 +128,7 @@ export function ClientAfipSection({
                 type="button"
                 size="xs"
                 onClick={handleLookup}
-                disabled={disabled || isLooking || !canLookup}
+                disabled={disabled || isLooking}
               >
                 {isLooking ? <IconLoader2 className="animate-spin" /> : <IconSearch />}
                 Buscar en AFIP
