@@ -21,6 +21,7 @@ import {
 } from '@/components/core/ui/table'
 
 import { getInvoice, type InvoiceRecord } from '@/app/actions/custom/invoices'
+import { InvoiceCancelActions } from '@/components/custom/features/invoices/invoice-cancel-actions'
 
 const RECEIPT_TYPE_LABELS: Record<number, string> = {
   1: 'Factura A',
@@ -92,10 +93,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </a>
         </Button>
         <h1 className="text-lg font-semibold">{headerLabel(invoice)}</h1>
-        <Badge variant={statusVariant} className="ml-auto gap-1">
-          <StatusIcon className="size-3" />
-          {statusLabel}
-        </Badge>
+        <div className="ml-auto flex items-center gap-2">
+          <Badge variant={statusVariant} className="gap-1">
+            <StatusIcon className="size-3" />
+            {statusLabel}
+          </Badge>
+          <InvoiceCancelActions invoice={invoice} />
+        </div>
       </div>
 
       <Card>
