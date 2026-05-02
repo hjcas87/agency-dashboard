@@ -320,26 +320,32 @@ function getColumns(
                 <IconMail className="size-4" />
                 Enviar por email
               </DropdownMenuItem>
-              {invoice.is_internal && (
+              {/* Anular se muestra en cualquier comprobante no anulado.
+                  Restaurar es exclusivo de internos (X) — la anulación
+                  AFIP via NC ya quedó registrada en ARCA y no se puede
+                  revertir desde acá. */}
+              {!isCancelled && (
                 <>
                   <DropdownMenuSeparator />
-                  {isCancelled ? (
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onSelect={() => onRestore(invoice)}
-                    >
-                      <IconRotate className="size-4" />
-                      Restaurar
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem
-                      className="cursor-pointer text-destructive focus:text-destructive"
-                      onSelect={() => onCancel(invoice)}
-                    >
-                      <IconBan className="size-4" />
-                      Anular
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    onSelect={() => onCancel(invoice)}
+                  >
+                    <IconBan className="size-4" />
+                    {invoice.is_internal ? 'Anular' : 'Anular vía NC'}
+                  </DropdownMenuItem>
+                </>
+              )}
+              {isCancelled && invoice.is_internal && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onSelect={() => onRestore(invoice)}
+                  >
+                    <IconRotate className="size-4" />
+                    Restaurar
+                  </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
@@ -376,10 +382,19 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
     const target = cancelTarget
     const result = await cancelInvoiceAction(target.id)
     if (result.success) {
-      const num = target.internal_number
-        ? `X-${String(target.internal_number).padStart(8, '0')}`
-        : `#${target.id}`
-      toast.success(`Comprobante ${num} anulado.`)
+      // For AFIP cancellation the response is the NC itself, not the
+      // original — so we surface its receipt number in the toast.
+      if (target.is_internal) {
+        const num = target.internal_number
+          ? `X-${String(target.internal_number).padStart(8, '0')}`
+          : `#${target.id}`
+        toast.success(`Comprobante ${num} anulado.`)
+      } else {
+        const ncNum = result.data.receipt_number ?? '?'
+        toast.success(
+          `Nota de Crédito C N°${ncNum} emitida — CAE ${result.data.cae ?? '—'}`
+        )
+      }
       router.refresh()
     } else {
       toast.error(result.error)
@@ -621,13 +636,35 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Anular comprobante</AlertDialogTitle>
+            <AlertDialogTitle>
+              {cancelTarget?.is_internal
+                ? 'Anular comprobante'
+                : 'Anular factura vía Nota de Crédito'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {cancelTarget?.internal_number
-                ? `Vas a anular el comprobante interno X-${String(cancelTarget.internal_number).padStart(8, '0')}.`
-                : 'Vas a anular este comprobante.'}{' '}
-              La fila queda visible pero tachada y marcada como anulada. La acción es
-              reversible — podés restaurarla desde el mismo menú.
+              {cancelTarget?.is_internal ? (
+                <>
+                  Vas a anular el comprobante interno{' '}
+                  <span className="font-mono text-foreground">
+                    X-
+                    {String(cancelTarget?.internal_number ?? 0).padStart(8, '0')}
+                  </span>
+                  . La fila queda visible pero tachada y marcada como anulada. La
+                  acción es reversible — podés restaurarla desde el mismo menú.
+                </>
+              ) : (
+                <>
+                  Vas a emitir una <strong>Nota de Crédito C</strong> contra AFIP
+                  asociada a la factura{' '}
+                  <span className="font-mono text-foreground">
+                    {String(cancelTarget?.point_of_sale ?? 0).padStart(4, '0')}-
+                    {String(cancelTarget?.receipt_number ?? 0).padStart(8, '0')}
+                  </span>
+                  . La NC queda registrada con su propio CAE y la factura original
+                  quedará marcada como anulada en el listado. La operación es{' '}
+                  <strong>irreversible</strong>: la NC también queda en los registros de AFIP.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -639,7 +676,7 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Anular
+              {cancelTarget?.is_internal ? 'Anular' : 'Emitir NC y anular'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -82,10 +82,20 @@ def issue_invoice_manual(
 def cancel_invoice(
     invoice_id: int,
     service: InvoiceService = Depends(get_invoice_service),
+    afip: AfipService = Depends(afip_dependency),
 ) -> InvoiceResponse:
-    """Soft-cancel an internal X comprobante. AFIP receipts return 400
-    — those need a Nota de Crédito (separate flow, not yet wired up)."""
-    return service.cancel_invoice(invoice_id)
+    """Anular un comprobante.
+
+    Internal X → soft toggle, returns the same Invoice with
+    `cancelled_at` set.
+
+    AFIP-issued → emit a Nota de Crédito linked via CbtesAsoc, persist
+    it as a new Invoice row with `cancels_invoice_id` pointing at the
+    original, and back-link the original via `cancelled_by_invoice_id`.
+    The response is the **NC** Invoice (with its own CAE) so the UI
+    can immediately offer to view/print/email it. The frontend follows
+    `cancelled_by_invoice_id` to highlight the link in the listing."""
+    return service.cancel_invoice(invoice_id, afip)
 
 
 @router.post("/{invoice_id}/restore", response_model=InvoiceResponse)

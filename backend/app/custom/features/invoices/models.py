@@ -84,13 +84,32 @@ class Invoice(Base):
 
     commercial_reference: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Internal-only soft cancellation. AFIP receipts are NEVER cancelled
-    # this way — they require a Nota de Crédito issued through ARCA,
-    # tracked as a separate Invoice row. For internal X comprobantes
-    # `cancelled_at` flips to "now()" and the row stays visible (struck
-    # through in the UI) so the operator keeps the audit trail.
+    # Cancellation timestamp. Two distinct semantics depending on kind:
+    # - Internal X: soft-toggle, set to now() on `cancel`, NULL on
+    #   `restore`. The row stays visible (struck-through) for audit.
+    # - AFIP-issued: set to now() ONCE the linked Nota de Crédito is
+    #   authorised and stored as its own Invoice row. The original
+    #   Factura keeps its CAE in ARCA — the cancellation is conceptual,
+    #   tracked through `cancelled_by_invoice_id` below.
     cancelled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+    # Back-pointer pair for AFIP cancellation. When a NC is issued to
+    # cancel a Factura, the NC row's `cancels_invoice_id` points at the
+    # original, and the original's `cancelled_by_invoice_id` points at
+    # the NC. Both nullable: most invoices are neither cancelling nor
+    # cancelled. Self-referential FK with SET NULL on delete so a stray
+    # delete doesn't cascade.
+    cancels_invoice_id: Mapped[int | None] = mapped_column(
+        ForeignKey("invoices.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    cancelled_by_invoice_id: Mapped[int | None] = mapped_column(
+        ForeignKey("invoices.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(

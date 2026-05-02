@@ -37,7 +37,19 @@ class IssueFromProposalRequest(BaseModel):
     `kind` selects the AFIP flow vs. an internal "Comprobante X".
     `receipt_type` is only consulted when `kind == AFIP`; ignored for
     internal receipts (they aren't fiscally typed).
-    """
+
+    `amount` is what's being charged in **this** invoice. A proposal
+    can be billed across many invoices (50/50 advance + balance,
+    monthly instalments, ad-hoc partial payments) — each call passes
+    the slice the operator wants to cover. `None` defaults to the
+    proposal's remaining balance on the service side; the service
+    rejects amounts > remaining and amounts <= 0.
+
+    `description` overrides the auto-generated single-line concept
+    ("Pago presupuesto «X» (NN%)"). When the slice equals the full
+    remaining and is the only invoice tied to the proposal, the
+    service still snapshots all proposal tasks as line items —
+    multi-invoice mode falls back to a consolidated single line."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -49,6 +61,8 @@ class IssueFromProposalRequest(BaseModel):
     commercial_reference: str | None = Field(default=None, max_length=255)
     kind: InvoiceKind = InvoiceKind.AFIP
     receipt_type: ReceiptType = ReceiptType.INVOICE_C
+    amount: Decimal | None = Field(default=None, gt=0)
+    description: str | None = Field(default=None, max_length=255)
 
     @model_validator(mode="after")
     def _check_service_dates(self) -> "IssueFromProposalRequest":
@@ -130,6 +144,8 @@ class InvoiceResponse(BaseModel):
     internal_number: int | None = None
 
     cancelled_at: str | None = None
+    cancels_invoice_id: int | None = None
+    cancelled_by_invoice_id: int | None = None
 
     # Pulled from afip_invoice_log via the FK.
     afip_invoice_log_id: int | None = None
@@ -160,12 +176,19 @@ class InvoiceResponse(BaseModel):
 
 
 class BillableProposalResponse(BaseModel):
-    """A proposal that's ACCEPTED and not yet invoiced — what the
-    *Presupuestos facturables* tab shows."""
+    """A proposal whose `remaining_ars > 0` — it appears in the
+    *Presupuestos facturables* tab while there's something left to
+    bill, regardless of whether part of it was already invoiced.
+
+    `total_ars` is the proposal's budget. `invoiced_ars` is the sum
+    of every active (non-cancelled) invoice tied to it. `remaining_ars`
+    is `total - invoiced` and that's the operator-facing balance."""
 
     id: int
     name: str
     client_id: int | None
     client_name: str | None
     total_ars: Decimal
+    invoiced_ars: Decimal
+    remaining_ars: Decimal
     created_at: str

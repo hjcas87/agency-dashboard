@@ -32,6 +32,8 @@ export interface InvoiceRecord {
   is_internal: boolean
   internal_number: number | null
   cancelled_at: string | null
+  cancels_invoice_id: number | null
+  cancelled_by_invoice_id: number | null
   afip_invoice_log_id: number | null
   cae: string | null
   cae_expiration: string | null
@@ -50,6 +52,8 @@ export interface BillableProposal {
   client_id: number | null
   client_name: string | null
   total_ars: string
+  invoiced_ars: string
+  remaining_ars: string
   created_at: string
 }
 
@@ -132,6 +136,11 @@ export interface IssueFromProposalInput {
   commercial_reference?: string
   kind?: InvoiceKind
   receipt_type?: ReceiptType
+  // Decimal serialised as string so we never lose precision in JSON.
+  // Omit (undefined) → backend defaults to the proposal's remaining
+  // balance. The two-decimal pattern matches what the form emits.
+  amount?: string
+  description?: string
 }
 
 export async function issueInvoiceFromProposalAction(

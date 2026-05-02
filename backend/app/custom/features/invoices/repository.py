@@ -1,4 +1,7 @@
 """Data-access layer for the Invoice feature."""
+from decimal import Decimal
+
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.custom.features.invoices.models import Invoice
@@ -16,25 +19,22 @@ class InvoiceRepository:
     def get(self, invoice_id: int) -> Invoice | None:
         return self.db.query(Invoice).filter(Invoice.id == invoice_id).first()
 
-    def get_by_proposal(self, proposal_id: int) -> Invoice | None:
-        """Returns the latest invoice for a given proposal, or None.
-        Used to flag proposals as already-invoiced in the billable list."""
-        return (
-            self.db.query(Invoice)
-            .filter(Invoice.proposal_id == proposal_id)
-            .order_by(Invoice.id.desc())
-            .first()
+    def invoiced_amount_for_proposal(self, proposal_id: int) -> Decimal:
+        """Sum of every active (non-cancelled) Invoice tied to a
+        proposal. Cancelled invoices drop out automatically (their
+        `cancelled_at` is set when an NC is emitted), so anulación
+        instantly returns capacity to the proposal. NCs themselves
+        don't carry a `proposal_id` — they live in their own row with
+        only `cancels_invoice_id` set — so they don't double-count."""
+        result = (
+            self.db.query(func.coalesce(func.sum(Invoice.total_amount_ars), 0))
+            .filter(
+                Invoice.proposal_id == proposal_id,
+                Invoice.cancelled_at.is_(None),
+            )
+            .scalar()
         )
-
-    def invoiced_proposal_ids(self) -> set[int]:
-        """All proposal_ids that already have at least one invoice."""
-        rows = (
-            self.db.query(Invoice.proposal_id)
-            .filter(Invoice.proposal_id.isnot(None))
-            .distinct()
-            .all()
-        )
-        return {row[0] for row in rows if row[0] is not None}
+        return Decimal(result or 0)
 
     def add(self, invoice: Invoice) -> Invoice:
         self.db.add(invoice)

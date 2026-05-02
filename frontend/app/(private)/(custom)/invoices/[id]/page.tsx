@@ -153,6 +153,32 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           {invoice.commercial_reference && (
             <Field label="Referencia comercial" value={invoice.commercial_reference} />
           )}
+          {invoice.cancelled_by_invoice_id !== null && (
+            <Field
+              label="Anulada por"
+              value={
+                <a
+                  className="underline"
+                  href={`/invoices/${invoice.cancelled_by_invoice_id}`}
+                >
+                  Ver Nota de Crédito #{invoice.cancelled_by_invoice_id}
+                </a>
+              }
+            />
+          )}
+          {invoice.cancels_invoice_id !== null && (
+            <Field
+              label="Anula a"
+              value={
+                <a
+                  className="underline"
+                  href={`/invoices/${invoice.cancels_invoice_id}`}
+                >
+                  Ver factura #{invoice.cancels_invoice_id}
+                </a>
+              }
+            />
+          )}
           {invoice.proposal_id && (
             <Field
               label="Presupuesto origen"
