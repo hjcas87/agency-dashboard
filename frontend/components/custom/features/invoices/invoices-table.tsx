@@ -376,6 +376,15 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [emailTarget, setEmailTarget] = useState<InvoiceRecord | null>(null)
   const [cancelTarget, setCancelTarget] = useState<InvoiceRecord | null>(null)
+  const [showCancelled, setShowCancelled] = useState(false)
+
+  const displayInvoices = useMemo(
+    () =>
+      showCancelled
+        ? invoices
+        : invoices.filter(inv => !inv.cancelled_at && !inv.cancelled_by_invoice_id),
+    [invoices, showCancelled]
+  )
 
   function handleRestore(invoice: InvoiceRecord) {
     startTransition(async () => {
@@ -421,7 +430,7 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
   )
 
   const table = useReactTable({
-    data: invoices,
+    data: displayInvoices,
     columns,
     state: { sorting, columnFilters, columnVisibility },
     onSortingChange: setSorting,
@@ -528,6 +537,15 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
             className="h-8 w-36"
           />
         </div>
+
+        <Button
+          variant={showCancelled ? 'default' : 'outline'}
+          size="sm"
+          className="h-8"
+          onClick={() => setShowCancelled(v => !v)}
+        >
+          Incluir anuladas
+        </Button>
 
         {hasAnyFilter && (
           <Button
