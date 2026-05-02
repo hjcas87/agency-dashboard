@@ -10,6 +10,7 @@ from app.core.features.users.models import User  # noqa: F401
 
 # Custom models
 from app.custom.features.clients.models import Client  # noqa: F401
+from app.custom.features.invoices.models import Invoice  # noqa: F401
 from app.custom.features.proposals.models import Proposal, ProposalTask  # noqa: F401
 from app.shared.afip.models import AfipInvoiceLog, AfipToken  # noqa: F401
 from app.shared.email.models import EmailTemplate  # noqa: F401
