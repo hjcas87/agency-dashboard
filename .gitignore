@@ -73,3 +73,8 @@ logs/
 .DS_Store
 Thumbs.db
 
+# AFIP — código Django de referencia (no se versiona) y certificados sensibles
+# Anclados al root para no afectar backend/app/shared/afip/ ni docs/references/afip/
+/afip/
+/certs/
+
