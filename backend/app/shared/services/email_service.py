@@ -2,6 +2,7 @@
 Implementación del servicio de email.
 Soporta SMTP y APIs de email (SendGrid, Mailgun, etc).
 """
+import asyncio
 import base64
 import logging
 import smtplib
@@ -17,6 +18,10 @@ from app.shared.interfaces.email_service import Attachment, IEmailService
 
 logger = logging.getLogger(__name__)
 
+# Implicit-SSL ports — these require smtplib.SMTP_SSL from the start.
+# 587 / 25 / 2525 negotiate STARTTLS over a plain SMTP connection instead.
+_IMPLICIT_SSL_PORTS = {465}
+
 
 class SMTPEmailService(IEmailService):
     """Servicio de email usando SMTP."""
@@ -30,6 +35,7 @@ class SMTPEmailService(IEmailService):
         self.from_email = settings.SMTP_FROM_EMAIL or settings.EMAIL_FROM_EMAIL
         self.from_name = settings.EMAIL_FROM_NAME
         self.use_tls = settings.SMTP_USE_TLS
+        self.timeout = settings.SMTP_TIMEOUT_SECONDS
 
     async def send_email(
         self,
@@ -52,7 +58,8 @@ class SMTPEmailService(IEmailService):
             cc: Email con copia (opcional)
 
         Returns:
-            True si se envió exitosamente
+            True si se envió exitosamente, False en cualquier fallo
+            (timeout, autenticación, TLS handshake, etc).
         """
         if not self.host or not self.from_email:
             logger.warning(
@@ -64,43 +71,82 @@ class SMTPEmailService(IEmailService):
             return True
 
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"{self.from_name} <{self.from_email}>"
-            msg["To"] = to
-            if cc:
-                msg["Cc"] = cc
-
-            # Agregar texto plano
-            text_part = MIMEText(body, "plain")
-            msg.attach(text_part)
-
-            # Agregar HTML si está disponible
-            if html_body:
-                html_part = MIMEText(html_body, "html")
-                msg.attach(html_part)
-
-            # Agregar adjuntos
-            if attachments:
-                for attachment in attachments:
-                    part = MIMEApplication(attachment.content, Name=attachment.filename)
-                    part["Content-Disposition"] = f'attachment; filename="{attachment.filename}"'
-                    msg.attach(part)
-
-            # Enviar email
-            with smtplib.SMTP(self.host, self.port) as server:
-                if self.use_tls:
-                    server.starttls()
-                if self.username and self.password:
-                    server.login(self.username, self.password)
-                server.send_message(msg)
-
+            message = self._build_message(
+                to=to,
+                subject=subject,
+                body=body,
+                html_body=html_body,
+                attachments=attachments,
+                cc=cc,
+            )
+            # smtplib is sync. Running it directly inside an async handler
+            # blocks the event loop for the entire SMTP session — and on a
+            # broken/unreachable host it would block forever. asyncio.to_thread
+            # offloads the call so the loop keeps serving other requests, and
+            # the `timeout=` argument on the smtplib constructor caps the
+            # blocking time.
+            await asyncio.to_thread(self._send_blocking, to, message)
             logger.info(f"[green]✓[/green] Email sent successfully to [cyan]{to}[/cyan] via SMTP")
             return True
 
-        except Exception as e:
-            logger.error(f"[red]✗[/red] Error sending email via SMTP: [yellow]{str(e)}[/yellow]")
+        except (TimeoutError, OSError) as exc:
+            logger.error(
+                f"[red]✗[/red] SMTP connection to [cyan]{self.host}:{self.port}[/cyan] "
+                f"timed out or refused: [yellow]{exc}[/yellow]"
+            )
             return False
+        except smtplib.SMTPAuthenticationError as exc:
+            logger.error(f"[red]✗[/red] SMTP authentication failed: [yellow]{exc}[/yellow]")
+            return False
+        except smtplib.SMTPException as exc:
+            logger.error(f"[red]✗[/red] SMTP error: [yellow]{exc}[/yellow]")
+            return False
+        except Exception as exc:
+            # Catch-all kept narrow: log with traceback so unknown failures
+            # do not get silently swallowed (legacy behavior).
+            logger.exception(f"[red]✗[/red] Unexpected error sending email via SMTP: {exc}")
+            return False
+
+    # ------------------------------------------------------------------ helpers
+
+    def _build_message(
+        self,
+        *,
+        to: str,
+        subject: str,
+        body: str,
+        html_body: str | None,
+        attachments: list[Attachment] | None,
+        cc: str | None,
+    ) -> MIMEMultipart:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{self.from_name} <{self.from_email}>"
+        msg["To"] = to
+        if cc:
+            msg["Cc"] = cc
+        msg.attach(MIMEText(body, "plain"))
+        if html_body:
+            msg.attach(MIMEText(html_body, "html"))
+        for attachment in attachments or []:
+            part = MIMEApplication(attachment.content, Name=attachment.filename)
+            part["Content-Disposition"] = f'attachment; filename="{attachment.filename}"'
+            msg.attach(part)
+        return msg
+
+    def _send_blocking(self, to: str, message: MIMEMultipart) -> None:
+        """Sync SMTP delivery — runs inside `asyncio.to_thread`. Picks
+        SMTP_SSL for implicit-SSL ports (465) and plain SMTP+STARTTLS
+        for the rest."""
+        client_cls = smtplib.SMTP_SSL if self.port in _IMPLICIT_SSL_PORTS else smtplib.SMTP
+        with client_cls(self.host, self.port, timeout=self.timeout) as server:
+            # STARTTLS only applies to plain-SMTP connections that were
+            # created without implicit SSL.
+            if self.use_tls and client_cls is smtplib.SMTP:
+                server.starttls()
+            if self.username and self.password:
+                server.login(self.username, self.password)
+            server.send_message(message)
 
 
 class APIEmailService(IEmailService):
@@ -239,4 +285,3 @@ class LoggingEmailService(IEmailService):
             f"{attachment_info}"
         )
         return True
-
