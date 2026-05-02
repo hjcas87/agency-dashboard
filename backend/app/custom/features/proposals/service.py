@@ -6,17 +6,48 @@ from decimal import Decimal
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.custom.features.proposals.models import Proposal, ProposalTask, ProposalStatus
+from app.custom.features.proposals.messages import (
+    ERR_INVALID_STATUS_VALUE,
+    ERR_NOT_FOUND,
+    ERR_TRANSITION_FORBIDDEN,
+    STATUS_LABELS,
+)
+from app.custom.features.proposals.models import Proposal, ProposalStatus, ProposalTask
 from app.custom.features.proposals.repository import ProposalRepository, ProposalTaskRepository
 from app.custom.features.proposals.schemas import (
     ProposalCreate,
-    ProposalUpdate,
-    ProposalStatusUpdate,
     ProposalResponse,
-    ProposalTaskCreate,
+    ProposalStatusUpdate,
     ProposalTaskResponse,
+    ProposalUpdate,
 )
-from app.shared.constants import AUTH_ERRORS
+
+# Allowed status transitions, expressed as a dispatch table from the
+# current status to the set of legal target statuses. Encodes the rules
+# documented in docs/solution_design/user_stories/proposal_status_change.md:
+# - DRAFT can move to any other state.
+# - SENT can move to ACCEPTED, REJECTED, or back to DRAFT (re-open).
+# - Terminal states (ACCEPTED / REJECTED) can only be re-opened to DRAFT;
+#   no direct ACCEPTED <-> REJECTED. The operator has to pass through
+#   DRAFT explicitly, which is by design — it forces a deliberate pause.
+_ALLOWED_TRANSITIONS: dict[ProposalStatus, frozenset[ProposalStatus]] = {
+    ProposalStatus.DRAFT: frozenset(
+        {ProposalStatus.SENT, ProposalStatus.ACCEPTED, ProposalStatus.REJECTED}
+    ),
+    ProposalStatus.SENT: frozenset(
+        {ProposalStatus.DRAFT, ProposalStatus.ACCEPTED, ProposalStatus.REJECTED}
+    ),
+    ProposalStatus.ACCEPTED: frozenset({ProposalStatus.DRAFT}),
+    ProposalStatus.REJECTED: frozenset({ProposalStatus.DRAFT}),
+}
+
+
+def _can_transition(current: ProposalStatus, target: ProposalStatus) -> bool:
+    """True iff `current → target` is in the allowed-transitions table.
+    A no-op transition (current == target) returns True — it's a noop."""
+    if current is target:
+        return True
+    return target in _ALLOWED_TRANSITIONS[current]
 
 
 class ProposalService:
@@ -58,6 +89,7 @@ class ProposalService:
         client_name = None
         if proposal.client_id:
             from app.custom.features.clients.models import Client
+
             client = self.db.query(Client).filter(Client.id == proposal.client_id).first()
             if client:
                 client_name = client.name
@@ -67,7 +99,9 @@ class ProposalService:
             name=proposal.name,
             client_id=proposal.client_id,
             client_name=client_name,
-            status=proposal.status.value if isinstance(proposal.status, ProposalStatus) else proposal.status,
+            status=proposal.status.value
+            if isinstance(proposal.status, ProposalStatus)
+            else proposal.status,
             hourly_rate_ars=proposal.hourly_rate_ars,
             exchange_rate=proposal.exchange_rate,
             adjustment_percentage=proposal.adjustment_percentage,
@@ -104,7 +138,7 @@ class ProposalService:
         if not proposal:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Presupuesto no encontrado",
+                detail=ERR_NOT_FOUND,
             )
         return self._to_response(proposal)
 
@@ -145,7 +179,7 @@ class ProposalService:
         if not proposal:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Presupuesto no encontrado",
+                detail=ERR_NOT_FOUND,
             )
 
         update_data = data.model_dump(exclude_unset=True)
@@ -173,22 +207,41 @@ class ProposalService:
         return self._to_response(proposal)
 
     def update_status(self, proposal_id: int, data: ProposalStatusUpdate) -> ProposalResponse:
-        """Update only the status of a proposal."""
+        """Update only the status of a proposal, enforcing the allowed-
+        transitions matrix. Rejects invalid transitions with HTTP 400 and
+        an operator-friendly message that includes the current and target
+        labels in Spanish."""
         proposal = self.repository.get_with_tasks(proposal_id)
         if not proposal:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Presupuesto no encontrado",
+                detail=ERR_NOT_FOUND,
             )
 
         try:
-            proposal.status = ProposalStatus(data.status)
-        except ValueError:
+            target = ProposalStatus(data.status)
+        except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Estado inválido. Debe ser uno de: {', '.join(s.value for s in ProposalStatus)}",
+                detail=ERR_INVALID_STATUS_VALUE,
+            ) from exc
+
+        current = (
+            proposal.status
+            if isinstance(proposal.status, ProposalStatus)
+            else ProposalStatus(proposal.status)
+        )
+
+        if not _can_transition(current, target):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERR_TRANSITION_FORBIDDEN.format(
+                    from_status=STATUS_LABELS[current.value],
+                    to_status=STATUS_LABELS[target.value],
+                ),
             )
 
+        proposal.status = target
         self.db.commit()
         self.db.refresh(proposal)
         return self._to_response(proposal)
@@ -199,6 +252,6 @@ class ProposalService:
         if not proposal:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Presupuesto no encontrado",
+                detail=ERR_NOT_FOUND,
             )
         self.repository.delete(proposal_id)

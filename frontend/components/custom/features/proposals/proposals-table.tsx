@@ -1,6 +1,14 @@
 'use client'
 
-import { IconDotsVertical, IconEdit, IconFileText, IconMail, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
+import {
+  IconDotsVertical,
+  IconEdit,
+  IconFileText,
+  IconMail,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+} from '@tabler/icons-react'
 import {
   flexRender,
   getCoreRowModel,
@@ -39,6 +47,13 @@ import {
 } from '@/components/core/ui/dropdown-menu'
 import { Input } from '@/components/core/ui/input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/core/ui/select'
+import {
   Table,
   TableBody,
   TableCell,
@@ -65,7 +80,7 @@ const STATUS_COLORS: Record<string, string> = {
 function getColumns(
   onDelete: (proposal: Proposal) => void,
   onPdf: (proposal: Proposal) => void,
-  onEmail: (proposal: Proposal) => void,
+  onEmail: (proposal: Proposal) => void
 ): ColumnDef<Proposal>[] {
   return [
     {
@@ -143,17 +158,11 @@ function getColumns(
                   Editar
                 </a>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => onPdf(proposal)}
-              >
+              <DropdownMenuItem className="cursor-pointer" onClick={() => onPdf(proposal)}>
                 <IconFileText className="size-4" />
                 Ver PDF
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => onEmail(proposal)}
-              >
+              <DropdownMenuItem className="cursor-pointer" onClick={() => onEmail(proposal)}>
                 <IconMail className="size-4" />
                 Enviar Email
               </DropdownMenuItem>
@@ -189,9 +198,9 @@ export function ProposalsTable({ data }: ProposalsTableProps) {
           const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
           window.open(`${apiBase}/api/v1/pdf/proposals/${proposal.id}`, '_blank')
         },
-        (proposal: Proposal) => setEmailDialogProposal(proposal),
+        (proposal: Proposal) => setEmailDialogProposal(proposal)
       ),
-    [],
+    []
   )
 
   const table = useReactTable({
@@ -242,6 +251,23 @@ export function ProposalsTable({ data }: ProposalsTableProps) {
             onChange={e => table.getColumn('name')?.setFilterValue(e.target.value)}
             className="h-8 w-64"
           />
+          <Select
+            value={(table.getColumn('status')?.getFilterValue() as string) ?? '__all__'}
+            onValueChange={value =>
+              table.getColumn('status')?.setFilterValue(value === '__all__' ? undefined : value)
+            }
+          >
+            <SelectTrigger className="h-8 w-40">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todos los estados</SelectItem>
+              <SelectItem value="draft">Borrador</SelectItem>
+              <SelectItem value="sent">Enviado</SelectItem>
+              <SelectItem value="accepted">Aceptado</SelectItem>
+              <SelectItem value="rejected">Rechazado</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Button asChild size="sm">
           <a href="/proposals/new">
@@ -324,7 +350,7 @@ export function ProposalsTable({ data }: ProposalsTableProps) {
       {/* Email send dialog */}
       <EmailSendDialog
         open={!!emailDialogProposal}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) setEmailDialogProposal(null)
         }}
         subject={emailDialogProposal ? `Presupuesto: ${emailDialogProposal.name}` : ''}
