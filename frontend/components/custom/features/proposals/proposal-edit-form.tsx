@@ -33,6 +33,7 @@ import {
   getClientsForSelect,
   updateProposalAction,
   updateProposalStatusAction,
+  type ProposalCurrency,
   type ProposalTask,
 } from '@/app/actions/custom/proposals'
 import { PROPOSAL_MESSAGES } from '@/lib/messages'
@@ -49,9 +50,12 @@ interface ProposalEditFormProps {
     client_id: number | null
     client_name: string | null
     status: string
+    currency: ProposalCurrency
     hourly_rate_ars: string
     exchange_rate: string
     adjustment_percentage: string
+    estimated_days: string | null
+    deliverables_summary: string | null
     tasks: ProposalTask[]
   }
 }
@@ -99,9 +103,12 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
   const [clients, setClients] = useState<ClientOption[]>([])
   const [name, setName] = useState(proposal.name)
   const [clientId, setClientId] = useState<string>(proposal.client_id?.toString() ?? '__none__')
+  const [currency, setCurrency] = useState<ProposalCurrency>(proposal.currency ?? 'ARS')
   const [hourlyRate, setHourlyRate] = useState(proposal.hourly_rate_ars)
   const [exchangeRate, setExchangeRate] = useState(proposal.exchange_rate)
   const [adjustmentPct, setAdjustmentPct] = useState(proposal.adjustment_percentage)
+  const [estimatedDays, setEstimatedDays] = useState(proposal.estimated_days ?? '')
+  const [deliverablesSummary, setDeliverablesSummary] = useState(proposal.deliverables_summary ?? '')
   const [tasks, setTasks] = useState<ProposalTask[]>(proposal.tasks ?? [])
   const [status, setStatus] = useState(proposal.status)
   const [pendingStatus, setPendingStatus] = useState<string | null>(null)
@@ -194,9 +201,12 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
     const data = {
       name,
       client_id: clientId && clientId !== '__none__' ? parseInt(clientId, 10) : null,
+      currency,
       hourly_rate_ars: hourlyRate,
       exchange_rate: exchangeRate,
       adjustment_percentage: adjustmentPct,
+      estimated_days: estimatedDays.trim() || null,
+      deliverables_summary: deliverablesSummary.trim() || null,
       tasks: tasks.map((t, i) => ({ ...t, sort_order: i })),
     }
 
@@ -310,6 +320,24 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
           </Select>
         </div>
         <div className="flex flex-col gap-2">
+          <Label htmlFor="currency">
+            Moneda al cliente <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={currency}
+            onValueChange={value => setCurrency(value as ProposalCurrency)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger id="currency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ARS">ARS — Pesos argentinos</SelectItem>
+              <SelectItem value="USD">USD — Dólares</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-2">
           <Label htmlFor="hourlyRate">Valor por hora (ARS)</Label>
           <Input
             id="hourlyRate"
@@ -357,6 +385,38 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
             />
             <span className="text-sm text-muted-foreground">%</span>
           </div>
+        </div>
+      </div>
+
+      {/* Resumen para el cliente (PDF) */}
+      <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
+        <div>
+          <h3 className="text-base font-semibold">Resumen para el cliente</h3>
+          <p className="text-sm text-muted-foreground">
+            Estos campos se imprimen en la página de entregables del PDF.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="estimatedDays">Tiempo de desarrollo</Label>
+          <Input
+            id="estimatedDays"
+            value={estimatedDays}
+            onChange={e => setEstimatedDays(e.target.value)}
+            placeholder="ej. 30 días hábiles"
+            maxLength={64}
+            disabled={isReadOnly}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="deliverablesSummary">Resumen de entregables</Label>
+          <Textarea
+            id="deliverablesSummary"
+            value={deliverablesSummary}
+            onChange={e => setDeliverablesSummary(e.target.value)}
+            placeholder="Texto que verá el cliente en la sección de entregables. Si lo dejás vacío esa zona del PDF queda en blanco."
+            rows={6}
+            disabled={isReadOnly}
+          />
         </div>
       </div>
 

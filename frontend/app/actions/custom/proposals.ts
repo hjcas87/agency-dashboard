@@ -11,15 +11,20 @@ export interface ProposalTask {
   sort_order: number
 }
 
+export type ProposalCurrency = 'ARS' | 'USD'
+
 export interface ProposalRecord {
   id: number
   name: string
   client_id: number | null
   client_name: string | null
   status: string
+  currency: ProposalCurrency
   hourly_rate_ars: string
   exchange_rate: string
   adjustment_percentage: string
+  estimated_days: string | null
+  deliverables_summary: string | null
   total_hours: string
   subtotal_ars: string
   adjustment_amount_ars: string
@@ -56,9 +61,12 @@ export async function getProposal(id: number): Promise<ProposalRecord & { tasks:
 export interface ProposalCreateData {
   name: string
   client_id: number | null
+  currency: ProposalCurrency
   hourly_rate_ars: string
   exchange_rate: string
   adjustment_percentage: string
+  estimated_days: string | null
+  deliverables_summary: string | null
   tasks: ProposalTask[]
 }
 

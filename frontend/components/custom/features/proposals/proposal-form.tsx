@@ -18,23 +18,26 @@ import { Textarea } from '@/components/core/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/core/ui/select'
 import { Badge } from '@/components/core/ui/badge'
 import { PROPOSAL_MESSAGES } from '@/lib/messages'
-import { createProposalAction, getClientsForSelect, type ProposalTask } from '@/app/actions/custom/proposals'
+import { createProposalAction, getClientsForSelect, type ProposalCurrency, type ProposalTask } from '@/app/actions/custom/proposals'
 
 interface ClientOption {
   id: number
   name: string
 }
 
-export function ProposalForm({ initialData }: { initialData?: { name: string; client_id: number | null; hourly_rate_ars: string; exchange_rate: string; adjustment_percentage: string; tasks: ProposalTask[] } }) {
+export function ProposalForm({ initialData }: { initialData?: { name: string; client_id: number | null; currency?: ProposalCurrency; hourly_rate_ars: string; exchange_rate: string; adjustment_percentage: string; estimated_days?: string | null; deliverables_summary?: string | null; tasks: ProposalTask[] } }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
   const [clients, setClients] = useState<ClientOption[]>([])
   const [name, setName] = useState(initialData?.name ?? '')
   const [clientId, setClientId] = useState<string>(initialData?.client_id?.toString() ?? '__none__')
+  const [currency, setCurrency] = useState<ProposalCurrency>(initialData?.currency ?? 'ARS')
   const [hourlyRate, setHourlyRate] = useState(initialData?.hourly_rate_ars ?? '50000')
   const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate ?? '1200')
   const [adjustmentPct, setAdjustmentPct] = useState(initialData?.adjustment_percentage ?? '0')
+  const [estimatedDays, setEstimatedDays] = useState(initialData?.estimated_days ?? '')
+  const [deliverablesSummary, setDeliverablesSummary] = useState(initialData?.deliverables_summary ?? '')
   const [tasks, setTasks] = useState<ProposalTask[]>(
     initialData?.tasks ?? [{ name: '', description: null, hours: '0', sort_order: 0 }]
   )
@@ -95,9 +98,12 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
     const data = {
       name,
       client_id: clientId && clientId !== '__none__' ? parseInt(clientId, 10) : null,
+      currency,
       hourly_rate_ars: hourlyRate,
       exchange_rate: exchangeRate,
       adjustment_percentage: adjustmentPct,
+      estimated_days: estimatedDays.trim() || null,
+      deliverables_summary: deliverablesSummary.trim() || null,
       tasks: tasks.map((t, i) => ({ ...t, sort_order: i })),
     }
 
@@ -157,6 +163,16 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
           </Select>
         </div>
         <div className="flex flex-col gap-2">
+          <Label htmlFor="currency">Moneda al cliente <span className="text-destructive">*</span></Label>
+          <Select value={currency} onValueChange={value => setCurrency(value as ProposalCurrency)}>
+            <SelectTrigger id="currency"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ARS">ARS — Pesos argentinos</SelectItem>
+              <SelectItem value="USD">USD — Dólares</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-2">
           <Label htmlFor="hourlyRate">Valor por hora (ARS) <span className="text-destructive">*</span></Label>
           <Input id="hourlyRate" type="number" step="0.01" min="0" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} required />
         </div>
@@ -183,6 +199,34 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
             className="w-32"
           />
           <span className="text-sm text-muted-foreground">%</span>
+        </div>
+      </div>
+
+      {/* Resumen para el cliente (PDF) */}
+      <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
+        <div>
+          <h3 className="text-base font-semibold">Resumen para el cliente</h3>
+          <p className="text-sm text-muted-foreground">Estos campos se imprimen en la página de entregables del PDF.</p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="estimatedDays">Tiempo de desarrollo</Label>
+          <Input
+            id="estimatedDays"
+            value={estimatedDays}
+            onChange={e => setEstimatedDays(e.target.value)}
+            placeholder="ej. 30 días hábiles"
+            maxLength={64}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="deliverablesSummary">Resumen de entregables</Label>
+          <Textarea
+            id="deliverablesSummary"
+            value={deliverablesSummary}
+            onChange={e => setDeliverablesSummary(e.target.value)}
+            placeholder="Texto que verá el cliente en la sección de entregables. Si lo dejás vacío esa zona del PDF queda en blanco."
+            rows={6}
+          />
         </div>
       </div>
 
