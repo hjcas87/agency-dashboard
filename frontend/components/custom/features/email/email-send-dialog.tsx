@@ -23,6 +23,12 @@ import { EmailSendRequest } from '@/lib/shared/email/types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+interface AvailableEmail {
+  email: string
+  label: string
+  is_primary: boolean
+}
+
 interface EmailSendDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -45,42 +51,59 @@ export function EmailSendDialog({
   const [body, setBody] = useState('')
   const [attachPdf, setAttachPdf] = useState(!!proposalId)
   const [sending, setSending] = useState(false)
-  const [loadingClient, setLoadingClient] = useState(false)
+  const [availableEmails, setAvailableEmails] = useState<AvailableEmail[]>([])
+  const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set())
+  const [ccFixed, setCcFixed] = useState<string[]>([])
 
   // Reset the form to the props when the dialog opens. Runs only on
-  // open / props change — never on each keystroke (avoids the bug where
-  // `to` was overwritten on every character because loadClientEmail was
-  // re-created when `to` changed and re-triggered the init effect).
+  // open / props change — never on each keystroke.
   useEffect(() => {
     if (!open) return
     setTo(initialRecipient)
     setEmailSubject(subject)
     setBody('')
     setAttachPdf(!!proposalId)
+    setAvailableEmails([])
+    setSelectedEmails(new Set())
+    setCcFixed([])
   }, [open, initialRecipient, subject, proposalId])
 
-  // When the dialog opens for a specific proposal, fetch the canonical
-  // subject + body + recipient from the backend and pre-fill the form.
-  // The operator can still tweak before sending — these are defaults,
-  // not locked-in values.
+  // When the dialog opens for a specific proposal, fetch the full
+  // template payload (subject + body + recipient choices + fixed CC)
+  // and pre-fill. The operator can still tweak before sending.
   useEffect(() => {
     if (!open || !proposalId) return
     let cancelled = false
-    setLoadingClient(true)
     ;(async () => {
       try {
         const res = await fetch(
           `${API_BASE}/api/v1/email/proposals/${proposalId}/template`
         )
         if (cancelled || !res.ok) return
-        const template = await res.json() as { to: string; subject: string; body: string }
-        if (template.to) setTo(template.to)
+        const template = await res.json() as {
+          to: string
+          subject: string
+          body: string
+          available_emails: AvailableEmail[]
+          cc_fixed: string[]
+        }
         if (template.subject) setEmailSubject(template.subject)
         if (template.body) setBody(template.body)
+        setAvailableEmails(template.available_emails ?? [])
+        setCcFixed(template.cc_fixed ?? [])
+        // Pre-select primary email(s); fall back to template.to if no
+        // primary flag was provided.
+        const primaries = (template.available_emails ?? [])
+          .filter(e => e.is_primary)
+          .map(e => e.email)
+        if (primaries.length > 0) {
+          setSelectedEmails(new Set(primaries))
+        } else if (template.to) {
+          setSelectedEmails(new Set([template.to]))
+        }
+        if (template.to) setTo(template.to)
       } catch {
         // Silently fail — operator types manually.
-      } finally {
-        if (!cancelled) setLoadingClient(false)
       }
     })()
     return () => {
@@ -88,13 +111,11 @@ export function EmailSendDialog({
     }
   }, [open, proposalId])
 
-  // Fallback: pull the email from the client when a clientId is given
-  // but the proposal-template endpoint didn't yield a recipient (e.g.
-  // when the dialog is opened without a proposalId).
+  // Fallback: pull email from the client when there's no proposalId
+  // but a clientId is given (free-form mode).
   useEffect(() => {
     if (!open || proposalId || !clientId || initialRecipient) return
     let cancelled = false
-    setLoadingClient(true)
     ;(async () => {
       try {
         const res = await fetch(`${API_BASE}/api/v1/clients/${clientId}`)
@@ -102,9 +123,7 @@ export function EmailSendDialog({
         const client = await res.json()
         if (client.email) setTo(client.email)
       } catch {
-        // Silently fail — user can type manually.
-      } finally {
-        if (!cancelled) setLoadingClient(false)
+        // Silently fail.
       }
     })()
     return () => {
@@ -112,16 +131,36 @@ export function EmailSendDialog({
     }
   }, [open, proposalId, clientId, initialRecipient])
 
+  function toggleSelected(email: string, checked: boolean) {
+    setSelectedEmails(prev => {
+      const next = new Set(prev)
+      if (checked) {
+        next.add(email)
+      } else {
+        next.delete(email)
+      }
+      return next
+    })
+  }
+
   async function handleSend() {
-    if (!to || !emailSubject || !body) {
-      toast.error('Por favor completa todos los campos obligatorios')
+    // For proposal sends we drive recipients from the checkbox list;
+    // for free-form sends we fall back to the single `to` input.
+    const proposalMode = proposalId && availableEmails.length > 0
+    const recipients = proposalMode
+      ? availableEmails.map(e => e.email).filter(e => selectedEmails.has(e))
+      : to.split(',').map(e => e.trim()).filter(Boolean)
+
+    if (recipients.length === 0 || !emailSubject || !body) {
+      toast.error('Necesitás al menos un destinatario, asunto y cuerpo')
       return
     }
 
     setSending(true)
     try {
       const request: EmailSendRequest = {
-        to,
+        to: recipients[0],
+        cc: recipients.slice(1).join(', ') || undefined,
         subject: emailSubject,
         body,
         attach_proposal_pdf: attachPdf && proposalId ? proposalId : undefined,
@@ -144,12 +183,14 @@ export function EmailSendDialog({
         const error = await res.json().catch(() => ({ detail: 'Error al enviar el email' }))
         toast.error(error.detail || 'Error al enviar el email')
       }
-    } catch (error) {
+    } catch {
       toast.error('Error al enviar el email')
     } finally {
       setSending(false)
     }
   }
+
+  const proposalMode = !!proposalId && availableEmails.length > 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -160,15 +201,45 @@ export function EmailSendDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label>Para</Label>
-            <Input
-              type="email"
-              value={to}
-              onChange={e => setTo(e.target.value)}
-              placeholder="cliente@ejemplo.com"
-            />
-          </div>
+          {proposalMode ? (
+            <div className="flex flex-col gap-2">
+              <Label>Destinatarios</Label>
+              <div className="flex flex-col gap-2 rounded-md border p-3">
+                {availableEmails.map(option => {
+                  const id = `recipient-${option.email}`
+                  return (
+                    <div key={option.email} className="flex items-center gap-3">
+                      <Checkbox
+                        id={id}
+                        checked={selectedEmails.has(option.email)}
+                        onCheckedChange={checked => toggleSelected(option.email, !!checked)}
+                      />
+                      <Label htmlFor={id} className="cursor-pointer text-sm font-normal">
+                        <span className="font-medium">{option.label}</span>{' '}
+                        <span className="text-muted-foreground">— {option.email}</span>
+                      </Label>
+                    </div>
+                  )
+                })}
+              </div>
+              {ccFixed.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  También se envía con copia fija a:{' '}
+                  <span className="font-mono">{ccFixed.join(', ')}</span>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Label>Para</Label>
+              <Input
+                type="email"
+                value={to}
+                onChange={e => setTo(e.target.value)}
+                placeholder="cliente@ejemplo.com (separá varios con comas)"
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <Label>Asunto</Label>

@@ -4,10 +4,23 @@ and the email subject + body templates that go out when the quote is
 shared.
 
 All strings live here so the wording stays consistent across the PDF,
-the download filename, and the future "send by email" feature.
+the download filename, and the email-send feature.
 """
+from xml.sax.saxutils import escape
+
 from app.custom.features.clients.models import Client
 from app.custom.features.proposals.models import Proposal
+
+# Always copied on outbound proposal emails. Hard-coded for now —
+# per-tenant customization can move this behind settings the day a
+# second fork needs different addresses.
+PROPOSAL_EMAIL_CC: tuple[str, ...] = (
+    "hernan.mendrisoftware@gmail.com",
+    "leandro.carriego@mendrisoftware.com",
+)
+
+
+_CODE_REFERENCE_PREFIX = "Código de referencia:"
 
 
 def format_recipient_label(client: Client | None) -> str | None:
@@ -81,3 +94,20 @@ def format_email_body(proposal: Proposal, client: Client | None) -> str:
         elif client.company:
             greeting_name = client.company.strip()
     return _EMAIL_BODY_TEMPLATE.format(greeting_name=greeting_name, code=proposal.code)
+
+
+def format_email_html_body(plain_body: str) -> str:
+    """Build an HTML version of the plain body so the line that
+    references the proposal code lands in **bold** in the recipient's
+    inbox. Everything else is escaped and `\\n` becomes `<br>` so the
+    layout matches what the operator sees in the textarea.
+    """
+    rendered_lines: list[str] = []
+    for line in plain_body.split("\n"):
+        escaped = escape(line)
+        if line.lstrip().startswith(_CODE_REFERENCE_PREFIX):
+            rendered_lines.append(f"<strong>{escaped}</strong>")
+        else:
+            rendered_lines.append(escaped)
+    body_html = "<br>".join(rendered_lines)
+    return f"<html><body>{body_html}</body></html>"

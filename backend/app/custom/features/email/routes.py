@@ -13,7 +13,9 @@ from app.custom.features.pdf.routes import generate_invoice_pdf
 from app.custom.features.proposals.models import ProposalCurrency
 from app.custom.features.proposals.quote.overlay import QuoteData, QuoteOverlayBuilder, QuoteTask
 from app.custom.features.proposals.quote_formatting import (
+    PROPOSAL_EMAIL_CC,
     format_email_body,
+    format_email_html_body,
     format_email_subject,
     format_filename,
     format_recipient_label,
@@ -104,14 +106,27 @@ async def send_email(
             logger.error(LOG_MESSAGES["pdf_attachment_error"].format(error=str(e)))
             raise HTTPException(status_code=500, detail=ERRORS["pdf_attachment_failed"]) from e
 
+    # Proposal emails always copy the company addresses + auto-bold the
+    # `Código de referencia:` line in the HTML body if the operator
+    # didn't ship their own HTML. Non-proposal sends pass through
+    # unchanged.
+    cc = request.cc
+    html_body = request.html_body
+    if request.attach_proposal_pdf:
+        existing_cc = [c.strip() for c in (request.cc or "").split(",") if c.strip()]
+        merged = existing_cc + [c for c in PROPOSAL_EMAIL_CC if c not in existing_cc]
+        cc = ", ".join(merged) if merged else None
+        if html_body is None:
+            html_body = format_email_html_body(request.body)
+
     logger.info(LOG_MESSAGES["email_sending"].format(to=request.to))
     success = await email_service.send_email(
         to=request.to,
         subject=request.subject,
         body=request.body,
-        html_body=request.html_body,
+        html_body=html_body,
         attachments=attachments if attachments else None,
-        cc=request.cc,
+        cc=cc,
     )
 
     if not success:
@@ -143,9 +158,13 @@ async def get_proposal_email_template(
     proposal_id: int,
     db: Session = Depends(get_db),
 ) -> dict:
-    """Return the canonical subject + body the operator should send
-    for this proposal. The frontend pre-fills the email dialog with
-    these values; the operator can still tweak before sending.
+    """Return the data the EmailSendDialog needs to pre-fill itself:
+    canonical subject + body, the recipient choices the operator can
+    pick from (primary + the client's `additional_emails`), and the
+    fixed company copies that are always added on send.
+
+    The operator can tweak any of these before hitting Send — these
+    are defaults, not locked-in values.
     """
     proposal_repo = ProposalRepository(db)
     proposal = proposal_repo.get_with_tasks(proposal_id)
@@ -153,10 +172,25 @@ async def get_proposal_email_template(
         raise HTTPException(status_code=404, detail=ERRORS["proposal_not_found"])
 
     client = ClientRepository(db).get(proposal.client_id) if proposal.client_id else None
+    available_emails: list[dict] = []
+    if client and client.email:
+        available_emails.append({"email": client.email, "label": "Principal", "is_primary": True})
+    if client and client.additional_emails:
+        for extra in client.additional_emails:
+            available_emails.append(
+                {
+                    "email": extra.email,
+                    "label": extra.label or "Adicional",
+                    "is_primary": False,
+                }
+            )
+
     return {
         "to": (client.email if client and client.email else "") or "",
         "subject": format_email_subject(proposal, client),
         "body": format_email_body(proposal, client),
+        "available_emails": available_emails,
+        "cc_fixed": list(PROPOSAL_EMAIL_CC),
     }
 
 
