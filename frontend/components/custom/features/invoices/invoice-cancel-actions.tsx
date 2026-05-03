@@ -1,9 +1,9 @@
 'use client'
 
-import { useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import { IconBan, IconLoader2, IconRotate } from '@tabler/icons-react'
+import { useRouter } from 'next/navigation'
+import { useTransition } from 'react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -69,9 +69,7 @@ export function InvoiceCancelActions({ invoice }: InvoiceCancelActionsProps) {
           toast.success(`Comprobante ${docNumber} anulado.`)
         } else {
           const ncNum = result.data.receipt_number ?? '?'
-          toast.success(
-            `Nota de Crédito C N°${ncNum} emitida — CAE ${result.data.cae ?? '—'}`
-          )
+          toast.success(`Nota de Crédito C N°${ncNum} emitida — CAE ${result.data.cae ?? '—'}`)
           // The NC is its own invoice — push the operator there so they
           // can immediately print/email the credit note.
           router.push(`/invoices/${result.data.id}`)
@@ -114,24 +112,24 @@ export function InvoiceCancelActions({ invoice }: InvoiceCancelActionsProps) {
             {invoice.is_internal ? (
               <>
                 Vas a anular el comprobante interno{' '}
-                <span className="font-mono text-foreground">
+                <span className="text-foreground">
                   X-
                   {String(invoice.internal_number ?? 0).padStart(8, '0')}
                 </span>
-                . La fila queda visible pero tachada y marcada como anulada. La acción
-                es reversible — podés restaurarla desde el mismo botón.
+                . La fila queda visible pero tachada y marcada como anulada. La acción es reversible
+                — podés restaurarla desde el mismo botón.
               </>
             ) : (
               <>
-                Vas a emitir una <strong>Nota de Crédito C</strong> contra AFIP
-                asociada a la factura{' '}
-                <span className="font-mono text-foreground">
+                Vas a emitir una <strong>Nota de Crédito C</strong> contra AFIP asociada a la
+                factura{' '}
+                <span className="text-foreground">
                   {String(invoice.point_of_sale ?? 0).padStart(4, '0')}-
                   {String(invoice.receipt_number ?? 0).padStart(8, '0')}
                 </span>
-                . La NC queda registrada con su propio CAE y la factura original
-                quedará marcada como anulada en el listado. La operación es{' '}
-                <strong>irreversible</strong>: la NC también queda en los registros de AFIP.
+                . La NC queda registrada con su propio CAE y la factura original quedará marcada
+                como anulada en el listado. La operación es <strong>irreversible</strong>: la NC
+                también queda en los registros de AFIP.
               </>
             )}
           </AlertDialogDescription>

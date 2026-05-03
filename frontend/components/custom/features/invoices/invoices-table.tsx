@@ -1,8 +1,5 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import {
   IconBan,
   IconCheck,
@@ -27,6 +24,9 @@ import {
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table'
+import { useRouter } from 'next/navigation'
+import { useMemo, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -102,7 +102,10 @@ function typeLabel(invoice: InvoiceRecord): string {
   return RECEIPT_TYPE_LABELS[invoice.receipt_type] ?? `Tipo ${invoice.receipt_type}`
 }
 
-function statusFor(invoice: InvoiceRecord): { label: string; variant: 'default' | 'outline' | 'destructive' | 'secondary' } {
+function statusFor(invoice: InvoiceRecord): {
+  label: string
+  variant: 'default' | 'outline' | 'destructive' | 'secondary'
+} {
   if (invoice.cancelled_at) return { label: 'Anulado', variant: 'destructive' }
   if (invoice.is_internal) return { label: 'Interno', variant: 'secondary' }
   if (!invoice.afip_success) return { label: 'Rechazada', variant: 'destructive' }
@@ -325,10 +328,7 @@ function getColumns(
                 </a>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onSelect={() => onSendEmail(invoice)}
-              >
+              <DropdownMenuItem className="cursor-pointer" onSelect={() => onSendEmail(invoice)}>
                 <IconMail className="size-4" />
                 Enviar por email
               </DropdownMenuItem>
@@ -351,10 +351,7 @@ function getColumns(
               {isCancelled && invoice.is_internal && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onSelect={() => onRestore(invoice)}
-                  >
+                  <DropdownMenuItem className="cursor-pointer" onSelect={() => onRestore(invoice)}>
                     <IconRotate className="size-4" />
                     Restaurar
                   </DropdownMenuItem>
@@ -412,9 +409,7 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
         toast.success(`Comprobante ${num} anulado.`)
       } else {
         const ncNum = result.data.receipt_number ?? '?'
-        toast.success(
-          `Nota de Crédito C N°${ncNum} emitida — CAE ${result.data.cae ?? '—'}`
-        )
+        toast.success(`Nota de Crédito C N°${ncNum} emitida — CAE ${result.data.cae ?? '—'}`)
       }
       router.refresh()
     } else {
@@ -548,11 +543,7 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
         </Button>
 
         {hasAnyFilter && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => table.resetColumnFilters()}
-          >
+          <Button variant="ghost" size="sm" onClick={() => table.resetColumnFilters()}>
             Limpiar
           </Button>
         )}
@@ -599,9 +590,7 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
                 <TableRow
                   key={row.id}
                   className={
-                    row.original.cancelled_at
-                      ? 'text-muted-foreground line-through'
-                      : undefined
+                    row.original.cancelled_at ? 'text-muted-foreground line-through' : undefined
                   }
                 >
                   {row.getVisibleCells().map(cell => (
@@ -675,24 +664,24 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
               {cancelTarget?.is_internal ? (
                 <>
                   Vas a anular el comprobante interno{' '}
-                  <span className="font-mono text-foreground">
+                  <span className="text-foreground">
                     X-
                     {String(cancelTarget?.internal_number ?? 0).padStart(8, '0')}
                   </span>
-                  . La fila queda visible pero tachada y marcada como anulada. La
-                  acción es reversible — podés restaurarla desde el mismo menú.
+                  . La fila queda visible pero tachada y marcada como anulada. La acción es
+                  reversible — podés restaurarla desde el mismo menú.
                 </>
               ) : (
                 <>
-                  Vas a emitir una <strong>Nota de Crédito C</strong> contra AFIP
-                  asociada a la factura{' '}
-                  <span className="font-mono text-foreground">
+                  Vas a emitir una <strong>Nota de Crédito C</strong> contra AFIP asociada a la
+                  factura{' '}
+                  <span className="text-foreground">
                     {String(cancelTarget?.point_of_sale ?? 0).padStart(4, '0')}-
                     {String(cancelTarget?.receipt_number ?? 0).padStart(8, '0')}
                   </span>
-                  . La NC queda registrada con su propio CAE y la factura original
-                  quedará marcada como anulada en el listado. La operación es{' '}
-                  <strong>irreversible</strong>: la NC también queda en los registros de AFIP.
+                  . La NC queda registrada con su propio CAE y la factura original quedará marcada
+                  como anulada en el listado. La operación es <strong>irreversible</strong>: la NC
+                  también queda en los registros de AFIP.
                 </>
               )}
             </AlertDialogDescription>

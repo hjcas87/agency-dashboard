@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import { IconLoader2, IconReceipt } from '@tabler/icons-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/core/ui/button'
 import {
@@ -143,8 +143,8 @@ export function BillableProposalsTable({ proposals }: BillableProposalsTableProp
         <EmptyHeader>
           <EmptyTitle>No hay presupuestos pendientes de facturar</EmptyTitle>
           <EmptyDescription>
-            Solo aparecen acá los presupuestos en estado &quot;Aceptado&quot; con saldo
-            pendiente. Si facturaste el total, la fila desaparece.
+            Solo aparecen acá los presupuestos en estado &quot;Aceptado&quot; con saldo pendiente.
+            Si facturaste el total, la fila desaparece.
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
@@ -271,9 +271,7 @@ export function BillableProposalsTable({ proposals }: BillableProposalsTableProp
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="comprobante-amount">
-                Importe a facturar (ARS)
-              </FieldLabel>
+              <FieldLabel htmlFor="comprobante-amount">Importe a facturar (ARS)</FieldLabel>
               <Input
                 id="comprobante-amount"
                 type="number"
@@ -285,8 +283,8 @@ export function BillableProposalsTable({ proposals }: BillableProposalsTableProp
                 disabled={isPending}
               />
               <p className="text-xs text-muted-foreground">
-                Default: el restante del presupuesto. Bajalo para facturar parcial
-                (adelanto, cuotas, etc.).{' '}
+                Default: el restante del presupuesto. Bajalo para facturar parcial (adelanto,
+                cuotas, etc.).{' '}
                 {percentLabel && (
                   <span className="text-foreground">Equivale al {percentLabel}.</span>
                 )}
@@ -294,9 +292,7 @@ export function BillableProposalsTable({ proposals }: BillableProposalsTableProp
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="comprobante-description">
-                Detalle (opcional)
-              </FieldLabel>
+              <FieldLabel htmlFor="comprobante-description">Detalle (opcional)</FieldLabel>
               <Input
                 id="comprobante-description"
                 placeholder='ej. "Adelanto fase 1"'
@@ -305,8 +301,8 @@ export function BillableProposalsTable({ proposals }: BillableProposalsTableProp
                 disabled={isPending}
               />
               <p className="text-xs text-muted-foreground">
-                Si lo dejás vacío, el sistema usa
-                {' '}<span className="font-mono text-foreground">
+                Si lo dejás vacío, el sistema usa{' '}
+                <span className="text-foreground">
                   Adelanto / Saldo / Pago parcial presupuesto «{target?.name}» (NN%)
                 </span>{' '}
                 según corresponda.
@@ -315,11 +311,7 @@ export function BillableProposalsTable({ proposals }: BillableProposalsTableProp
           </FieldGroup>
 
           <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setTarget(null)}
-              disabled={isPending}
-            >
+            <Button variant="ghost" onClick={() => setTarget(null)} disabled={isPending}>
               Cancelar
             </Button>
             <Button onClick={confirmIssue} disabled={isPending}>
