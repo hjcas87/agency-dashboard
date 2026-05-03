@@ -2,6 +2,7 @@
 PDF Templates feature — API routes.
 """
 import logging
+import urllib.parse
 import uuid
 from decimal import Decimal
 from pathlib import Path
@@ -15,6 +16,7 @@ from app.custom.features.invoices.issuer import ISSUER
 from app.custom.features.invoices.repository import InvoiceRepository
 from app.custom.features.proposals.models import ProposalCurrency
 from app.custom.features.proposals.quote.overlay import QuoteData, QuoteOverlayBuilder, QuoteTask
+from app.custom.features.proposals.quote_formatting import format_filename, format_recipient_label
 from app.custom.features.proposals.repository import ProposalRepository
 from app.custom.features.proposals.service import ProposalService
 from app.database import get_db
@@ -53,11 +55,14 @@ async def generate_proposal_pdf(
     proposal_id: int,
     db: Session = Depends(get_db),
 ) -> Response:
-    """Stream the 5-page client-facing quote PDF for a proposal."""
+    """Stream the client-facing quote PDF for a proposal."""
     proposal_repo = ProposalRepository(db)
     proposal = proposal_repo.get_with_tasks(proposal_id)
     if not proposal:
         raise HTTPException(status_code=404, detail=ERRORS["proposal_not_found"])
+
+    client = ClientRepository(db).get(proposal.client_id) if proposal.client_id else None
+    recipient_label = format_recipient_label(client) if proposal.show_recipient_on_cover else None
 
     totals = ProposalService.calculate_totals(proposal, proposal.tasks)
     currency = (
@@ -68,6 +73,9 @@ async def generate_proposal_pdf(
     total_amount = totals["total_usd"] if currency == "USD" else totals["total_ars"]
 
     quote_data = QuoteData(
+        code=proposal.code,
+        issue_date=proposal.issue_date,
+        recipient_label=recipient_label,
         tasks=[QuoteTask(name=t.name, description=t.description) for t in proposal.tasks],
         deliverables_summary=proposal.deliverables_summary,
         estimated_days=proposal.estimated_days,
@@ -79,11 +87,15 @@ async def generate_proposal_pdf(
     pdf_bytes = QuoteOverlayBuilder().build(quote_data)
     logger.info(LOG_MESSAGES["proposal_generated"].format(id=proposal_id))
 
+    filename = f"{format_filename(proposal, client)}.pdf"
+    # RFC 5987 dual encoding so HTTP clients render Unicode characters
+    # in the suggested filename (es-AR names, accents, etc.).
+    encoded = urllib.parse.quote(filename)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f"inline; filename=presupuesto_{proposal_id}.pdf",
+            "Content-Disposition": (f"inline; filename=\"{filename}\"; filename*=UTF-8''{encoded}"),
         },
     )
 

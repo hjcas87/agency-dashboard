@@ -5,10 +5,10 @@ Uses SQLAlchemy 2.x `Mapped[...]` / `mapped_column(...)` declarations so
 attribute access yields plain types instead of `Column[T]`.
 """
 import enum
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -43,10 +43,23 @@ class Proposal(Base):
     __tablename__ = "proposals"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    # Short reference code printed on the cover (`#TY48YY`). Generated
+    # server-side at create time, immutable afterwards.
+    code: Mapped[str] = mapped_column(String(8), unique=True, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     client_id: Mapped[int | None] = mapped_column(
         ForeignKey("clients.id", ondelete="SET NULL"),
         nullable=True,
+    )
+    # Date stamped on the cover. Defaults to creation day but the
+    # operator can edit it to back- or forward-date a quote.
+    issue_date: Mapped[date] = mapped_column(
+        Date, nullable=False, server_default=func.current_date()
+    )
+    # Whether the "PREPARADO PARA: <client>" block is rendered on the
+    # cover. Always false-effective when the proposal has no client.
+    show_recipient_on_cover: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
     )
     status: Mapped[ProposalStatus] = mapped_column(
         Enum(

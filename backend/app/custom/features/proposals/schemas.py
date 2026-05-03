@@ -1,7 +1,7 @@
 """
 Pydantic schemas for the Proposal feature.
 """
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
@@ -61,6 +61,8 @@ class ProposalCreate(BaseModel):
     hourly_rate_ars: Decimal = Field(..., gt=0)
     exchange_rate: Decimal = Field(..., gt=0)
     adjustment_percentage: Decimal = Field(default=0, ge=-100, le=100)
+    issue_date: date | None = None
+    show_recipient_on_cover: bool = True
     estimated_days: str | None = Field(default=None, max_length=64)
     deliverables_summary: str | None = Field(
         default=None, max_length=DELIVERABLES_SUMMARY_MAX_CHARS
@@ -77,6 +79,8 @@ class ProposalUpdate(BaseModel):
     hourly_rate_ars: Decimal | None = Field(None, gt=0)
     exchange_rate: Decimal | None = Field(None, gt=0)
     adjustment_percentage: Decimal | None = Field(None, ge=-100, le=100)
+    issue_date: date | None = None
+    show_recipient_on_cover: bool | None = None
     estimated_days: str | None = Field(default=None, max_length=64)
     deliverables_summary: str | None = Field(
         default=None, max_length=DELIVERABLES_SUMMARY_MAX_CHARS
@@ -94,6 +98,7 @@ class ProposalResponse(BaseModel):
     """Schema returned for a proposal with calculated totals."""
 
     id: int
+    code: str
     name: str
     client_id: int | None
     client_name: str | None = None
@@ -102,6 +107,8 @@ class ProposalResponse(BaseModel):
     hourly_rate_ars: Decimal
     exchange_rate: Decimal
     adjustment_percentage: Decimal
+    issue_date: date
+    show_recipient_on_cover: bool
     estimated_days: str | None = None
     deliverables_summary: str | None = None
     total_hours: Decimal

@@ -7,6 +7,7 @@ from decimal import Decimal
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.custom.features.proposals.code_generator import generate_unique_code
 from app.custom.features.proposals.constants import PROPOSAL_VALIDITY_DAYS
 from app.custom.features.proposals.messages import (
     ERR_INVALID_STATUS_VALUE,
@@ -110,6 +111,7 @@ class ProposalService:
 
         return ProposalResponse(
             id=proposal.id,
+            code=proposal.code,
             name=proposal.name,
             client_id=proposal.client_id,
             client_name=client_name,
@@ -122,6 +124,8 @@ class ProposalService:
             hourly_rate_ars=proposal.hourly_rate_ars,
             exchange_rate=proposal.exchange_rate,
             adjustment_percentage=proposal.adjustment_percentage,
+            issue_date=proposal.issue_date,
+            show_recipient_on_cover=proposal.show_recipient_on_cover,
             estimated_days=proposal.estimated_days,
             deliverables_summary=proposal.deliverables_summary,
             total_hours=totals["total_hours"],
@@ -165,17 +169,24 @@ class ProposalService:
 
     def create_proposal(self, data: ProposalCreate) -> ProposalResponse:
         """Create a new proposal with its tasks."""
-        proposal = Proposal(
-            name=data.name,
-            client_id=data.client_id,
-            currency=ProposalCurrency(data.currency),
-            hourly_rate_ars=data.hourly_rate_ars,
-            exchange_rate=data.exchange_rate,
-            adjustment_percentage=data.adjustment_percentage,
-            estimated_days=data.estimated_days,
-            deliverables_summary=data.deliverables_summary,
-            status=ProposalStatus.DRAFT,
-        )
+        kwargs = {
+            "code": generate_unique_code(self.db),
+            "name": data.name,
+            "client_id": data.client_id,
+            "currency": ProposalCurrency(data.currency),
+            "hourly_rate_ars": data.hourly_rate_ars,
+            "exchange_rate": data.exchange_rate,
+            "adjustment_percentage": data.adjustment_percentage,
+            "show_recipient_on_cover": data.show_recipient_on_cover,
+            "estimated_days": data.estimated_days,
+            "deliverables_summary": data.deliverables_summary,
+            "status": ProposalStatus.DRAFT,
+        }
+        # Let the DB default to CURRENT_DATE when issue_date is omitted —
+        # avoids drift between the timezone the app sees and the DB sees.
+        if data.issue_date is not None:
+            kwargs["issue_date"] = data.issue_date
+        proposal = Proposal(**kwargs)
         self.db.add(proposal)
         self.db.flush()
 

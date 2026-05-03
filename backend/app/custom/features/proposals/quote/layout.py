@@ -59,6 +59,48 @@ ASSET_ORDER: tuple[str, ...] = (
     ASSET_FINAL,
 )
 
+# ── cover_page.pdf ──────────────────────────────────────────────
+# Reference code printed in white at the bottom-left of the cover —
+# precedes a "#" character at draw time. fs 14.2 pt.
+COVER_CODE_FIELD = LayoutZone(
+    name="cover.code",
+    top_cm=27.2,
+    left_cm=2.0,
+    width_cm=4.5,
+    height_cm=0.8,
+)
+
+# Big red issue date stacked across three lines (dd / mm / yy). The
+# layout box reserves enough vertical room for the 58.3 pt glyphs at
+# leading 60 pt × 3 lines.
+COVER_DATE_FIELD = LayoutZone(
+    name="cover.date",
+    top_cm=16.5,
+    left_cm=15.0,
+    width_cm=4.5,
+    height_cm=6.5,
+)
+
+# "PREPARADO PARA:" fixed label, fs 14.2 pt white. Optional pair with
+# the recipient name field below.
+COVER_RECIPIENT_LABEL_FIELD = LayoutZone(
+    name="cover.recipient.label",
+    top_cm=25.0,
+    left_cm=13.0,
+    width_cm=6.5,
+    height_cm=0.8,
+)
+
+# Recipient line — wraps up to 19.5 cm from the page's left edge so
+# longer "Name - Company" combinations don't run off the design.
+COVER_RECIPIENT_NAME_FIELD = LayoutZone(
+    name="cover.recipient.name",
+    top_cm=27.0,
+    left_cm=13.0,
+    width_cm=6.5,
+    height_cm=2.0,
+)
+
 # ── quote_base.pdf ──────────────────────────────────────────────
 QUOTE_BASE_CONTAINER = LayoutZone(
     name="quote_base.container",

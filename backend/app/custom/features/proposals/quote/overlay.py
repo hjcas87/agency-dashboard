@@ -15,6 +15,7 @@ quote_base pages are inserted automatically until every task fits.
 """
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
@@ -22,7 +23,7 @@ from typing import Any
 from xml.sax.saxutils import escape
 
 from pypdf import PageObject, PdfReader, PdfWriter
-from reportlab.lib.colors import white
+from reportlab.lib.colors import HexColor, white
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
@@ -36,9 +37,14 @@ from app.core.logging_config import get_logger
 from app.custom.features.proposals.quote.layout import (
     A4_HEIGHT_CM,
     A4_WIDTH_CM,
+    ASSET_COVER,
     ASSET_DELIVERABLES,
     ASSET_ORDER,
     ASSET_QUOTE_BASE,
+    COVER_CODE_FIELD,
+    COVER_DATE_FIELD,
+    COVER_RECIPIENT_LABEL_FIELD,
+    COVER_RECIPIENT_NAME_FIELD,
     DELIVERABLES_CONTAINER,
     DELIVERABLES_DAYS_FIELD,
     DELIVERABLES_TOTAL_FIELD,
@@ -59,6 +65,16 @@ FONT_BOLD_PATH = FONTS_DIR / "OpenSans-Bold.ttf"
 FONT_REGULAR_PATH = FONTS_DIR / "OpenSans-Regular.ttf"
 FONT_SIZE_PT = 12
 LINE_LEADING_PT = 14
+
+# Cover page typography. The big stacked date is the visual focal
+# point of the cover and uses the brand red taken from the source PDF.
+COVER_CODE_FONT_SIZE_PT = 14.2
+COVER_DATE_FONT_SIZE_PT = 58.3
+COVER_DATE_LEADING_PT = 60.0
+COVER_DATE_COLOR = HexColor("#f13a2c")
+COVER_LABEL_FONT_SIZE_PT = 14.2
+COVER_NAME_FONT_SIZE_PT = 11.9
+COVER_NAME_LEADING_PT = 14.0
 
 # Vertical gap between the bold task title and its (regular-weight)
 # description — small and intentional, just enough to detach the
@@ -108,6 +124,9 @@ class QuoteData:
     testable and independent of the persistence layer.
     """
 
+    code: str
+    issue_date: date
+    recipient_label: str | None
     tasks: list[QuoteTask]
     deliverables_summary: str | None
     estimated_days: str | None
@@ -185,6 +204,8 @@ class QuoteOverlayBuilder:
 
     # ── Per-asset overlay dispatcher ─────────────────────────
     def _build_overlay_for_asset(self, asset_name: str, data: QuoteData) -> PageObject | None:
+        if asset_name == ASSET_COVER:
+            return self._render_overlay(lambda c: self._draw_cover(c, data))
         if asset_name == ASSET_DELIVERABLES:
             return self._render_overlay(lambda c: self._draw_deliverables(c, data))
         return None
@@ -289,6 +310,74 @@ class QuoteOverlayBuilder:
                 group.append(Paragraph(escape(task.description), desc_style))
             groups.append(group)
         return groups
+
+    # ── Cover page ───────────────────────────────────────────
+    @staticmethod
+    def _draw_cover(c: rl_canvas.Canvas, data: QuoteData) -> None:
+        QuoteOverlayBuilder._draw_cover_code(c, data.code)
+        QuoteOverlayBuilder._draw_cover_date(c, data.issue_date)
+        if data.recipient_label:
+            QuoteOverlayBuilder._draw_cover_recipient(c, data.recipient_label)
+
+    @staticmethod
+    def _draw_cover_code(c: rl_canvas.Canvas, code: str) -> None:
+        style = ParagraphStyle(
+            "CoverCode",
+            fontName=FONT_BOLD,
+            fontSize=COVER_CODE_FONT_SIZE_PT,
+            leading=COVER_CODE_FONT_SIZE_PT * 1.2,
+            textColor=white,
+            alignment=TA_LEFT,
+            spaceAfter=0,
+        )
+        QuoteOverlayBuilder._draw_paragraph_in_zone(c, COVER_CODE_FIELD, f"#{escape(code)}", style)
+
+    @staticmethod
+    def _draw_cover_date(c: rl_canvas.Canvas, issue_date: date) -> None:
+        # dd / mm / yy stacked across three lines.
+        html = (
+            f"{issue_date.day:02d}<br/>"
+            f"{issue_date.month:02d}<br/>"
+            f"{issue_date.year % 100:02d}"
+        )
+        style = ParagraphStyle(
+            "CoverDate",
+            fontName=FONT_BOLD,
+            fontSize=COVER_DATE_FONT_SIZE_PT,
+            leading=COVER_DATE_LEADING_PT,
+            textColor=COVER_DATE_COLOR,
+            alignment=TA_LEFT,
+            spaceAfter=0,
+        )
+        QuoteOverlayBuilder._draw_paragraph_in_zone(c, COVER_DATE_FIELD, html, style)
+
+    @staticmethod
+    def _draw_cover_recipient(c: rl_canvas.Canvas, recipient_label: str) -> None:
+        label_style = ParagraphStyle(
+            "CoverRecipientLabel",
+            fontName=FONT_BOLD,
+            fontSize=COVER_LABEL_FONT_SIZE_PT,
+            leading=COVER_LABEL_FONT_SIZE_PT * 1.2,
+            textColor=white,
+            alignment=TA_LEFT,
+            spaceAfter=0,
+        )
+        QuoteOverlayBuilder._draw_paragraph_in_zone(
+            c, COVER_RECIPIENT_LABEL_FIELD, "PREPARADO PARA:", label_style
+        )
+
+        name_style = ParagraphStyle(
+            "CoverRecipientName",
+            fontName=FONT_BOLD,
+            fontSize=COVER_NAME_FONT_SIZE_PT,
+            leading=COVER_NAME_LEADING_PT,
+            textColor=white,
+            alignment=TA_LEFT,
+            spaceAfter=0,
+        )
+        QuoteOverlayBuilder._draw_paragraph_in_zone(
+            c, COVER_RECIPIENT_NAME_FIELD, escape(recipient_label), name_style
+        )
 
     # ── Deliverables page ────────────────────────────────────
     @staticmethod
