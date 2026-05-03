@@ -7,7 +7,6 @@ import {
   IconBriefcase,
   IconCalendarEvent,
   IconDashboard,
-  IconFileDescription,
   IconFileInvoice,
   IconSettings,
   IconUsers,
@@ -27,7 +26,6 @@ export const MAIN_NAV: NavItem[] = [
   { title: 'Clientes', url: '/clients', icon: IconUsers },
   { title: 'Presupuestos', url: '/proposals', icon: IconBriefcase },
   { title: 'Facturación', url: '/invoices', icon: IconFileInvoice },
-  { title: 'Plantillas PDF', url: '/pdf-templates', icon: IconFileDescription },
 ]
 
 /** Settings item shown at the bottom of the sidebar, above the user section. */
@@ -44,7 +42,6 @@ export const ROUTE_TITLES: Record<string, string> = {
   '/clients': 'Clientes',
   '/proposals': 'Presupuestos',
   '/invoices': 'Facturación',
-  '/pdf-templates': 'Plantillas PDF',
   '/settings': 'Configuración',
   '/clientes': 'Clientes',
   '/presupuestos': 'Presupuestos',
