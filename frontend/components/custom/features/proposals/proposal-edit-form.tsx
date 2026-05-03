@@ -17,6 +17,7 @@ import {
 } from '@/components/core/ui/alert-dialog'
 import { Badge } from '@/components/core/ui/badge'
 import { Button } from '@/components/core/ui/button'
+import { Checkbox } from '@/components/core/ui/checkbox'
 import { Input } from '@/components/core/ui/input'
 import { Label } from '@/components/core/ui/label'
 import {
@@ -51,6 +52,7 @@ const DELIVERABLES_SUMMARY_WARN = 1200
 interface ProposalEditFormProps {
   proposal: {
     id: number
+    code: string
     name: string
     client_id: number | null
     client_name: string | null
@@ -59,6 +61,8 @@ interface ProposalEditFormProps {
     hourly_rate_ars: string
     exchange_rate: string
     adjustment_percentage: string
+    issue_date: string
+    show_recipient_on_cover: boolean
     estimated_days: string | null
     deliverables_summary: string | null
     tasks: ProposalTask[]
@@ -112,6 +116,8 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
   const [hourlyRate, setHourlyRate] = useState(proposal.hourly_rate_ars)
   const [exchangeRate, setExchangeRate] = useState(proposal.exchange_rate)
   const [adjustmentPct, setAdjustmentPct] = useState(proposal.adjustment_percentage)
+  const [issueDate, setIssueDate] = useState(proposal.issue_date)
+  const [showRecipientOnCover, setShowRecipientOnCover] = useState(proposal.show_recipient_on_cover)
   const [estimatedDays, setEstimatedDays] = useState(proposal.estimated_days ?? '')
   const [deliverablesSummary, setDeliverablesSummary] = useState(proposal.deliverables_summary ?? '')
   const [tasks, setTasks] = useState<ProposalTask[]>(proposal.tasks ?? [])
@@ -210,6 +216,8 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
       hourly_rate_ars: hourlyRate,
       exchange_rate: exchangeRate,
       adjustment_percentage: adjustmentPct,
+      issue_date: issueDate || null,
+      show_recipient_on_cover: showRecipientOnCover,
       estimated_days: estimatedDays.trim() || null,
       deliverables_summary: deliverablesSummary.trim() || null,
       tasks: tasks.map((t, i) => ({ ...t, sort_order: i })),
@@ -255,7 +263,12 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
           </a>
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">Editar Presupuesto</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Editar Presupuesto</h1>
+            <Badge variant="outline" className="font-mono text-xs">
+              #{proposal.code}
+            </Badge>
+          </div>
           <p className="text-sm text-muted-foreground">
             Modificá los datos de <span className="font-medium">{proposal.name}</span>.
           </p>
@@ -426,6 +439,34 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
           <div className={`text-xs text-right ${deliverablesSummary.length > DELIVERABLES_SUMMARY_WARN ? 'text-amber-600' : 'text-muted-foreground'}`}>
             {deliverablesSummary.length} / {DELIVERABLES_SUMMARY_MAX}
           </div>
+        </div>
+      </div>
+
+      {/* Cover settings */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="issueDate">
+            Fecha del presupuesto <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="issueDate"
+            type="date"
+            value={issueDate}
+            onChange={e => setIssueDate(e.target.value)}
+            required
+            disabled={isReadOnly}
+          />
+        </div>
+        <div className="flex items-center gap-2 self-end pb-2 md:col-span-2">
+          <Checkbox
+            id="showRecipientOnCover"
+            checked={showRecipientOnCover}
+            onCheckedChange={value => setShowRecipientOnCover(value === true)}
+            disabled={isReadOnly}
+          />
+          <Label htmlFor="showRecipientOnCover" className="cursor-pointer text-sm font-normal">
+            Mostrar &quot;Preparado para: {'{cliente}'}&quot; en la portada (si hay cliente asignado)
+          </Label>
         </div>
       </div>
 

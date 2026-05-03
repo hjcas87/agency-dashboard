@@ -11,6 +11,7 @@ import {
 } from '@tabler/icons-react'
 
 import { Button } from '@/components/core/ui/button'
+import { Checkbox } from '@/components/core/ui/checkbox'
 import { Input } from '@/components/core/ui/input'
 import { Label } from '@/components/core/ui/label'
 import { Separator } from '@/components/core/ui/separator'
@@ -30,7 +31,15 @@ interface ClientOption {
 const DELIVERABLES_SUMMARY_MAX = 1300
 const DELIVERABLES_SUMMARY_WARN = 1200
 
-export function ProposalForm({ initialData }: { initialData?: { name: string; client_id: number | null; currency?: ProposalCurrency; hourly_rate_ars: string; exchange_rate: string; adjustment_percentage: string; estimated_days?: string | null; deliverables_summary?: string | null; tasks: ProposalTask[] } }) {
+function todayIso(): string {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+export function ProposalForm({ initialData }: { initialData?: { name: string; client_id: number | null; currency?: ProposalCurrency; hourly_rate_ars: string; exchange_rate: string; adjustment_percentage: string; issue_date?: string; show_recipient_on_cover?: boolean; estimated_days?: string | null; deliverables_summary?: string | null; tasks: ProposalTask[] } }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
@@ -41,6 +50,8 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
   const [hourlyRate, setHourlyRate] = useState(initialData?.hourly_rate_ars ?? '50000')
   const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate ?? '1200')
   const [adjustmentPct, setAdjustmentPct] = useState(initialData?.adjustment_percentage ?? '0')
+  const [issueDate, setIssueDate] = useState(initialData?.issue_date ?? todayIso())
+  const [showRecipientOnCover, setShowRecipientOnCover] = useState(initialData?.show_recipient_on_cover ?? true)
   const [estimatedDays, setEstimatedDays] = useState(initialData?.estimated_days ?? '')
   const [deliverablesSummary, setDeliverablesSummary] = useState(initialData?.deliverables_summary ?? '')
   const [tasks, setTasks] = useState<ProposalTask[]>(
@@ -107,6 +118,8 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
       hourly_rate_ars: hourlyRate,
       exchange_rate: exchangeRate,
       adjustment_percentage: adjustmentPct,
+      issue_date: issueDate || null,
+      show_recipient_on_cover: showRecipientOnCover,
       estimated_days: estimatedDays.trim() || null,
       deliverables_summary: deliverablesSummary.trim() || null,
       tasks: tasks.map((t, i) => ({ ...t, sort_order: i })),
@@ -184,6 +197,24 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
         <div className="flex flex-col gap-2">
           <Label htmlFor="exchangeRate">Tasa de cambio (1 USD = X ARS) <span className="text-destructive">*</span></Label>
           <Input id="exchangeRate" type="number" step="0.01" min="0" value={exchangeRate} onChange={e => setExchangeRate(e.target.value)} required />
+        </div>
+      </div>
+
+      {/* Cover settings */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="issueDate">Fecha del presupuesto <span className="text-destructive">*</span></Label>
+          <Input id="issueDate" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} required />
+        </div>
+        <div className="flex items-center gap-2 self-end pb-2 md:col-span-2">
+          <Checkbox
+            id="showRecipientOnCover"
+            checked={showRecipientOnCover}
+            onCheckedChange={value => setShowRecipientOnCover(value === true)}
+          />
+          <Label htmlFor="showRecipientOnCover" className="cursor-pointer text-sm font-normal">
+            Mostrar &quot;Preparado para: {'{cliente}'}&quot; en la portada (si hay cliente asignado)
+          </Label>
         </div>
       </div>
 

@@ -15,6 +15,7 @@ export type ProposalCurrency = 'ARS' | 'USD'
 
 export interface ProposalRecord {
   id: number
+  code: string
   name: string
   client_id: number | null
   client_name: string | null
@@ -23,6 +24,8 @@ export interface ProposalRecord {
   hourly_rate_ars: string
   exchange_rate: string
   adjustment_percentage: string
+  issue_date: string  // ISO date (YYYY-MM-DD)
+  show_recipient_on_cover: boolean
   estimated_days: string | null
   deliverables_summary: string | null
   total_hours: string
@@ -65,6 +68,8 @@ export interface ProposalCreateData {
   hourly_rate_ars: string
   exchange_rate: string
   adjustment_percentage: string
+  issue_date: string | null  // ISO date (YYYY-MM-DD) or null = use server default (today)
+  show_recipient_on_cover: boolean
   estimated_days: string | null
   deliverables_summary: string | null
   tasks: ProposalTask[]
