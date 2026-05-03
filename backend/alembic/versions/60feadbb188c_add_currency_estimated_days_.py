@@ -5,34 +5,38 @@ Revises: fb8153bb5132
 Create Date: 2026-05-02 20:09:50.471980
 
 """
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '60feadbb188c'
-down_revision = 'fb8153bb5132'
+revision = "60feadbb188c"
+down_revision = "fb8153bb5132"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
+    # Postgres `add_column` does not auto-create the named ENUM type
+    # the way `create_table` does — explicit `.create()` is required
+    # or the next ALTER fails with "type ... does not exist".
+    proposalcurrency = sa.Enum("ARS", "USD", name="proposalcurrency")
+    proposalcurrency.create(op.get_bind(), checkfirst=True)
     op.add_column(
-        'proposals',
+        "proposals",
         sa.Column(
-            'currency',
-            sa.Enum('ARS', 'USD', name='proposalcurrency'),
-            server_default='ARS',
+            "currency",
+            proposalcurrency,
+            server_default="ARS",
             nullable=False,
         ),
     )
-    op.add_column('proposals', sa.Column('estimated_days', sa.String(length=64), nullable=True))
-    op.add_column('proposals', sa.Column('deliverables_summary', sa.Text(), nullable=True))
+    op.add_column("proposals", sa.Column("estimated_days", sa.String(length=64), nullable=True))
+    op.add_column("proposals", sa.Column("deliverables_summary", sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column('proposals', 'deliverables_summary')
-    op.drop_column('proposals', 'estimated_days')
-    op.drop_column('proposals', 'currency')
-    op.execute('DROP TYPE proposalcurrency')
-
+    op.drop_column("proposals", "deliverables_summary")
+    op.drop_column("proposals", "estimated_days")
+    op.drop_column("proposals", "currency")
+    op.execute("DROP TYPE proposalcurrency")
