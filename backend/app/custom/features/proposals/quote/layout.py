@@ -95,7 +95,7 @@ COVER_RECIPIENT_LABEL_FIELD = LayoutZone(
 # longer "Name - Company" combinations don't run off the design.
 COVER_RECIPIENT_NAME_FIELD = LayoutZone(
     name="cover.recipient.name",
-    top_cm=27.0,
+    top_cm=26.0,
     left_cm=13.0,
     width_cm=6.5,
     height_cm=2.0,

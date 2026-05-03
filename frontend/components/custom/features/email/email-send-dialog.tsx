@@ -55,14 +55,44 @@ export function EmailSendDialog({
     if (!open) return
     setTo(initialRecipient)
     setEmailSubject(subject)
+    setBody('')
     setAttachPdf(!!proposalId)
   }, [open, initialRecipient, subject, proposalId])
 
-  // Load the client's email when the dialog opens with a clientId but
-  // no initialRecipient. Independent from user typing — `to` is not in
-  // the deps, so editing the input does not retrigger this effect.
+  // When the dialog opens for a specific proposal, fetch the canonical
+  // subject + body + recipient from the backend and pre-fill the form.
+  // The operator can still tweak before sending — these are defaults,
+  // not locked-in values.
   useEffect(() => {
-    if (!open || !clientId || initialRecipient) return
+    if (!open || !proposalId) return
+    let cancelled = false
+    setLoadingClient(true)
+    ;(async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/v1/email/proposals/${proposalId}/template`
+        )
+        if (cancelled || !res.ok) return
+        const template = await res.json() as { to: string; subject: string; body: string }
+        if (template.to) setTo(template.to)
+        if (template.subject) setEmailSubject(template.subject)
+        if (template.body) setBody(template.body)
+      } catch {
+        // Silently fail — operator types manually.
+      } finally {
+        if (!cancelled) setLoadingClient(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open, proposalId])
+
+  // Fallback: pull the email from the client when a clientId is given
+  // but the proposal-template endpoint didn't yield a recipient (e.g.
+  // when the dialog is opened without a proposalId).
+  useEffect(() => {
+    if (!open || proposalId || !clientId || initialRecipient) return
     let cancelled = false
     setLoadingClient(true)
     ;(async () => {
@@ -80,7 +110,7 @@ export function EmailSendDialog({
     return () => {
       cancelled = true
     }
-  }, [open, clientId, initialRecipient])
+  }, [open, proposalId, clientId, initialRecipient])
 
   async function handleSend() {
     if (!to || !emailSubject || !body) {

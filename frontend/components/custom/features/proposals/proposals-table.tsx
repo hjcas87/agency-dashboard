@@ -342,13 +342,13 @@ export function ProposalsTable({ data }: ProposalsTableProps) {
         </div>
       )}
 
-      {/* Email send dialog */}
+      {/* Email send dialog — subject + body are pulled from
+          /email/proposals/{id}/template when a proposalId is set. */}
       <EmailSendDialog
         open={!!emailDialogProposal}
         onOpenChange={open => {
           if (!open) setEmailDialogProposal(null)
         }}
-        subject={emailDialogProposal ? `Presupuesto: ${emailDialogProposal.name}` : ''}
         proposalId={emailDialogProposal?.id}
         clientId={emailDialogProposal?.client_id}
       />
