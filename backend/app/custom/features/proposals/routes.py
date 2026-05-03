@@ -96,7 +96,13 @@ def parse_ai_input(data: ProposalAIParseRequest) -> ProposalAIParseResponse:
     touch the DB. The frontend uses this to pre-populate the form so
     the operator can still review/edit before saving."""
     try:
-        parsed = json.loads(data.raw)
+        # `strict=False` lets through literal control chars (tabs,
+        # newlines) inside string values. Operators pasting from the
+        # chat clipboard, and many AI models, routinely produce JSON
+        # with un-escaped newlines inside long string fields — the
+        # tradeoff is harmless since we still hand the parsed dict to
+        # Pydantic for the real validation.
+        parsed = json.loads(data.raw, strict=False)
     except json.JSONDecodeError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

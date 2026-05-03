@@ -237,44 +237,27 @@ export const PROPOSAL_MESSAGES = {
   aiGenerate: {
     triggerLabel: 'Generar tareas',
     dialogTitle: 'Generar tareas con IA',
-    dialogDescription:
-      'Copiá y usá este prompt. Pegá el JSON que devuelva acá abajo y aplicalo al presupuesto.',
-    promptHeading: '1. Copiá este prompt',
-    promptHelper: 'Reemplazá el bloque entre corchetes con tu descripción del proyecto.',
-    pasteHeading: '2. Pegá el JSON que devolvió la IA',
+    dialogDescription: 'Pegá el JSON que devuelva la IA en el formato de abajo.',
+    promptHeading: 'Prompt',
+    promptHelper: 'Pedile a la IA que devuelva el presupuesto con este formato exacto.',
+    pasteHeading: 'JSON de la IA',
     pastePlaceholder: '{\n  "deliverables_summary": "...",\n  "tasks": [ ... ]\n}',
-    copyButton: 'Copiar prompt',
-    copyDone: 'Prompt copiado',
+    copyButton: 'Copiar',
+    copyDone: 'Copiado',
     cancelButton: 'Cancelar',
-    applyButton: 'Aplicar al presupuesto',
+    applyButton: 'Aplicar',
     applyingButton: 'Procesando...',
-    emptyError: 'Pegá el JSON que devolvió la IA antes de procesar.',
+    emptyError: 'Pegá el JSON antes de procesar.',
     successToast: 'Tareas y resumen aplicados al formulario.',
     genericError: 'No se pudo procesar el JSON. Revisá el formato y volvé a intentar.',
-    promptTemplate: `Sos un asistente que estructura cotizaciones de software. Recibís un texto libre con la descripción de un proyecto y devolvés EXCLUSIVAMENTE un JSON válido con esta forma exacta:
+    promptTemplate: `Devolvé el presupuesto en este JSON exacto (sin texto extra, sin markdown). \`name\` en MAYÚSCULAS sin numerar, \`hours\` > 0, \`deliverables_summary\` máx. 1300 chars (puede ser "").
 
 {
-  "deliverables_summary": "string (máx. 1300 caracteres). Resumen breve de lo que el cliente recibe al final del proyecto. Tono profesional, en español, primera persona del plural cuando aplique.",
+  "deliverables_summary": "",
   "tasks": [
-    {
-      "name": "STRING CORTO EN MAYÚSCULAS, sin numerar",
-      "description": "string. Qué incluye la tarea, en una o dos oraciones",
-      "hours": 4
-    }
+    { "name": "", "description": "", "hours": 0 }
   ]
-}
-
-Reglas estrictas:
-- Devolvé únicamente el JSON. Sin texto antes ni después. Sin bloques de código markdown.
-- No numerés las tareas en \`name\` (la app las numera sola).
-- \`name\` debe ir en MAYÚSCULAS y no superar 80 caracteres.
-- \`description\` puede ser "" si no hay info.
-- \`hours\` es un número (entero o decimal) estrictamente mayor a 0, realista para el alcance descrito.
-- \`deliverables_summary\` no puede pasar 1300 caracteres y puede ser "" si no aplica.
-- Podés generar tantas tareas como haga falta para cubrir el alcance, sin límite superior.
-
-Texto del proyecto:
-[PEGÁ ACÁ TU TEXTO]`,
+}`,
   },
 } as const
 

@@ -1,8 +1,5 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import {
   IconArrowLeft,
   IconDeviceFloppy,
@@ -10,6 +7,9 @@ import {
   IconSparkles,
   IconTrash,
 } from '@tabler/icons-react'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 
 import {
   AlertDialog,
@@ -295,7 +295,7 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Editar Presupuesto</h1>
-            <Badge variant="outline" className="font-mono text-xs">
+            <Badge variant="outline" className="text-xs">
               #{proposal.code}
             </Badge>
           </div>

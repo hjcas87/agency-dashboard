@@ -109,7 +109,7 @@ export function AIGenerateTasksDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-[95vw] flex-col sm:max-w-[95vw] lg:max-w-300">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconSparkles className="size-5 text-emerald-600" />
@@ -118,7 +118,7 @@ export function AIGenerateTasksDialog({
           <DialogDescription>{M.dialogDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold">{M.promptHeading}</Label>
@@ -132,7 +132,12 @@ export function AIGenerateTasksDialog({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">{M.promptHelper}</p>
-            <Textarea readOnly value={M.promptTemplate} rows={8} className="font-mono text-xs" />
+            <Textarea
+              readOnly
+              value={M.promptTemplate}
+              rows={6}
+              className="h-40 resize-y text-xs field-sizing-fixed"
+            />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -145,7 +150,7 @@ export function AIGenerateTasksDialog({
               onChange={e => setRaw(e.target.value)}
               placeholder={M.pastePlaceholder}
               rows={10}
-              className="font-mono text-xs"
+              className="h-56 resize-y text-xs field-sizing-fixed"
             />
           </div>
 
