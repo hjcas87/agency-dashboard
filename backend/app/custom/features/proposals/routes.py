@@ -1,10 +1,19 @@
 """
 Routes for the Proposal feature.
 """
-from fastapi import APIRouter, Depends, status
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from app.custom.features.proposals.messages import (
+    ERR_AI_PARSE_INVALID_JSON,
+    ERR_AI_PARSE_INVALID_PAYLOAD,
+)
 from app.custom.features.proposals.schemas import (
+    ProposalAIParseRequest,
+    ProposalAIParseResponse,
     ProposalCreate,
     ProposalResponse,
     ProposalStatusUpdate,
@@ -78,3 +87,30 @@ def delete_proposal(
 ) -> None:
     """Delete a proposal."""
     return service.delete_proposal(proposal_id)
+
+
+@router.post("/parse-ai-input", response_model=ProposalAIParseResponse)
+def parse_ai_input(data: ProposalAIParseRequest) -> ProposalAIParseResponse:
+    """Parse the JSON payload the operator pasted from the AI prompt
+    template and return clean tasks + summary. Pure parsing — does not
+    touch the DB. The frontend uses this to pre-populate the form so
+    the operator can still review/edit before saving."""
+    try:
+        parsed = json.loads(data.raw)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=ERR_AI_PARSE_INVALID_JSON.format(
+                reason=exc.msg, line=exc.lineno, column=exc.colno
+            ),
+        ) from exc
+
+    try:
+        return ProposalAIParseResponse.model_validate(parsed)
+    except ValidationError as exc:
+        first = exc.errors()[0]
+        location = ".".join(str(p) for p in first["loc"]) or "root"
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=ERR_AI_PARSE_INVALID_PAYLOAD.format(location=location, reason=first["msg"]),
+        ) from exc

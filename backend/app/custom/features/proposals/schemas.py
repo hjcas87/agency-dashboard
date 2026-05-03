@@ -94,6 +94,36 @@ class ProposalStatusUpdate(BaseModel):
     status: str = Field(..., pattern="^(draft|sent|accepted|rejected)$")
 
 
+# ── AI-assisted task generation ─────────────────────────────────
+
+
+class AIParsedTask(BaseModel):
+    """A single task as returned by the AI prompt template.
+
+    Mirrors `ProposalTaskCreate` but stays decoupled because the AI
+    payload is operator-pasted text, not a guaranteed-clean form
+    submission — keeping the shapes separate avoids accidentally
+    relaxing validation on the create path."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str | None = None
+    hours: Decimal = Field(..., gt=0)
+
+
+class ProposalAIParseRequest(BaseModel):
+    """Operator-pasted JSON output from the AI prompt template."""
+
+    raw: str = Field(..., min_length=1)
+
+
+class ProposalAIParseResponse(BaseModel):
+    """Parsed AI payload — fed back into the form so the operator can
+    review/edit before saving."""
+
+    deliverables_summary: str | None = None
+    tasks: list[AIParsedTask] = Field(..., min_length=1)
+
+
 class ProposalResponse(BaseModel):
     """Schema returned for a proposal with calculated totals."""
 

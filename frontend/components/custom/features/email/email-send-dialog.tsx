@@ -1,9 +1,11 @@
 'use client'
 
+import { IconLoader2, IconMail, IconX } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { IconMail, IconX, IconLoader2 } from '@tabler/icons-react'
 
+import { Button } from '@/components/core/ui/button'
+import { Checkbox } from '@/components/core/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -12,12 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/core/ui/dialog'
-import { Button } from '@/components/core/ui/button'
-import { Label } from '@/components/core/ui/label'
 import { Input } from '@/components/core/ui/input'
-import { Textarea } from '@/components/core/ui/textarea'
-import { Checkbox } from '@/components/core/ui/checkbox'
+import { Label } from '@/components/core/ui/label'
 import { Separator } from '@/components/core/ui/separator'
+import { Textarea } from '@/components/core/ui/textarea'
 
 import { EmailSendRequest } from '@/lib/shared/email/types'
 
@@ -76,11 +76,9 @@ export function EmailSendDialog({
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch(
-          `${API_BASE}/api/v1/email/proposals/${proposalId}/template`
-        )
+        const res = await fetch(`${API_BASE}/api/v1/email/proposals/${proposalId}/template`)
         if (cancelled || !res.ok) return
-        const template = await res.json() as {
+        const template = (await res.json()) as {
           to: string
           subject: string
           body: string
@@ -149,7 +147,10 @@ export function EmailSendDialog({
     const proposalMode = proposalId && availableEmails.length > 0
     const recipients = proposalMode
       ? availableEmails.map(e => e.email).filter(e => selectedEmails.has(e))
-      : to.split(',').map(e => e.trim()).filter(Boolean)
+      : to
+          .split(',')
+          .map(e => e.trim())
+          .filter(Boolean)
 
     if (recipients.length === 0 || !emailSubject || !body) {
       toast.error('Necesitás al menos un destinatario, asunto y cuerpo')
@@ -224,8 +225,7 @@ export function EmailSendDialog({
               </div>
               {ccFixed.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  También se envía con copia fija a:{' '}
-                  <span className="font-mono">{ccFixed.join(', ')}</span>
+                  CC: <span>{ccFixed.join(', ')}</span>
                 </p>
               )}
             </div>

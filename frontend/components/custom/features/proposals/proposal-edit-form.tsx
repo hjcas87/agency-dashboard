@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { IconArrowLeft, IconDeviceFloppy, IconPlus, IconTrash } from '@tabler/icons-react'
+import {
+  IconArrowLeft,
+  IconDeviceFloppy,
+  IconPlus,
+  IconSparkles,
+  IconTrash,
+} from '@tabler/icons-react'
 
 import {
   AlertDialog,
@@ -37,6 +43,10 @@ import {
   type ProposalCurrency,
   type ProposalTask,
 } from '@/app/actions/custom/proposals'
+import {
+  AIGenerateTasksDialog,
+  type AIParsedResult,
+} from '@/components/custom/features/proposals/ai-generate-tasks-dialog'
 import { PROPOSAL_MESSAGES } from '@/lib/messages'
 
 interface ClientOption {
@@ -119,10 +129,13 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
   const [issueDate, setIssueDate] = useState(proposal.issue_date)
   const [showRecipientOnCover, setShowRecipientOnCover] = useState(proposal.show_recipient_on_cover)
   const [estimatedDays, setEstimatedDays] = useState(proposal.estimated_days ?? '')
-  const [deliverablesSummary, setDeliverablesSummary] = useState(proposal.deliverables_summary ?? '')
+  const [deliverablesSummary, setDeliverablesSummary] = useState(
+    proposal.deliverables_summary ?? ''
+  )
   const [tasks, setTasks] = useState<ProposalTask[]>(proposal.tasks ?? [])
   const [status, setStatus] = useState(proposal.status)
   const [pendingStatus, setPendingStatus] = useState<string | null>(null)
+  const [aiDialogOpen, setAiDialogOpen] = useState(false)
   const tasksRef = useRef<HTMLDivElement>(null)
   const taskNameRefs = useRef<HTMLInputElement[]>([])
 
@@ -154,6 +167,23 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
     },
     []
   )
+
+  const applyAIResult = useCallback((result: AIParsedResult) => {
+    const isEmpty = (t: ProposalTask) => !t.name.trim() && (!t.hours || parseFloat(t.hours) === 0)
+    setTasks(prev => {
+      const incoming = result.tasks.map(t => ({
+        name: t.name,
+        description: t.description,
+        hours: t.hours,
+        sort_order: 0,
+      }))
+      const merged = prev.length === 0 || prev.every(isEmpty) ? incoming : [...prev, ...incoming]
+      return merged.map((t, i) => ({ ...t, sort_order: i }))
+    })
+    if (result.deliverables_summary && result.deliverables_summary.trim()) {
+      setDeliverablesSummary(result.deliverables_summary.slice(0, DELIVERABLES_SUMMARY_MAX))
+    }
+  }, [])
 
   function handleStatusSelect(target: string) {
     if (target === status) return
@@ -430,13 +460,17 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
           <Textarea
             id="deliverablesSummary"
             value={deliverablesSummary}
-            onChange={e => setDeliverablesSummary(e.target.value.slice(0, DELIVERABLES_SUMMARY_MAX))}
+            onChange={e =>
+              setDeliverablesSummary(e.target.value.slice(0, DELIVERABLES_SUMMARY_MAX))
+            }
             placeholder="Texto que verá el cliente en la sección de entregables. Si lo dejás vacío esa zona del PDF queda en blanco."
             rows={6}
             maxLength={DELIVERABLES_SUMMARY_MAX}
             disabled={isReadOnly}
           />
-          <div className={`text-xs text-right ${deliverablesSummary.length > DELIVERABLES_SUMMARY_WARN ? 'text-amber-600' : 'text-muted-foreground'}`}>
+          <div
+            className={`text-xs text-right ${deliverablesSummary.length > DELIVERABLES_SUMMARY_WARN ? 'text-amber-600' : 'text-muted-foreground'}`}
+          >
             {deliverablesSummary.length} / {DELIVERABLES_SUMMARY_MAX}
           </div>
         </div>
@@ -465,7 +499,8 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
             disabled={isReadOnly}
           />
           <Label htmlFor="showRecipientOnCover" className="cursor-pointer text-sm font-normal">
-            Mostrar &quot;Preparado para: {'{cliente}'}&quot; en la portada (si hay cliente asignado)
+            Mostrar &quot;Preparado para: {'{cliente}'}&quot; en la portada (si hay cliente
+            asignado)
           </Label>
         </div>
       </div>
@@ -474,16 +509,28 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
       <div ref={tasksRef} className="flex flex-col gap-3">
         <div className="sticky top-[5rem] z-50 flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border px-4 py-3 shadow-md">
           <Label className="text-base font-semibold">Tareas</Label>
-          <Button
-            type="button"
-            size="sm"
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-            onClick={addTask}
-            disabled={isReadOnly}
-          >
-            <IconPlus className="size-4" />
-            Agregar tarea
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setAiDialogOpen(true)}
+              disabled={isReadOnly}
+            >
+              <IconSparkles className="size-4" />
+              {PROPOSAL_MESSAGES.aiGenerate.triggerLabel}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={addTask}
+              disabled={isReadOnly}
+            >
+              <IconPlus className="size-4" />
+              Agregar tarea
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -588,6 +635,12 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
           </Button>
         )}
       </div>
+
+      <AIGenerateTasksDialog
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        onResult={applyAIResult}
+      />
 
       {/* Status change confirmation */}
       <AlertDialog
