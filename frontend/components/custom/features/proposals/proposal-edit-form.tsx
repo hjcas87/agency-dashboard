@@ -1,9 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import {
+  IconArrowLeft,
+  IconDeviceFloppy,
+  IconPlus,
+  IconSparkles,
+  IconTrash,
+} from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { IconArrowLeft, IconDeviceFloppy, IconPlus, IconTrash } from '@tabler/icons-react'
 
 import {
   AlertDialog,
@@ -17,6 +23,7 @@ import {
 } from '@/components/core/ui/alert-dialog'
 import { Badge } from '@/components/core/ui/badge'
 import { Button } from '@/components/core/ui/button'
+import { Checkbox } from '@/components/core/ui/checkbox'
 import { Input } from '@/components/core/ui/input'
 import { Label } from '@/components/core/ui/label'
 import {
@@ -33,8 +40,13 @@ import {
   getClientsForSelect,
   updateProposalAction,
   updateProposalStatusAction,
+  type ProposalCurrency,
   type ProposalTask,
 } from '@/app/actions/custom/proposals'
+import {
+  AIGenerateTasksDialog,
+  type AIParsedResult,
+} from '@/components/custom/features/proposals/ai-generate-tasks-dialog'
 import { PROPOSAL_MESSAGES } from '@/lib/messages'
 
 interface ClientOption {
@@ -42,16 +54,27 @@ interface ClientOption {
   name: string
 }
 
+// Mirror of `DELIVERABLES_SUMMARY_MAX_CHARS` in
+// backend/app/custom/features/proposals/schemas.py — keep them in sync.
+const DELIVERABLES_SUMMARY_MAX = 1300
+const DELIVERABLES_SUMMARY_WARN = 1200
+
 interface ProposalEditFormProps {
   proposal: {
     id: number
+    code: string
     name: string
     client_id: number | null
     client_name: string | null
     status: string
+    currency: ProposalCurrency
     hourly_rate_ars: string
     exchange_rate: string
     adjustment_percentage: string
+    issue_date: string
+    show_recipient_on_cover: boolean
+    estimated_days: string | null
+    deliverables_summary: string | null
     tasks: ProposalTask[]
   }
 }
@@ -99,12 +122,20 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
   const [clients, setClients] = useState<ClientOption[]>([])
   const [name, setName] = useState(proposal.name)
   const [clientId, setClientId] = useState<string>(proposal.client_id?.toString() ?? '__none__')
+  const [currency, setCurrency] = useState<ProposalCurrency>(proposal.currency ?? 'ARS')
   const [hourlyRate, setHourlyRate] = useState(proposal.hourly_rate_ars)
   const [exchangeRate, setExchangeRate] = useState(proposal.exchange_rate)
   const [adjustmentPct, setAdjustmentPct] = useState(proposal.adjustment_percentage)
+  const [issueDate, setIssueDate] = useState(proposal.issue_date)
+  const [showRecipientOnCover, setShowRecipientOnCover] = useState(proposal.show_recipient_on_cover)
+  const [estimatedDays, setEstimatedDays] = useState(proposal.estimated_days ?? '')
+  const [deliverablesSummary, setDeliverablesSummary] = useState(
+    proposal.deliverables_summary ?? ''
+  )
   const [tasks, setTasks] = useState<ProposalTask[]>(proposal.tasks ?? [])
   const [status, setStatus] = useState(proposal.status)
   const [pendingStatus, setPendingStatus] = useState<string | null>(null)
+  const [aiDialogOpen, setAiDialogOpen] = useState(false)
   const tasksRef = useRef<HTMLDivElement>(null)
   const taskNameRefs = useRef<HTMLInputElement[]>([])
 
@@ -136,6 +167,23 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
     },
     []
   )
+
+  const applyAIResult = useCallback((result: AIParsedResult) => {
+    const isEmpty = (t: ProposalTask) => !t.name.trim() && (!t.hours || parseFloat(t.hours) === 0)
+    setTasks(prev => {
+      const incoming = result.tasks.map(t => ({
+        name: t.name,
+        description: t.description,
+        hours: t.hours,
+        sort_order: 0,
+      }))
+      const merged = prev.length === 0 || prev.every(isEmpty) ? incoming : [...prev, ...incoming]
+      return merged.map((t, i) => ({ ...t, sort_order: i }))
+    })
+    if (result.deliverables_summary && result.deliverables_summary.trim()) {
+      setDeliverablesSummary(result.deliverables_summary.slice(0, DELIVERABLES_SUMMARY_MAX))
+    }
+  }, [])
 
   function handleStatusSelect(target: string) {
     if (target === status) return
@@ -194,9 +242,14 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
     const data = {
       name,
       client_id: clientId && clientId !== '__none__' ? parseInt(clientId, 10) : null,
+      currency,
       hourly_rate_ars: hourlyRate,
       exchange_rate: exchangeRate,
       adjustment_percentage: adjustmentPct,
+      issue_date: issueDate || null,
+      show_recipient_on_cover: showRecipientOnCover,
+      estimated_days: estimatedDays.trim() || null,
+      deliverables_summary: deliverablesSummary.trim() || null,
       tasks: tasks.map((t, i) => ({ ...t, sort_order: i })),
     }
 
@@ -240,7 +293,12 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
           </a>
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">Editar Presupuesto</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Editar Presupuesto</h1>
+            <Badge variant="outline" className="text-xs">
+              #{proposal.code}
+            </Badge>
+          </div>
           <p className="text-sm text-muted-foreground">
             Modificá los datos de <span className="font-medium">{proposal.name}</span>.
           </p>
@@ -310,6 +368,24 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
           </Select>
         </div>
         <div className="flex flex-col gap-2">
+          <Label htmlFor="currency">
+            Moneda al cliente <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={currency}
+            onValueChange={value => setCurrency(value as ProposalCurrency)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger id="currency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ARS">ARS — Pesos argentinos</SelectItem>
+              <SelectItem value="USD">USD — Dólares</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-2">
           <Label htmlFor="hourlyRate">Valor por hora (ARS)</Label>
           <Input
             id="hourlyRate"
@@ -360,20 +436,101 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
         </div>
       </div>
 
+      {/* Resumen para el cliente (PDF) */}
+      <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
+        <div>
+          <h3 className="text-base font-semibold">Resumen para el cliente</h3>
+          <p className="text-sm text-muted-foreground">
+            Estos campos se imprimen en la página de entregables del PDF.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="estimatedDays">Tiempo de desarrollo</Label>
+          <Input
+            id="estimatedDays"
+            value={estimatedDays}
+            onChange={e => setEstimatedDays(e.target.value)}
+            placeholder="ej. 30 días hábiles"
+            maxLength={64}
+            disabled={isReadOnly}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="deliverablesSummary">Resumen de entregables</Label>
+          <Textarea
+            id="deliverablesSummary"
+            value={deliverablesSummary}
+            onChange={e =>
+              setDeliverablesSummary(e.target.value.slice(0, DELIVERABLES_SUMMARY_MAX))
+            }
+            placeholder="Texto que verá el cliente en la sección de entregables. Si lo dejás vacío esa zona del PDF queda en blanco."
+            rows={6}
+            maxLength={DELIVERABLES_SUMMARY_MAX}
+            disabled={isReadOnly}
+          />
+          <div
+            className={`text-xs text-right ${deliverablesSummary.length > DELIVERABLES_SUMMARY_WARN ? 'text-amber-600' : 'text-muted-foreground'}`}
+          >
+            {deliverablesSummary.length} / {DELIVERABLES_SUMMARY_MAX}
+          </div>
+        </div>
+      </div>
+
+      {/* Cover settings */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="issueDate">
+            Fecha del presupuesto <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="issueDate"
+            type="date"
+            value={issueDate}
+            onChange={e => setIssueDate(e.target.value)}
+            required
+            disabled={isReadOnly}
+          />
+        </div>
+        <div className="flex items-center gap-2 self-end pb-2 md:col-span-2">
+          <Checkbox
+            id="showRecipientOnCover"
+            checked={showRecipientOnCover}
+            onCheckedChange={value => setShowRecipientOnCover(value === true)}
+            disabled={isReadOnly}
+          />
+          <Label htmlFor="showRecipientOnCover" className="cursor-pointer text-sm font-normal">
+            Mostrar &quot;Preparado para: {'{cliente}'}&quot; en la portada (si hay cliente
+            asignado)
+          </Label>
+        </div>
+      </div>
+
       {/* Tasks */}
       <div ref={tasksRef} className="flex flex-col gap-3">
         <div className="sticky top-[5rem] z-50 flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border px-4 py-3 shadow-md">
           <Label className="text-base font-semibold">Tareas</Label>
-          <Button
-            type="button"
-            size="sm"
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-            onClick={addTask}
-            disabled={isReadOnly}
-          >
-            <IconPlus className="size-4" />
-            Agregar tarea
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setAiDialogOpen(true)}
+              disabled={isReadOnly}
+            >
+              <IconSparkles className="size-4" />
+              {PROPOSAL_MESSAGES.aiGenerate.triggerLabel}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={addTask}
+              disabled={isReadOnly}
+            >
+              <IconPlus className="size-4" />
+              Agregar tarea
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -478,6 +635,12 @@ export function ProposalEditForm({ proposal }: ProposalEditFormProps) {
           </Button>
         )}
       </div>
+
+      <AIGenerateTasksDialog
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        onResult={applyAIResult}
+      />
 
       {/* Status change confirmation */}
       <AlertDialog

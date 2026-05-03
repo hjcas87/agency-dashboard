@@ -1,9 +1,10 @@
 """
 Repositorio base con operaciones CRUD comunes.
 """
-from typing import Generic, TypeVar, Type, Optional, List
-from sqlalchemy.orm import Session
+from typing import Generic, Optional, TypeVar
+
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.database import Base
 
@@ -13,10 +14,10 @@ ModelType = TypeVar("ModelType", bound=Base)
 class BaseRepository(Generic[ModelType]):
     """Repositorio base con operaciones CRUD comunes."""
 
-    def __init__(self, model: Type[ModelType], db: Session):
+    def __init__(self, model: type[ModelType], db: Session):
         """
         Inicializa el repositorio.
-        
+
         Args:
             model: Clase del modelo SQLAlchemy
             db: Sesión de base de datos
@@ -36,7 +37,7 @@ class BaseRepository(Generic[ModelType]):
         skip: int = 0,
         limit: int = 100,
         filters: Optional[dict] = None,
-    ) -> List[ModelType]:
+    ) -> list[ModelType]:
         """Obtiene múltiples registros con paginación."""
         try:
             query = self.db.query(self.model)
@@ -107,4 +108,3 @@ class BaseRepository(Generic[ModelType]):
             return query.count()
         except SQLAlchemyError as e:
             raise Exception(f"Error counting {self.model.__name__}: {str(e)}")
-

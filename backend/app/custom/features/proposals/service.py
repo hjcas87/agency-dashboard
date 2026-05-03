@@ -1,18 +1,26 @@
 """
 Service layer for the Proposal feature.
 """
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.custom.features.proposals.code_generator import generate_unique_code
+from app.custom.features.proposals.constants import PROPOSAL_VALIDITY_DAYS
 from app.custom.features.proposals.messages import (
     ERR_INVALID_STATUS_VALUE,
     ERR_NOT_FOUND,
     ERR_TRANSITION_FORBIDDEN,
     STATUS_LABELS,
 )
-from app.custom.features.proposals.models import Proposal, ProposalStatus, ProposalTask
+from app.custom.features.proposals.models import (
+    Proposal,
+    ProposalCurrency,
+    ProposalStatus,
+    ProposalTask,
+)
 from app.custom.features.proposals.repository import ProposalRepository, ProposalTaskRepository
 from app.custom.features.proposals.schemas import (
     ProposalCreate,
@@ -94,17 +102,32 @@ class ProposalService:
             if client:
                 client_name = client.name
 
+        sent_at = proposal.sent_at
+        if sent_at is not None:
+            expiry = sent_at + timedelta(days=PROPOSAL_VALIDITY_DAYS)
+            days_until_expiry = (expiry - datetime.now(UTC)).days
+        else:
+            days_until_expiry = None
+
         return ProposalResponse(
             id=proposal.id,
+            code=proposal.code,
             name=proposal.name,
             client_id=proposal.client_id,
             client_name=client_name,
             status=proposal.status.value
             if isinstance(proposal.status, ProposalStatus)
             else proposal.status,
+            currency=proposal.currency.value
+            if isinstance(proposal.currency, ProposalCurrency)
+            else proposal.currency,
             hourly_rate_ars=proposal.hourly_rate_ars,
             exchange_rate=proposal.exchange_rate,
             adjustment_percentage=proposal.adjustment_percentage,
+            issue_date=proposal.issue_date,
+            show_recipient_on_cover=proposal.show_recipient_on_cover,
+            estimated_days=proposal.estimated_days,
+            deliverables_summary=proposal.deliverables_summary,
             total_hours=totals["total_hours"],
             subtotal_ars=totals["subtotal_ars"],
             adjustment_amount_ars=totals["adjustment_amount_ars"],
@@ -112,6 +135,8 @@ class ProposalService:
             total_usd=totals["total_usd"],
             created_at=proposal.created_at.isoformat() if proposal.created_at else "",
             updated_at=proposal.updated_at.isoformat() if proposal.updated_at else "",
+            sent_at=sent_at,
+            days_until_expiry=days_until_expiry,
             tasks=[
                 ProposalTaskResponse(
                     id=t.id,
@@ -144,14 +169,24 @@ class ProposalService:
 
     def create_proposal(self, data: ProposalCreate) -> ProposalResponse:
         """Create a new proposal with its tasks."""
-        proposal = Proposal(
-            name=data.name,
-            client_id=data.client_id,
-            hourly_rate_ars=data.hourly_rate_ars,
-            exchange_rate=data.exchange_rate,
-            adjustment_percentage=data.adjustment_percentage,
-            status=ProposalStatus.DRAFT,
-        )
+        kwargs = {
+            "code": generate_unique_code(self.db),
+            "name": data.name,
+            "client_id": data.client_id,
+            "currency": ProposalCurrency(data.currency),
+            "hourly_rate_ars": data.hourly_rate_ars,
+            "exchange_rate": data.exchange_rate,
+            "adjustment_percentage": data.adjustment_percentage,
+            "show_recipient_on_cover": data.show_recipient_on_cover,
+            "estimated_days": data.estimated_days,
+            "deliverables_summary": data.deliverables_summary,
+            "status": ProposalStatus.DRAFT,
+        }
+        # Let the DB default to CURRENT_DATE when issue_date is omitted —
+        # avoids drift between the timezone the app sees and the DB sees.
+        if data.issue_date is not None:
+            kwargs["issue_date"] = data.issue_date
+        proposal = Proposal(**kwargs)
         self.db.add(proposal)
         self.db.flush()
 
@@ -184,6 +219,8 @@ class ProposalService:
 
         update_data = data.model_dump(exclude_unset=True)
         tasks_data = update_data.pop("tasks", None)
+        if "currency" in update_data:
+            update_data["currency"] = ProposalCurrency(update_data["currency"])
 
         for field, value in update_data.items():
             setattr(proposal, field, value)
@@ -242,6 +279,12 @@ class ProposalService:
             )
 
         proposal.status = target
+
+        if target in (ProposalStatus.SENT, ProposalStatus.ACCEPTED) and proposal.sent_at is None:
+            proposal.sent_at = datetime.now(UTC)
+        elif target is ProposalStatus.SENT and current is ProposalStatus.DRAFT:
+            proposal.sent_at = datetime.now(UTC)
+
         self.db.commit()
         self.db.refresh(proposal)
         return self._to_response(proposal)

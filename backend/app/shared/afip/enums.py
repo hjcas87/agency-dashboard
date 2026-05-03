@@ -68,6 +68,32 @@ class IvaCondition(StrEnum):
     NC = "NC"  # No Categorizado
 
 
+# Human label used wherever the IVA condition is rendered for an end
+# user — invoice PDFs, client detail pages, etc. Kept here so the label
+# text stays in lock-step with the enum members.
+IVA_CONDITION_LABELS: dict[IvaCondition, str] = {
+    IvaCondition.RI: "IVA Responsable Inscripto",
+    IvaCondition.MT: "Responsable Monotributo",
+    IvaCondition.EX: "IVA Sujeto Exento",
+    IvaCondition.NA: "IVA No Alcanzado",
+    IvaCondition.CF: "Consumidor Final",
+    IvaCondition.NC: "IVA No Categorizado",
+}
+
+
+def iva_condition_label(value: IvaCondition | str | None) -> str:
+    """Return the human label for an IvaCondition (enum or raw string).
+    Falls back to an empty string when the value is missing or not in
+    the table — the renderer's placeholder helper takes over from there."""
+    if value is None:
+        return ""
+    try:
+        condition = value if isinstance(value, IvaCondition) else IvaCondition(str(value))
+    except ValueError:
+        return ""
+    return IVA_CONDITION_LABELS.get(condition, "")
+
+
 # Mapping IvaCondition -> CondicionIVAReceptorId (RG 5616).
 # These ARCA codes are the values returned by `FEParamGetCondicionIvaReceptor`.
 # Legacy bug 1: NA was mapped to 3 (does not exist in ARCA); now 15.
@@ -332,9 +358,11 @@ __all__ = [
     "Concept",
     "CurrencyId",
     "DocType",
+    "IVA_CONDITION_LABELS",
     "IVA_CONDITION_TO_AFIP_CODE",
     "IvaAliquotId",
     "IvaCondition",
+    "iva_condition_label",
     "ReceiptLetter",
     "ReceiptType",
     "SameForeignCurrencyMarker",

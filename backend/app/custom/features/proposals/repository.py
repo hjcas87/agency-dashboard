@@ -16,6 +16,7 @@ class ProposalRepository(BaseRepository[Proposal]):
     def get_with_tasks(self, proposal_id: int) -> Proposal | None:
         """Get a proposal with its tasks eagerly loaded."""
         from sqlalchemy.orm import joinedload
+
         return (
             self.db.query(Proposal)
             .options(joinedload(Proposal.tasks))
@@ -30,6 +31,7 @@ class ProposalRepository(BaseRepository[Proposal]):
     ) -> list[Proposal]:
         """Get all proposals with tasks eagerly loaded."""
         from sqlalchemy.orm import joinedload
+
         return (
             self.db.query(Proposal)
             .options(joinedload(Proposal.tasks))
@@ -57,6 +59,4 @@ class ProposalTaskRepository(BaseRepository[ProposalTask]):
 
     def delete_by_proposal(self, proposal_id: int) -> None:
         """Delete all tasks for a specific proposal."""
-        self.db.query(ProposalTask).filter(
-            ProposalTask.proposal_id == proposal_id
-        ).delete()
+        self.db.query(ProposalTask).filter(ProposalTask.proposal_id == proposal_id).delete()

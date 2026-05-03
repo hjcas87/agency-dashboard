@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { serverFetch } from '@/lib/shared/server-fetch'
 
 export interface ProposalTask {
   name: string
@@ -11,15 +11,23 @@ export interface ProposalTask {
   sort_order: number
 }
 
+export type ProposalCurrency = 'ARS' | 'USD'
+
 export interface ProposalRecord {
   id: number
+  code: string
   name: string
   client_id: number | null
   client_name: string | null
   status: string
+  currency: ProposalCurrency
   hourly_rate_ars: string
   exchange_rate: string
   adjustment_percentage: string
+  issue_date: string  // ISO date (YYYY-MM-DD)
+  show_recipient_on_cover: boolean
+  estimated_days: string | null
+  deliverables_summary: string | null
   total_hours: string
   subtotal_ars: string
   adjustment_amount_ars: string
@@ -27,11 +35,13 @@ export interface ProposalRecord {
   total_usd: string
   created_at: string
   updated_at: string
+  sent_at: string | null
+  days_until_expiry: number | null
 }
 
 export async function getProposals(): Promise<ProposalRecord[]> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/`, {
+    const res = await serverFetch(`/api/v1/proposals/`, {
       cache: 'no-store',
     })
     if (!res.ok) return []
@@ -42,7 +52,7 @@ export async function getProposals(): Promise<ProposalRecord[]> {
 }
 
 export async function getProposal(id: number): Promise<ProposalRecord & { tasks: ProposalTask[] }> {
-  const res = await fetch(`${API_URL}/api/v1/proposals/${id}`, {
+  const res = await serverFetch(`/api/v1/proposals/${id}`, {
     cache: 'no-store',
   })
   if (!res.ok) {
@@ -54,15 +64,20 @@ export async function getProposal(id: number): Promise<ProposalRecord & { tasks:
 export interface ProposalCreateData {
   name: string
   client_id: number | null
+  currency: ProposalCurrency
   hourly_rate_ars: string
   exchange_rate: string
   adjustment_percentage: string
+  issue_date: string | null  // ISO date (YYYY-MM-DD) or null = use server default (today)
+  show_recipient_on_cover: boolean
+  estimated_days: string | null
+  deliverables_summary: string | null
   tasks: ProposalTask[]
 }
 
 export async function createProposalAction(data: ProposalCreateData) {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/`, {
+    const res = await serverFetch(`/api/v1/proposals/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -82,7 +97,7 @@ export async function createProposalAction(data: ProposalCreateData) {
 
 export async function updateProposalAction(id: number, data: ProposalCreateData) {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/${id}`, {
+    const res = await serverFetch(`/api/v1/proposals/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -102,7 +117,7 @@ export async function updateProposalAction(id: number, data: ProposalCreateData)
 
 export async function updateProposalStatusAction(id: number, status: string) {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/${id}/status`, {
+    const res = await serverFetch(`/api/v1/proposals/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -122,7 +137,7 @@ export async function updateProposalStatusAction(id: number, status: string) {
 
 export async function deleteProposalAction(id: number): Promise<string | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/proposals/${id}`, {
+    const res = await serverFetch(`/api/v1/proposals/${id}`, {
       method: 'DELETE',
     })
 
@@ -139,7 +154,7 @@ export async function deleteProposalAction(id: number): Promise<string | null> {
 
 export async function getClientsForSelect(): Promise<{ id: number; name: string }[]> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/`, {
+    const res = await serverFetch(`/api/v1/clients/`, {
       cache: 'no-store',
     })
     if (!res.ok) return []

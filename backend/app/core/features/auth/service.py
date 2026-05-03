@@ -2,38 +2,35 @@
 Service layer para el feature de Auth.
 """
 from datetime import timedelta
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.features.users.models import User
-from app.core.features.users.repository import UserRepository
+from app.config import settings
 from app.core.features.auth.schemas import (
     LoginRequest,
-    PasswordResetRequest,
-    PasswordResetConfirm,
     PasswordChangeRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     UserCreateWithPassword,
     UserRegister,
 )
+from app.core.features.auth.tasks import send_email_task
 from app.core.features.auth.utils import (
-    verify_password,
-    get_password_hash,
     create_access_token,
-    get_user_password,
-    set_user_password,
     create_password_reset_token,
     get_password_reset_token,
+    get_user_password,
+    set_user_password,
+    verify_password,
 )
-from app.core.features.auth.models import PasswordResetToken
-from app.core.features.auth.tasks import send_email_task
-from app.config import settings
+from app.core.features.users.models import User
+from app.core.features.users.repository import UserRepository
 from app.shared.constants import (
     AUTH_ERRORS,
     AUTH_SUCCESS,
-    AUTH_SCHEME,
-    AUTHENTICATE_HEADER,
-    TOKEN_TYPE,
     JWT_CLAIM_SUB,
+    TOKEN_TYPE,
 )
 
 
@@ -43,7 +40,7 @@ class AuthService:
     def __init__(self, db: Session):
         """
         Inicializa el service.
-        
+
         Args:
             db: Sesión de base de datos
         """
@@ -53,13 +50,13 @@ class AuthService:
     def login(self, login_data: LoginRequest) -> dict:
         """
         Autentica un usuario y genera un token JWT.
-        
+
         Args:
             login_data: Datos de login
-            
+
         Returns:
             Dict con access_token, token_type y user
-            
+
         Raises:
             HTTPException: Si las credenciales son inválidas
         """
@@ -73,7 +70,9 @@ class AuthService:
 
         # Verificar contraseña
         user_password = get_user_password(self.db, user.id)
-        if not user_password or not verify_password(login_data.password, user_password.hashed_password):
+        if not user_password or not verify_password(
+            login_data.password, user_password.hashed_password
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=AUTH_ERRORS["invalid_credentials"],
@@ -89,8 +88,7 @@ class AuthService:
         # Crear token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={JWT_CLAIM_SUB: str(user.id)},
-            expires_delta=access_token_expires
+            data={JWT_CLAIM_SUB: str(user.id)}, expires_delta=access_token_expires
         )
 
         return {
@@ -101,16 +99,16 @@ class AuthService:
                 "email": user.email,
                 "name": user.name,
                 "is_active": user.is_active,
-            }
+            },
         }
 
     def request_password_reset(self, reset_data: PasswordResetRequest) -> dict:
         """
         Solicita un reseteo de contraseña.
-        
+
         Args:
             reset_data: Datos de solicitud de reseteo
-            
+
         Returns:
             Dict con mensaje de confirmación
         """
@@ -118,13 +116,13 @@ class AuthService:
         if not user:
             # Por seguridad, no revelamos si el email existe o no
             return {"message": AUTH_SUCCESS["password_reset_sent"]}
-        
+
         # Crear token de reseteo
         token = create_password_reset_token(self.db, user.id)
-        
+
         # Preparar contenido del email
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-        
+
         subject = "Password Reset"
         body = f"""
 Hola {user.name},
@@ -167,7 +165,7 @@ Saludos,
 </body>
 </html>
 """
-        
+
         # Encolar email en background usando Celery
         # Esto no bloquea la respuesta de la API
         try:
@@ -181,23 +179,22 @@ Saludos,
             # Log del error pero no fallar la respuesta
             # El email se reintentará automáticamente por Celery
             import logging
+
             logger = logging.getLogger(__name__)
             logger.error(f"Error al encolar email de password reset: {str(e)}")
-        
-        return {
-            "message": AUTH_SUCCESS["password_reset_sent"]
-        }
+
+        return {"message": AUTH_SUCCESS["password_reset_sent"]}
 
     def confirm_password_reset(self, reset_data: PasswordResetConfirm) -> dict:
         """
         Confirma el reseteo de contraseña con un token.
-        
+
         Args:
             reset_data: Datos de confirmación de reseteo
-            
+
         Returns:
             Dict con mensaje de confirmación
-            
+
         Raises:
             HTTPException: Si el token es inválido o expiró
         """
@@ -208,48 +205,43 @@ Saludos,
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=AUTH_ERRORS["invalid_token"],
             )
-        
+
         # Actualizar contraseña
         set_user_password(self.db, int(reset_token.user_id), reset_data.new_password)
-        
+
         # Marcar token como usado
         reset_token.used = True
         self.db.commit()
-        
+
         return {"message": AUTH_SUCCESS["password_reset_done"]}
 
-    def change_password(
-        self,
-        user_id: int,
-        change_data: PasswordChangeRequest
-    ) -> dict:
+    def change_password(self, user_id: int, change_data: PasswordChangeRequest) -> dict:
         """
         Cambia la contraseña de un usuario autenticado.
-        
+
         Args:
             user_id: ID del usuario
             change_data: Datos de cambio de contraseña
-            
+
         Returns:
             Dict con mensaje de confirmación
-            
+
         Raises:
             HTTPException: Si la contraseña actual es incorrecta
         """
         # Verificar contraseña actual
         user_password = get_user_password(self.db, user_id)
         if not user_password or not verify_password(
-            change_data.current_password,
-            user_password.hashed_password
+            change_data.current_password, user_password.hashed_password
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=AUTH_ERRORS["incorrect_password"],
             )
-        
+
         # Actualizar contraseña
         set_user_password(self.db, user_id, change_data.new_password)
-        
+
         return {"message": AUTH_SUCCESS["password_changed"]}
 
     def register(self, user_data: UserRegister) -> User:
@@ -286,13 +278,13 @@ Saludos,
     def create_user_with_password(self, user_data: UserCreateWithPassword) -> User:
         """
         Crea un usuario con contraseña (solo para administradores).
-        
+
         Args:
             user_data: Datos del usuario a crear
-            
+
         Returns:
             Usuario creado
-            
+
         Raises:
             HTTPException: Si el email ya existe
         """
@@ -303,18 +295,16 @@ Saludos,
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=AUTH_ERRORS["user_exists_detail"].format(email=user_data.email),
             )
-        
+
         # Crear usuario
         from app.core.features.users.schemas import UserCreate
+
         user_create = UserCreate(
-            email=user_data.email,
-            name=user_data.name,
-            is_active=user_data.is_active
+            email=user_data.email, name=user_data.name, is_active=user_data.is_active
         )
         user = self.user_repository.create(user_create.model_dump())
-        
+
         # Establecer contraseña
         set_user_password(self.db, user.id, user_data.password)
-        
-        return user
 
+        return user

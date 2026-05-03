@@ -2,12 +2,18 @@
 
 import { revalidatePath } from 'next/cache'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { serverFetch } from '@/lib/shared/server-fetch'
 
 // IvaCondition mirrors backend/app/shared/afip/enums.py::IvaCondition.
 // Kept as a string-union so the form can accept the raw codes the API
 // returns without intermediate mapping.
 export type IvaCondition = 'RI' | 'MT' | 'EX' | 'NA' | 'CF' | 'NC'
+
+export interface ClientAdditionalEmail {
+  id: number
+  email: string
+  label: string | null
+}
 
 export interface ClientRecord {
   id: number
@@ -15,8 +21,10 @@ export interface ClientRecord {
   company: string | null
   email: string
   phone: string | null
+  address: string | null
   cuit: string | null
   iva_condition: IvaCondition | null
+  additional_emails: ClientAdditionalEmail[]
 }
 
 export interface CuitLookupResult {
@@ -39,7 +47,7 @@ export type CuitLookupOutcome =
 
 export async function getClients(): Promise<ClientRecord[]> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/`, {
+    const res = await serverFetch(`/api/v1/clients/`, {
       cache: 'no-store',
     })
     if (!res.ok) return []
@@ -50,7 +58,7 @@ export async function getClients(): Promise<ClientRecord[]> {
 }
 
 export async function getClient(id: number): Promise<ClientRecord> {
-  const res = await fetch(`${API_URL}/api/v1/clients/${id}`, {
+  const res = await serverFetch(`/api/v1/clients/${id}`, {
     cache: 'no-store',
   })
   if (!res.ok) {
@@ -64,14 +72,35 @@ function buildClientBody(formData: FormData): Record<string, unknown> {
   const company = formData.get('company') as string
   const email = formData.get('email') as string
   const phone = formData.get('phone') as string
+  const address = formData.get('address') as string
   const cuit = formData.get('cuit') as string
   const ivaCondition = formData.get('iva_condition') as string
 
   const body: Record<string, unknown> = { name, email }
   if (company) body.company = company
   if (phone) body.phone = phone
+  if (address) body.address = address
   if (cuit) body.cuit = cuit
   if (ivaCondition) body.iva_condition = ivaCondition
+
+  // Additional emails come in as a JSON-stringified hidden input
+  // because FormData can't carry a structured list. Each entry is
+  // `{ email, label? }`. We strip empties and ship the rest verbatim.
+  const additionalRaw = formData.get('additional_emails') as string | null
+  if (additionalRaw) {
+    try {
+      const parsed = JSON.parse(additionalRaw) as { email?: string; label?: string }[]
+      const cleaned = parsed
+        .map(entry => ({
+          email: entry.email?.trim() ?? '',
+          label: entry.label?.trim() || null,
+        }))
+        .filter(entry => entry.email.length > 0)
+      body.additional_emails = cleaned
+    } catch {
+      // Silent — malformed JSON is a programmer error, not user input.
+    }
+  }
   return body
 }
 
@@ -114,7 +143,7 @@ export async function createClientAction(formData: FormData) {
   }
 
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/`, {
+    const res = await serverFetch(`/api/v1/clients/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(buildClientBody(formData)),
@@ -146,7 +175,7 @@ export async function updateClientAction(id: number, formData: FormData) {
   }
 
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/${id}`, {
+    const res = await serverFetch(`/api/v1/clients/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(buildClientBody(formData)),
@@ -176,7 +205,7 @@ export async function lookupCuitInAfipAction(cuit: string): Promise<CuitLookupOu
     return { success: false, error: 'El CUIT debe tener 11 dígitos.', status: 400 }
   }
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/lookup-cuit/${normalized}`, {
+    const res = await serverFetch(`/api/v1/clients/lookup-cuit/${normalized}`, {
       cache: 'no-store',
     })
     if (!res.ok) {
@@ -196,7 +225,7 @@ export async function lookupCuitInAfipAction(cuit: string): Promise<CuitLookupOu
 
 export async function deleteClientAction(id: number): Promise<string | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/clients/${id}`, {
+    const res = await serverFetch(`/api/v1/clients/${id}`, {
       method: 'DELETE',
     })
 

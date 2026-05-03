@@ -1,11 +1,11 @@
 """
 Shared utility functions.
 """
-from typing import Any, Dict
 import json
+from typing import Any
 
 
-def safe_json_loads(data: str) -> Dict[str, Any]:
+def safe_json_loads(data: str) -> dict[str, Any]:
     """Safely parse JSON string."""
     try:
         return json.loads(data)
@@ -16,4 +16,3 @@ def safe_json_loads(data: str) -> Dict[str, Any]:
 def format_error_message(error: Exception) -> str:
     """Format exception message for API responses."""
     return str(error) if error else "Unknown error"
-

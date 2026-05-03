@@ -1,13 +1,13 @@
 """
 Service layer para el feature de Users.
 """
-from typing import List, Optional
-from sqlalchemy.orm import Session
+from typing import Optional
+
 from fastapi import HTTPException, status
 
-from app.core.features.users.repository import UserRepository
-from app.core.features.users.schemas import UserCreate, UserUpdate, UserResponse
 from app.core.features.users.models import User
+from app.core.features.users.repository import UserRepository
+from app.core.features.users.schemas import UserCreate, UserUpdate
 
 
 class UserService:
@@ -16,7 +16,7 @@ class UserService:
     def __init__(self, user_repository: UserRepository):
         """
         Inicializa el service.
-        
+
         Args:
             user_repository: Instancia del repository de usuarios
         """
@@ -25,13 +25,13 @@ class UserService:
     def create_user(self, user_data: UserCreate) -> User:
         """
         Crea un nuevo usuario.
-        
+
         Args:
             user_data: Datos del usuario a crear
-            
+
         Returns:
             Usuario creado
-            
+
         Raises:
             HTTPException: Si el email ya existe
         """
@@ -50,13 +50,13 @@ class UserService:
     def get_user(self, user_id: int) -> User:
         """
         Obtiene un usuario por ID.
-        
+
         Args:
             user_id: ID del usuario
-            
+
         Returns:
             Usuario encontrado
-            
+
         Raises:
             HTTPException: Si el usuario no existe
         """
@@ -74,16 +74,16 @@ class UserService:
         limit: int = 100,
         active_only: bool = False,
         search: Optional[str] = None,
-    ) -> tuple[List[User], int]:
+    ) -> tuple[list[User], int]:
         """
         Obtiene lista de usuarios.
-        
+
         Args:
             skip: Número de registros a saltar
             limit: Número máximo de registros
             active_only: Si solo devolver usuarios activos
             search: Término de búsqueda opcional
-            
+
         Returns:
             Tupla con (lista de usuarios, total)
         """
@@ -102,14 +102,14 @@ class UserService:
     def update_user(self, user_id: int, user_data: UserUpdate) -> User:
         """
         Actualiza un usuario.
-        
+
         Args:
             user_id: ID del usuario
             user_data: Datos a actualizar
-            
+
         Returns:
             Usuario actualizado
-            
+
         Raises:
             HTTPException: Si el usuario no existe o el email ya está en uso
         """
@@ -132,13 +132,13 @@ class UserService:
     def delete_user(self, user_id: int) -> bool:
         """
         Elimina un usuario.
-        
+
         Args:
             user_id: ID del usuario
-            
+
         Returns:
             True si se eliminó exitosamente
-            
+
         Raises:
             HTTPException: Si el usuario no existe
         """
@@ -147,4 +147,3 @@ class UserService:
 
         # Eliminar
         return self.user_repository.delete(user_id)
-

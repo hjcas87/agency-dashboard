@@ -13,6 +13,10 @@ ERR_TRANSITION_FORBIDDEN = (
     "No se puede pasar de '{from_status}' a '{to_status}'. "
     "Si querés volver a editar un presupuesto cerrado, primero pasalo a 'borrador'."
 )
+ERR_AI_PARSE_INVALID_JSON = (
+    "El texto pegado no es JSON válido: {reason} (línea {line}, columna {column})."
+)
+ERR_AI_PARSE_INVALID_PAYLOAD = "El JSON no respeta el formato esperado en `{location}`: {reason}."
 
 
 # --- Status labels (for error messages, not for UI — UI usa frontend/lib/messages) ---
@@ -26,6 +30,8 @@ STATUS_LABELS = {
 
 
 __all__ = [
+    "ERR_AI_PARSE_INVALID_JSON",
+    "ERR_AI_PARSE_INVALID_PAYLOAD",
     "ERR_INVALID_STATUS_VALUE",
     "ERR_NOT_FOUND",
     "ERR_TRANSITION_FORBIDDEN",

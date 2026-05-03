@@ -4,14 +4,10 @@ Routes para el feature de N8N.
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.core.features.n8n.schemas import N8NTriggerRequest, N8NTriggerResponse, TaskStatusResponse
+from app.core.features.n8n.service import N8NFeatureService
 from app.database import get_db
 from app.shared.services.n8n_service import N8NService
-from app.core.features.n8n.service import N8NFeatureService
-from app.core.features.n8n.schemas import (
-    N8NTriggerRequest,
-    N8NTriggerResponse,
-    TaskStatusResponse,
-)
 
 router = APIRouter(prefix="/n8n", tags=["Core: N8N"])
 
@@ -54,4 +50,3 @@ async def get_task_status(
     """
     result = service.get_task_status(task_id)
     return TaskStatusResponse(**result)
-

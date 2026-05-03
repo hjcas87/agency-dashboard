@@ -18,6 +18,10 @@ import { Input } from '@/components/core/ui/input'
 
 import { createClientAction, type CuitLookupResult } from '@/app/actions/custom/clients'
 import {
+  AdditionalEmailsSection,
+  type AdditionalEmailDraft,
+} from '@/components/custom/features/clients/additional-emails-section'
+import {
   ClientAfipSection,
   type ClientAfipFields,
 } from '@/components/custom/features/clients/client-afip-section'
@@ -28,10 +32,23 @@ interface ClientCoreFields {
   company: string
   email: string
   phone: string
+  address: string
 }
 
-const EMPTY_CORE: ClientCoreFields = { name: '', company: '', email: '', phone: '' }
+const EMPTY_CORE: ClientCoreFields = {
+  name: '',
+  company: '',
+  email: '',
+  phone: '',
+  address: '',
+}
 const EMPTY_AFIP: ClientAfipFields = { cuit: '', ivaCondition: null }
+
+function composeFiscalAddress(result: CuitLookupResult): string {
+  return [result.fiscal_address, result.fiscal_locality, result.fiscal_province]
+    .filter(part => part && part.trim())
+    .join(', ')
+}
 
 function applyAfipAutofill(
   core: ClientCoreFields,
@@ -39,12 +56,14 @@ function applyAfipAutofill(
   result: CuitLookupResult
 ): { core: ClientCoreFields; afip: ClientAfipFields } {
   const composedName = [result.first_name, result.last_name].filter(Boolean).join(' ').trim() || ''
+  const composedAddress = composeFiscalAddress(result)
   return {
     core: {
       name: core.name || composedName,
       company: core.company || result.company_name || '',
       email: core.email,
       phone: core.phone,
+      address: core.address || composedAddress,
     },
     afip: {
       cuit: result.cuit,
@@ -59,6 +78,7 @@ export function ClientForm() {
   const [formError, setFormError] = useState<string | null>(null)
   const [core, setCore] = useState<ClientCoreFields>(EMPTY_CORE)
   const [afip, setAfip] = useState<ClientAfipFields>(EMPTY_AFIP)
+  const [additionalEmails, setAdditionalEmails] = useState<AdditionalEmailDraft[]>([])
 
   function handleSubmit(formData: FormData) {
     setFormError(null)
@@ -156,6 +176,18 @@ export function ClientForm() {
                   onChange={e => setCore(prev => ({ ...prev, phone: e.target.value }))}
                 />
               </Field>
+
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="address">Domicilio</FieldLabel>
+                <Input
+                  id="address"
+                  name="address"
+                  placeholder="Calle 123, Localidad, Provincia"
+                  disabled={isPending}
+                  value={core.address}
+                  onChange={e => setCore(prev => ({ ...prev, address: e.target.value }))}
+                />
+              </Field>
             </FieldGroup>
 
             <ClientAfipSection
@@ -166,6 +198,12 @@ export function ClientForm() {
                 setCore(next.core)
                 setAfip(next.afip)
               }}
+              disabled={isPending}
+            />
+
+            <AdditionalEmailsSection
+              values={additionalEmails}
+              onChange={setAdditionalEmails}
               disabled={isPending}
             />
 

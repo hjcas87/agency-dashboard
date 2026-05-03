@@ -1,10 +1,57 @@
-export default function InvoicesPage() {
+import { IconPlus } from '@tabler/icons-react'
+
+import { Button } from '@/components/core/ui/button'
+import { Card, CardContent } from '@/components/core/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/core/ui/tabs'
+
+import { getBillableProposals, getInvoices } from '@/app/actions/custom/invoices'
+import { BillableProposalsTable } from '@/components/custom/features/invoices/billable-proposals-table'
+import { InvoicesTable } from '@/components/custom/features/invoices/invoices-table'
+
+export default async function InvoicesPage() {
+  const [invoices, billable] = await Promise.all([getInvoices(), getBillableProposals()])
+
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">Facturación</h1>
-      <p className="text-muted-foreground">
-        Gestión de facturas y pagos.
-      </p>
+    <div className="flex w-full flex-col gap-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Facturación</h1>
+          <p className="text-sm text-muted-foreground">
+            Emití Facturas C contra AFIP desde un presupuesto aprobado o manualmente.
+          </p>
+        </div>
+        <Button asChild>
+          <a href="/invoices/new">
+            <IconPlus data-icon="inline-start" />
+            Nueva factura manual
+          </a>
+        </Button>
+      </div>
+
+      <Tabs defaultValue="emitted">
+        <TabsList>
+          <TabsTrigger value="emitted">Emitidas ({invoices.length})</TabsTrigger>
+          <TabsTrigger value="billable">Presupuestos facturables ({billable.length})</TabsTrigger>
+        </TabsList>
+        {/* `pt-6` overrides the CardContent default `pt-0` — that default
+            assumes a CardHeader is providing the top padding, but here the
+            tabs sit above and the card is headerless, so the toolbar would
+            otherwise kiss the top border. */}
+        <TabsContent value="emitted">
+          <Card>
+            <CardContent className="pt-6">
+              <InvoicesTable invoices={invoices} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="billable">
+          <Card>
+            <CardContent className="pt-6">
+              <BillableProposalsTable proposals={billable} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

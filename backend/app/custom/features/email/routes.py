@@ -2,14 +2,26 @@
 Email feature — API routes.
 """
 import logging
-from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.custom.features.clients.repository import ClientRepository
 from app.custom.features.email.messages import ERRORS, LOG_MESSAGES, RESPONSES
+from app.custom.features.invoices.repository import InvoiceRepository
+from app.custom.features.pdf.routes import generate_invoice_pdf
+from app.custom.features.proposals.models import ProposalCurrency
+from app.custom.features.proposals.quote.overlay import QuoteData, QuoteOverlayBuilder, QuoteTask
+from app.custom.features.proposals.quote_formatting import (
+    PROPOSAL_EMAIL_CC,
+    format_email_body,
+    format_email_html_body,
+    format_email_subject,
+    format_filename,
+    format_recipient_label,
+)
 from app.custom.features.proposals.repository import ProposalRepository
+from app.custom.features.proposals.service import ProposalService
 from app.database import get_db
 from app.shared.email.schemas import (
     EmailPreviewRequest,
@@ -20,7 +32,6 @@ from app.shared.email.schemas import (
 )
 from app.shared.email.template import EmailTemplateRepository
 from app.shared.interfaces.email_service import Attachment
-from app.shared.pdf.generator import PdfGenerator
 from app.shared.services.email_service_factory import get_email_service
 
 logger = logging.getLogger(__name__)
@@ -54,68 +65,68 @@ async def send_email(
         if not proposal:
             raise HTTPException(status_code=404, detail=ERRORS["proposal_not_found"])
 
-        client = None
-        if proposal.client_id:
-            client = client_repo.get(proposal.client_id)
+        client = client_repo.get(proposal.client_id) if proposal.client_id else None
 
-        total_hours = sum((t.hours for t in proposal.tasks), Decimal("0"))
-        subtotal_ars = total_hours * proposal.hourly_rate_ars
-        adjustment_amount_ars = subtotal_ars * (proposal.adjustment_percentage / Decimal("100"))
-        total_ars = subtotal_ars + adjustment_amount_ars
-        total_usd = total_ars / proposal.exchange_rate if proposal.exchange_rate else Decimal("0")
-
-        proposal_data = {
-            "proposal": {
-                "id": proposal.id,
-                "name": proposal.name,
-                "status": str(proposal.status),
-                "created_at": proposal.created_at.isoformat(),
-            },
-            "client": {
-                "name": client.name,
-                "company": client.company,
-                "email": client.email,
-                "phone": client.phone,
-            } if client else None,
-            "tasks": [
-                {
-                    "name": task.name,
-                    "description": task.description,
-                    "hours": float(task.hours),
-                }
-                for task in proposal.tasks
-            ],
-            "totals": {
-                "Total Horas": f"{float(total_hours):.2f} hs",
-                "Subtotal ARS": f"$ {subtotal_ars:,.2f}",
-                f"Ajuste ({float(proposal.adjustment_percentage):.1f}%)": f"$ {adjustment_amount_ars:,.2f}",
-                "Total ARS": f"$ {total_ars:,.2f}",
-                "Total USD": f"US$ {total_usd:,.2f}",
-            },
-        }
+        # Reuse the same overlay builder that drives the download
+        # endpoint so the email attachment is byte-for-byte identical
+        # to the PDF the client would see in the browser.
+        totals = ProposalService.calculate_totals(proposal, proposal.tasks)
+        currency = (
+            proposal.currency.value
+            if isinstance(proposal.currency, ProposalCurrency)
+            else str(proposal.currency)
+        )
+        total_amount = totals["total_usd"] if currency == "USD" else totals["total_ars"]
+        recipient_label = (
+            format_recipient_label(client) if proposal.show_recipient_on_cover else None
+        )
+        quote_data = QuoteData(
+            code=proposal.code,
+            issue_date=proposal.issue_date,
+            recipient_label=recipient_label,
+            tasks=[QuoteTask(name=t.name, description=t.description) for t in proposal.tasks],
+            deliverables_summary=proposal.deliverables_summary,
+            estimated_days=proposal.estimated_days,
+            total_amount=total_amount,
+            currency=currency,
+        )
 
         try:
             logger.info(LOG_MESSAGES["pdf_attachment_generating"].format(id=proposal.id))
-            generator = PdfGenerator(db)
-            pdf_bytes = generator.generate_proposal(proposal_data)
-            attachments.append(Attachment(
-                filename=f"presupuesto_{proposal.id}.pdf",
-                content=pdf_bytes,
-                mime_type="application/pdf",
-            ))
+            pdf_bytes = QuoteOverlayBuilder().build(quote_data)
+            attachments.append(
+                Attachment(
+                    filename=f"{format_filename(proposal, client)}.pdf",
+                    content=pdf_bytes,
+                    mime_type="application/pdf",
+                )
+            )
             logger.info(LOG_MESSAGES["pdf_attachment_generated"].format(id=proposal.id))
         except Exception as e:
             logger.error(LOG_MESSAGES["pdf_attachment_error"].format(error=str(e)))
             raise HTTPException(status_code=500, detail=ERRORS["pdf_attachment_failed"]) from e
+
+    # Proposal emails always copy the company addresses + auto-bold the
+    # `Código de referencia:` line in the HTML body if the operator
+    # didn't ship their own HTML. Non-proposal sends pass through
+    # unchanged.
+    cc = request.cc
+    html_body = request.html_body
+    if request.attach_proposal_pdf:
+        existing_cc = [c.strip() for c in (request.cc or "").split(",") if c.strip()]
+        merged = existing_cc + [c for c in PROPOSAL_EMAIL_CC if c not in existing_cc]
+        cc = ", ".join(merged) if merged else None
+        if html_body is None:
+            html_body = format_email_html_body(request.body)
 
     logger.info(LOG_MESSAGES["email_sending"].format(to=request.to))
     success = await email_service.send_email(
         to=request.to,
         subject=request.subject,
         body=request.body,
-        html_body=request.html_body,
+        html_body=html_body,
         attachments=attachments if attachments else None,
-        cc=request.cc,
+        cc=cc,
     )
 
     if not success:
@@ -140,6 +151,97 @@ async def send_proposal_email(
     """
     request.attach_proposal_pdf = proposal_id
     return await send_email(request, db)
+
+
+@router.get("/proposals/{proposal_id}/template")
+async def get_proposal_email_template(
+    proposal_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return the data the EmailSendDialog needs to pre-fill itself:
+    canonical subject + body, the recipient choices the operator can
+    pick from (primary + the client's `additional_emails`), and the
+    fixed company copies that are always added on send.
+
+    The operator can tweak any of these before hitting Send — these
+    are defaults, not locked-in values.
+    """
+    proposal_repo = ProposalRepository(db)
+    proposal = proposal_repo.get_with_tasks(proposal_id)
+    if not proposal:
+        raise HTTPException(status_code=404, detail=ERRORS["proposal_not_found"])
+
+    client = ClientRepository(db).get(proposal.client_id) if proposal.client_id else None
+    available_emails: list[dict] = []
+    if client and client.email:
+        available_emails.append({"email": client.email, "label": "Principal", "is_primary": True})
+    if client and client.additional_emails:
+        for extra in client.additional_emails:
+            available_emails.append(
+                {
+                    "email": extra.email,
+                    "label": extra.label or "Adicional",
+                    "is_primary": False,
+                }
+            )
+
+    return {
+        "to": (client.email if client and client.email else "") or "",
+        "subject": format_email_subject(proposal, client),
+        "body": format_email_body(proposal, client),
+        "available_emails": available_emails,
+        "cc_fixed": list(PROPOSAL_EMAIL_CC),
+    }
+
+
+@router.post("/invoices/{invoice_id}/send")
+async def send_invoice_email(
+    invoice_id: int,
+    request: EmailSendRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Send an invoice (or internal X comprobante) by email with the
+    printed PDF attached. Filename adapts to the kind so the recipient
+    sees `presupuesto_X-00000001.pdf` for internals and
+    `factura_<n>.pdf` for AFIP-issued comprobantes."""
+    invoice_repo = InvoiceRepository(db)
+    invoice = invoice_repo.get(invoice_id)
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Factura no encontrada")
+
+    pdf_response = await generate_invoice_pdf(invoice_id, db)
+    pdf_bytes = pdf_response.body if hasattr(pdf_response, "body") else b""
+    if invoice.is_internal:
+        suffix = (
+            f"X-{str(invoice.internal_number).zfill(8)}"
+            if invoice.internal_number is not None
+            else f"X-{invoice_id}"
+        )
+        filename = f"presupuesto_{suffix}.pdf"
+    else:
+        filename = f"factura_{invoice_id}.pdf"
+    attachments = [
+        Attachment(
+            filename=filename,
+            content=bytes(pdf_bytes),
+            mime_type="application/pdf",
+        )
+    ]
+
+    email_service = get_email_service()
+    logger.info(LOG_MESSAGES["email_sending"].format(to=request.to))
+    success = await email_service.send_email(
+        to=request.to,
+        subject=request.subject,
+        body=request.body,
+        html_body=request.html_body,
+        attachments=attachments,
+        cc=request.cc,
+    )
+    if not success:
+        raise HTTPException(status_code=500, detail=ERRORS["send_failed"])
+    logger.info(LOG_MESSAGES["email_sent"].format(to=request.to))
+    return {"message": RESPONSES["email_sent"]}
 
 
 @router.get("/templates", response_model=list[EmailTemplateResponse])

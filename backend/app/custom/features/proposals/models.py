@@ -5,10 +5,10 @@ Uses SQLAlchemy 2.x `Mapped[...]` / `mapped_column(...)` declarations so
 attribute access yields plain types instead of `Column[T]`.
 """
 import enum
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -27,16 +27,39 @@ class ProposalStatus(str, enum.Enum):
         return self.value
 
 
+class ProposalCurrency(str, enum.Enum):
+    """Currency the proposal is presented in to the client."""
+
+    ARS = "ARS"
+    USD = "USD"
+
+    def __str__(self) -> str:
+        return self.value
+
+
 class Proposal(Base):
     """Proposal model representing a commercial quote."""
 
     __tablename__ = "proposals"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    # Short reference code printed on the cover (`#TY48YY`). Generated
+    # server-side at create time, immutable afterwards.
+    code: Mapped[str] = mapped_column(String(8), unique=True, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     client_id: Mapped[int | None] = mapped_column(
         ForeignKey("clients.id", ondelete="SET NULL"),
         nullable=True,
+    )
+    # Date stamped on the cover. Defaults to creation day but the
+    # operator can edit it to back- or forward-date a quote.
+    issue_date: Mapped[date] = mapped_column(
+        Date, nullable=False, server_default=func.current_date()
+    )
+    # Whether the "PREPARADO PARA: <client>" block is rendered on the
+    # cover. Always false-effective when the proposal has no client.
+    show_recipient_on_cover: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
     )
     status: Mapped[ProposalStatus] = mapped_column(
         Enum(
@@ -47,11 +70,22 @@ class Proposal(Base):
         nullable=False,
         server_default="draft",
     )
+    currency: Mapped[ProposalCurrency] = mapped_column(
+        Enum(
+            ProposalCurrency,
+            values_callable=lambda e: [x.value for x in e],
+            name="proposalcurrency",
+        ),
+        nullable=False,
+        server_default="ARS",
+    )
     hourly_rate_ars: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     exchange_rate: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     adjustment_percentage: Mapped[Decimal] = mapped_column(
         Numeric(6, 2), nullable=False, server_default="0"
     )
+    estimated_days: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    deliverables_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -61,6 +95,7 @@ class Proposal(Base):
         onupdate=func.now(),
         nullable=False,
     )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     tasks: Mapped[list["ProposalTask"]] = relationship(
         "ProposalTask",

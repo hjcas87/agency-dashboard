@@ -5,12 +5,14 @@ import logging
 from collections.abc import Callable
 
 from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.custom.features.clients.messages import (
     ERR_AFIP_LOOKUP_FAILED,
     ERR_AFIP_LOOKUP_NOT_FOUND,
     ERR_AFIP_NOT_CONFIGURED,
+    ERR_DUPLICATE_ADDITIONAL_EMAIL,
     ERR_DUPLICATE_EMAIL,
     ERR_NOT_FOUND,
 )
@@ -121,7 +123,12 @@ class ClientService:
         existing = self.repository.get_by_email(data.email)
         if existing:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=ERR_DUPLICATE_EMAIL)
-        client = self.repository.create(data)
+        try:
+            client = self.repository.create(data)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail=ERR_DUPLICATE_ADDITIONAL_EMAIL
+            ) from None
         return ClientResponse.model_validate(client)
 
     def update_client(self, client_id: int, data: ClientUpdate) -> ClientResponse:
@@ -135,7 +142,12 @@ class ClientService:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT, detail=ERR_DUPLICATE_EMAIL
                 )
-        updated = self.repository.update(client, data)
+        try:
+            updated = self.repository.update(client, data)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail=ERR_DUPLICATE_ADDITIONAL_EMAIL
+            ) from None
         return ClientResponse.model_validate(updated)
 
     def delete_client(self, client_id: int) -> None:

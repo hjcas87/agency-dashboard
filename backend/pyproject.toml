@@ -39,6 +39,8 @@ dependencies = [
     "cryptography>=46.0.7",
     "aiosmtplib>=5.1.0",
     "reportlab>=4.4.10",
+    "qrcode[pil]>=8.2",
+    "pypdf>=6.10.2",
 ]
 
 [build-system]
@@ -55,6 +57,7 @@ dev = [
     "isort==5.13.2",
     "mypy==1.7.1",
     "ruff==0.1.8",
+    "fonttools>=4.62.1",
 ]
 
 [tool.pytest.ini_options]

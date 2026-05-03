@@ -4,12 +4,8 @@ Factory para obtener el servicio de email apropiado.
 import logging
 
 from app.config import settings
-from app.shared.services.email_service import (
-    APIEmailService,
-    LoggingEmailService,
-    SMTPEmailService,
-)
 from app.shared.interfaces.email_service import IEmailService
+from app.shared.services.email_service import APIEmailService, LoggingEmailService, SMTPEmailService
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +13,7 @@ logger = logging.getLogger(__name__)
 def get_email_service() -> IEmailService:
     """
     Obtiene el servicio de email apropiado según la configuración.
-    
+
     Returns:
         Instancia del servicio de email configurado
     """
@@ -35,9 +31,10 @@ def get_email_service() -> IEmailService:
         if settings.EMAIL_API_URL and settings.EMAIL_FROM_EMAIL:
             return APIEmailService()
         else:
-            logger.warning("[yellow]⚠[/yellow] Email API not fully configured, using logging service")
+            logger.warning(
+                "[yellow]⚠[/yellow] Email API not fully configured, using logging service"
+            )
             return LoggingEmailService()
     else:
         # Por defecto, usar servicio de logging (desarrollo)
         return LoggingEmailService()
-

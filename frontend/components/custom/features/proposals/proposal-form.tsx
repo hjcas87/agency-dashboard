@@ -7,37 +7,93 @@ import {
   IconArrowLeft,
   IconDeviceFloppy,
   IconPlus,
+  IconSparkles,
   IconTrash,
 } from '@tabler/icons-react'
 
 import { Button } from '@/components/core/ui/button'
+import { Checkbox } from '@/components/core/ui/checkbox'
 import { Input } from '@/components/core/ui/input'
 import { Label } from '@/components/core/ui/label'
 import { Separator } from '@/components/core/ui/separator'
 import { Textarea } from '@/components/core/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/core/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/core/ui/select'
 import { Badge } from '@/components/core/ui/badge'
 import { PROPOSAL_MESSAGES } from '@/lib/messages'
-import { createProposalAction, getClientsForSelect, type ProposalTask } from '@/app/actions/custom/proposals'
+import {
+  createProposalAction,
+  getClientsForSelect,
+  type ProposalCurrency,
+  type ProposalTask,
+} from '@/app/actions/custom/proposals'
+import {
+  AIGenerateTasksDialog,
+  type AIParsedResult,
+} from '@/components/custom/features/proposals/ai-generate-tasks-dialog'
 
 interface ClientOption {
   id: number
   name: string
 }
 
-export function ProposalForm({ initialData }: { initialData?: { name: string; client_id: number | null; hourly_rate_ars: string; exchange_rate: string; adjustment_percentage: string; tasks: ProposalTask[] } }) {
+// Mirror of `DELIVERABLES_SUMMARY_MAX_CHARS` in
+// backend/app/custom/features/proposals/schemas.py — keep them in sync.
+const DELIVERABLES_SUMMARY_MAX = 1300
+const DELIVERABLES_SUMMARY_WARN = 1200
+
+function todayIso(): string {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+export function ProposalForm({
+  initialData,
+}: {
+  initialData?: {
+    name: string
+    client_id: number | null
+    currency?: ProposalCurrency
+    hourly_rate_ars: string
+    exchange_rate: string
+    adjustment_percentage: string
+    issue_date?: string
+    show_recipient_on_cover?: boolean
+    estimated_days?: string | null
+    deliverables_summary?: string | null
+    tasks: ProposalTask[]
+  }
+}) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
   const [clients, setClients] = useState<ClientOption[]>([])
   const [name, setName] = useState(initialData?.name ?? '')
   const [clientId, setClientId] = useState<string>(initialData?.client_id?.toString() ?? '__none__')
+  const [currency, setCurrency] = useState<ProposalCurrency>(initialData?.currency ?? 'ARS')
   const [hourlyRate, setHourlyRate] = useState(initialData?.hourly_rate_ars ?? '50000')
   const [exchangeRate, setExchangeRate] = useState(initialData?.exchange_rate ?? '1200')
   const [adjustmentPct, setAdjustmentPct] = useState(initialData?.adjustment_percentage ?? '0')
+  const [issueDate, setIssueDate] = useState(initialData?.issue_date ?? todayIso())
+  const [showRecipientOnCover, setShowRecipientOnCover] = useState(
+    initialData?.show_recipient_on_cover ?? true
+  )
+  const [estimatedDays, setEstimatedDays] = useState(initialData?.estimated_days ?? '')
+  const [deliverablesSummary, setDeliverablesSummary] = useState(
+    initialData?.deliverables_summary ?? ''
+  )
   const [tasks, setTasks] = useState<ProposalTask[]>(
     initialData?.tasks ?? [{ name: '', description: null, hours: '0', sort_order: 0 }]
   )
+  const [aiDialogOpen, setAiDialogOpen] = useState(false)
   const tasksRef = useRef<HTMLDivElement>(null)
   const taskNameRefs = useRef<HTMLInputElement[]>([])
 
@@ -62,18 +118,39 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
     setTasks(prev => prev.filter((_, i) => i !== index).map((t, i) => ({ ...t, sort_order: i })))
   }, [])
 
-  const updateTask = useCallback((index: number, field: keyof ProposalTask, value: string | null) => {
-    setTasks(prev => prev.map((t, i) => i === index ? { ...t, [field]: value } : t))
+  const updateTask = useCallback(
+    (index: number, field: keyof ProposalTask, value: string | null) => {
+      setTasks(prev => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)))
+    },
+    []
+  )
+
+  const applyAIResult = useCallback((result: AIParsedResult) => {
+    const isEmpty = (t: ProposalTask) => !t.name.trim() && (!t.hours || parseFloat(t.hours) === 0)
+    setTasks(prev => {
+      const incoming = result.tasks.map(t => ({
+        name: t.name,
+        description: t.description,
+        hours: t.hours,
+        sort_order: 0,
+      }))
+      const merged = prev.every(isEmpty) ? incoming : [...prev, ...incoming]
+      return merged.map((t, i) => ({ ...t, sort_order: i }))
+    })
+    if (result.deliverables_summary && result.deliverables_summary.trim()) {
+      setDeliverablesSummary(result.deliverables_summary.slice(0, DELIVERABLES_SUMMARY_MAX))
+    }
   }, [])
 
   // Calculations
   const totalHours = tasks.reduce((sum, t) => sum + (parseFloat(t.hours) || 0), 0)
   const subtotal = totalHours * (parseFloat(hourlyRate) || 0)
-  const adjAmount = subtotal * (parseFloat(adjustmentPct) || 0) / 100
+  const adjAmount = (subtotal * (parseFloat(adjustmentPct) || 0)) / 100
   const totalArs = subtotal + adjAmount
   const totalUsd = exchangeRate ? totalArs / parseFloat(exchangeRate) : 0
 
-  const isValid = name.trim() && totalHours > 0 && tasks.every(t => t.name.trim() && parseFloat(t.hours) > 0)
+  const isValid =
+    name.trim() && totalHours > 0 && tasks.every(t => t.name.trim() && parseFloat(t.hours) > 0)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -95,9 +172,14 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
     const data = {
       name,
       client_id: clientId && clientId !== '__none__' ? parseInt(clientId, 10) : null,
+      currency,
       hourly_rate_ars: hourlyRate,
       exchange_rate: exchangeRate,
       adjustment_percentage: adjustmentPct,
+      issue_date: issueDate || null,
+      show_recipient_on_cover: showRecipientOnCover,
+      estimated_days: estimatedDays.trim() || null,
+      deliverables_summary: deliverablesSummary.trim() || null,
       tasks: tasks.map((t, i) => ({ ...t, sort_order: i })),
     }
 
@@ -118,8 +200,18 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
     })
   }
 
-  const adjColor = parseFloat(adjustmentPct) < 0 ? 'text-red-600' : parseFloat(adjustmentPct) > 0 ? 'text-green-600' : 'text-muted-foreground'
-  const adjLabel = parseFloat(adjustmentPct) < 0 ? 'Descuento' : parseFloat(adjustmentPct) > 0 ? 'Recargo' : 'Ajuste'
+  const adjColor =
+    parseFloat(adjustmentPct) < 0
+      ? 'text-red-600'
+      : parseFloat(adjustmentPct) > 0
+        ? 'text-green-600'
+        : 'text-muted-foreground'
+  const adjLabel =
+    parseFloat(adjustmentPct) < 0
+      ? 'Descuento'
+      : parseFloat(adjustmentPct) > 0
+        ? 'Recargo'
+        : 'Ajuste'
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -143,33 +235,114 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
       {/* General settings */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="name">Nombre <span className="text-destructive">*</span></Label>
-          <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del presupuesto" required />
+          <Label htmlFor="name">
+            Nombre <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Nombre del presupuesto"
+            required
+          />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="client">Cliente</Label>
           <Select value={clientId} onValueChange={setClientId}>
-            <SelectTrigger id="client"><SelectValue placeholder="Sin cliente" /></SelectTrigger>
+            <SelectTrigger id="client">
+              <SelectValue placeholder="Sin cliente" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">Sin cliente</SelectItem>
-              {clients.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+              {clients.map(c => (
+                <SelectItem key={c.id} value={c.id.toString()}>
+                  {c.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="hourlyRate">Valor por hora (ARS) <span className="text-destructive">*</span></Label>
-          <Input id="hourlyRate" type="number" step="0.01" min="0" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} required />
+          <Label htmlFor="currency">
+            Moneda al cliente <span className="text-destructive">*</span>
+          </Label>
+          <Select value={currency} onValueChange={value => setCurrency(value as ProposalCurrency)}>
+            <SelectTrigger id="currency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ARS">ARS — Pesos argentinos</SelectItem>
+              <SelectItem value="USD">USD — Dólares</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="exchangeRate">Tasa de cambio (1 USD = X ARS) <span className="text-destructive">*</span></Label>
-          <Input id="exchangeRate" type="number" step="0.01" min="0" value={exchangeRate} onChange={e => setExchangeRate(e.target.value)} required />
+          <Label htmlFor="hourlyRate">
+            Valor por hora (ARS) <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="hourlyRate"
+            type="number"
+            step="0.01"
+            min="0"
+            value={hourlyRate}
+            onChange={e => setHourlyRate(e.target.value)}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="exchangeRate">
+            Tasa de cambio (1 USD = X ARS) <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="exchangeRate"
+            type="number"
+            step="0.01"
+            min="0"
+            value={exchangeRate}
+            onChange={e => setExchangeRate(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Cover settings */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="issueDate">
+            Fecha del presupuesto <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="issueDate"
+            type="date"
+            value={issueDate}
+            onChange={e => setIssueDate(e.target.value)}
+            required
+          />
+        </div>
+        <div className="flex items-center gap-2 self-end pb-2 md:col-span-2">
+          <Checkbox
+            id="showRecipientOnCover"
+            checked={showRecipientOnCover}
+            onCheckedChange={value => setShowRecipientOnCover(value === true)}
+          />
+          <Label htmlFor="showRecipientOnCover" className="cursor-pointer text-sm font-normal">
+            Mostrar &quot;Preparado para: {'{cliente}'}&quot; en la portada (si hay cliente
+            asignado)
+          </Label>
         </div>
       </div>
 
       {/* Adjustment */}
       <div className="flex flex-col gap-2">
         <Label htmlFor="adjustment">
-          Ajuste sobre el subtotal ({parseFloat(adjustmentPct) < 0 ? 'Descuento' : parseFloat(adjustmentPct) > 0 ? 'Recargo' : 'Sin ajuste'})
+          Ajuste sobre el subtotal (
+          {parseFloat(adjustmentPct) < 0
+            ? 'Descuento'
+            : parseFloat(adjustmentPct) > 0
+              ? 'Recargo'
+              : 'Sin ajuste'}
+          )
         </Label>
         <div className="flex items-center gap-2">
           <Input
@@ -186,39 +359,117 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
         </div>
       </div>
 
+      {/* Resumen para el cliente (PDF) */}
+      <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
+        <div>
+          <h3 className="text-base font-semibold">Resumen para el cliente</h3>
+          <p className="text-sm text-muted-foreground">
+            Estos campos se imprimen en la página de entregables del PDF.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="estimatedDays">Tiempo de desarrollo</Label>
+          <Input
+            id="estimatedDays"
+            value={estimatedDays}
+            onChange={e => setEstimatedDays(e.target.value)}
+            placeholder="ej. 30 días hábiles"
+            maxLength={64}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="deliverablesSummary">Resumen de entregables</Label>
+          <Textarea
+            id="deliverablesSummary"
+            value={deliverablesSummary}
+            onChange={e =>
+              setDeliverablesSummary(e.target.value.slice(0, DELIVERABLES_SUMMARY_MAX))
+            }
+            placeholder="Texto que verá el cliente en la sección de entregables. Si lo dejás vacío esa zona del PDF queda en blanco."
+            rows={6}
+            maxLength={DELIVERABLES_SUMMARY_MAX}
+          />
+          <div
+            className={`text-xs text-right ${deliverablesSummary.length > DELIVERABLES_SUMMARY_WARN ? 'text-amber-600' : 'text-muted-foreground'}`}
+          >
+            {deliverablesSummary.length} / {DELIVERABLES_SUMMARY_MAX}
+          </div>
+        </div>
+      </div>
+
       {/* Tasks */}
       <div ref={tasksRef} className="flex flex-col gap-3">
         <div className="sticky top-[5rem] z-50 flex items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border px-4 py-3 shadow-md">
           <Label className="text-base font-semibold">Tareas</Label>
-          <Button type="button" size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={addTask}>
-            <IconPlus className="size-4" />
-            Agregar tarea
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => setAiDialogOpen(true)}>
+              <IconSparkles className="size-4" />
+              {PROPOSAL_MESSAGES.aiGenerate.triggerLabel}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={addTask}
+            >
+              <IconPlus className="size-4" />
+              Agregar tarea
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">
           {tasks.map((task, index) => (
-          <div key={index} className="flex flex-col gap-3 rounded-lg border p-4">
-            <div className="flex items-center justify-between">
-              <Badge variant="outline">Tarea {index + 1}</Badge>
-              <Button type="button" variant="ghost" size="icon" className="size-8 text-destructive" onClick={() => removeTask(index)} disabled={tasks.length === 1}>
-                <IconTrash className="size-4" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <div className="flex flex-col gap-2 md:col-span-3">
-                <Label>Nombre <span className="text-destructive">*</span></Label>
-                <Input ref={el => { taskNameRefs.current[index] = el! }} value={task.name} onChange={e => updateTask(index, 'name', e.target.value)} placeholder="Nombre de la tarea" />
-                <Label>Descripción</Label>
-                <Textarea value={task.description ?? ''} onChange={e => updateTask(index, 'description', e.target.value || null)} placeholder="Descripción opcional..." rows={3} />
+            <div key={index} className="flex flex-col gap-3 rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <Badge variant="outline">Tarea {index + 1}</Badge>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-destructive"
+                  onClick={() => removeTask(index)}
+                  disabled={tasks.length === 1}
+                >
+                  <IconTrash className="size-4" />
+                </Button>
               </div>
-              <div className="flex flex-col gap-2">
-                <Label>Horas <span className="text-destructive">*</span></Label>
-                <Input type="number" step="0.5" min="0" value={task.hours} onChange={e => updateTask(index, 'hours', e.target.value)} />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                <div className="flex flex-col gap-2 md:col-span-3">
+                  <Label>
+                    Nombre <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    ref={el => {
+                      taskNameRefs.current[index] = el!
+                    }}
+                    value={task.name}
+                    onChange={e => updateTask(index, 'name', e.target.value)}
+                    placeholder="Nombre de la tarea"
+                  />
+                  <Label>Descripción</Label>
+                  <Textarea
+                    value={task.description ?? ''}
+                    onChange={e => updateTask(index, 'description', e.target.value || null)}
+                    placeholder="Descripción opcional..."
+                    rows={3}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>
+                    Horas <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={task.hours}
+                    onChange={e => updateTask(index, 'hours', e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
         </div>
       </div>
 
@@ -230,7 +481,9 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
           <div>{totalHours.toFixed(2)} hs</div>
           <div className="text-muted-foreground">Subtotal</div>
           <div>${subtotal.toLocaleString('es-AR')}</div>
-          <div className={adjColor}>{adjLabel} ({adjustmentPct}%)</div>
+          <div className={adjColor}>
+            {adjLabel} ({adjustmentPct}%)
+          </div>
           <div className={adjColor}>${adjAmount.toLocaleString('es-AR')}</div>
         </div>
         <Separator className="my-3" />
@@ -251,7 +504,12 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3">
-        <Button variant="outline" type="button" onClick={() => router.push('/proposals')} disabled={isPending}>
+        <Button
+          variant="outline"
+          type="button"
+          onClick={() => router.push('/proposals')}
+          disabled={isPending}
+        >
           Cancelar
         </Button>
         <Button type="submit" disabled={isPending || !isValid}>
@@ -259,6 +517,12 @@ export function ProposalForm({ initialData }: { initialData?: { name: string; cl
           {isPending ? 'Guardando...' : 'Guardar Presupuesto'}
         </Button>
       </div>
+
+      <AIGenerateTasksDialog
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        onResult={applyAIResult}
+      />
     </form>
   )
 }
